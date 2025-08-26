@@ -1,0 +1,12 @@
+status: done
+id: de/bb
+data:
+  - bb
+license: DL-DE/BY-2.0
+creator: GeoBasis-DE/LGB
+url: https://data.geobasis-bb.de/geobasis/daten/dop/rgb_jpg/
+
+# Die Daten können gemäß der „Datenlizenz Deutschland - Namensnennung - Version 2.0“ (https://www.govdata.de/dl-de/by-2-0) genutzt werden.
+# Namensnennung: "GeoBasis-DE/LGB“, Beispiel: „© GeoBasis-DE/LGB, dl-de/by-2-0, (Daten geändert)“, (Klammer = optional)
+# Hinweis: werden auch Daten des Bundeslandes Berlin genutzt, ist der Copyright-Vermerk um den Hinweis “© Geoportal Berlin, dl-de/by-2-0“ zu ergänzen.
+# Beispiel: „© GeoBasis-DE/LGB, dl-de/by-2-0; © Geoportal Berlin, dl-de/by-2-0 (Daten geändert)“, (Klammer = optional)

@@ -1,0 +1,8 @@
+.DS_Store
+*.jp2
+*.mbtiles
+*.tif
+*.versatiles
+*.vrt
+**/temp*/*
+**/tiles*/*

@@ -1,0 +1,3 @@
+from_gdal_raster filename="U21N-0M20.vrt"
+| raster_overview
+| raster_format format=webp quality=50 speed=0

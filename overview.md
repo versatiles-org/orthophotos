@@ -1,0 +1,24 @@
+
+
+- [ ] Germany:
+	- [ ] baden-württemberg: -
+	- [ ] bayern: -
+	- [ ] berlin: https://fbinter.stadt-berlin.de/fb/feed/senstadt/a_luftbild2024_true_rgbi/0
+	- [ ] brandenburg: https://data.geobasis-bb.de/geobasis/daten/dop/rgbi_tif/
+	- [ ] bremen: https://www.metaver.de/trefferanzeige?docuuid=910260F7-AC66-40F3-8BA2-E7108C3C71C9
+	- [ ] hamburg: https://metaver.de/search/dls/?serviceId=B802986C-530D-443A-A64A-CFEE4EEA2180&datasetId=DD10AFD3-5530-4FD4-933D-5FC71D14B8C7&partner=hh
+	- [ ] hessen: -
+	- [ ] mecklenburg-vorpommern: -
+	- [ ] niedersachsen: https://arcgis-geojson.s3.eu-de.cloud-object-storage.appdomain.cloud/dop20/lgln-opengeodata-dop20.geojson
+	- [ ] nordrhein-westfalen: https://www.opengeodata.nrw.de/produkte/geobasis/lusat/akt/dop/dop_jp2_f10/
+	- [ ] rheinland-pfalz: --
+	- [ ] saarland: https://geoportal.saarland.de/mapbender/php/mod_inspireDownloadFeed.php?id=6c2eb4e4-6b85-4858-93f8-b62a2ef87987&type=DATASET&generateFrom=wmslayer&layerid=46303
+	- [ ] sachsen: https://www.geodaten.sachsen.de/batch-download-4719.html
+	- [ ] sachsen-anhalt: https://geodatenportal.sachsen-anhalt.de/arcgisinspire/rest/directories/web/INSPIRE_ALKIS/ALKIS_OI_DOP20_MapServer/datasetoi.xml / https://www.geodatenportal.sachsen-anhalt.de/gfds_webshare/sec-download/LVermGeo/DOP20/326065762.tif
+	- [ ] schleswig-holstein: --
+	- [ ] thüringen: -
+- [ ] Österreich: https://data.bev.gv.at/geonetwork/srv/ger/catalog.search#/metadata/3028ccf4-ff64-42ed-98f5-fea1b32da62a
+- [ ] France: https://geoservices.ign.fr/bdortho
+- [ ] Polski
+- [ ] CZ: https://atom.cuzk.gov.cz/OI/OI.xml
+- [ ] Belgien: https://urbisdownload.datastore.brussels/atomfeed/f32ea605-e11a-11ee-bcc0-00090ffe0001-en.xml

@@ -1,0 +1,2 @@
+status: failed
+message: Correct overlaying of images is not possible because the alpha channel is missing.

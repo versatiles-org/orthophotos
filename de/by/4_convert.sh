@@ -1,3 +1,4 @@
-versatiles convert bayern.vpl ~/data/bayern.mbtiles
-versatiles convert ~/data/bayern.mbtiles bayern.versatiles
-mv ~/data/bayern.mbtiles .
+set -e
+
+versatiles convert by.vpl by.versatiles
+versatiles convert by.versatiles by.mbtiles

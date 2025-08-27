@@ -1,4 +1,5 @@
-status: done
+status: failed
+message: images are upside down, "gdalbuildvrt does not support positive NS resolution."
 id: at
 data:
   - at

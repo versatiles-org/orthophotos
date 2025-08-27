@@ -13,10 +13,11 @@ cat urls.txt | shuf | parallel --eta --bar -j 4 '
   set -e
   url={}
   id=$(echo "$url" | grep -oE "........-....-....-....-............")
-  if [ ! -f "../tiles/$id.tif" ]; then
-    curl "$url" -o "$id.xml"
+  if [ ! -f "../tiles/$id.jp2" ]; then
+    curl -s "$url" -o "$id.xml"
     tif=$(xmlstarlet sel -N a="http://www.w3.org/2005/Atom" -t -m "//a:entry//a:id" -v "." -n $id.xml)
-    curl "$tif" -o "$id.tif"
+    curl -s "$tif" -o "$id.tif"
+  
     mv "$id.tif" "../tiles/"
     rm "$id*"
   fi

@@ -1,3 +1,3 @@
 set -e
 
-gdal_translate -tr 100 100 -r average bw.vrt bw.tif
+gdalwarp -tr 100 100 -r nearest -multi -overwrite -wo NUM_THREADS=ALL_CPUS bw.vrt bw.jp2

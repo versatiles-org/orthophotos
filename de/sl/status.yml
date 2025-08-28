@@ -1,5 +1,6 @@
-status: failed
-message: Unfortunately, bulk downloads are not possible, so each image would have to be downloaded manually.
-
-
-# https://www.shop.lvgl.saarland.de/index.php?option=com_virtuemart&view=category&category_layout=wega_iframe&virtuemart_category_id=1061
+status: done
+data:
+  - tiles
+license: DL-DE/BY 2.0
+creator: GeoBasis DE/LVGL-SL (2025)
+url: https://geoportal.saarland.de/app-article/geobasisdatenuebersicht/

@@ -1,3 +1,3 @@
 set -e
 
-gdalwarp -tr 100 100 -r nearest -multi -wo "NUM_THREADS=ALL_CPUS" -overwrite he.vrt he.jp2
+gdalwarp -tr 100 100 -r nearest -multi -wo "NUM_THREADS=ALL_CPUS" -overwrite tiles.vrt tiles.jp2

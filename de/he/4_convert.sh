@@ -1,4 +1,4 @@
 set -e
 
-versatiles convert he.vpl he.versatiles
-versatiles convert he.versatiles he.mbtiles 
+versatiles convert tiles.vpl tiles.versatiles
+versatiles convert tiles.versatiles tiles.mbtiles 

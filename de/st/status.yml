@@ -1,0 +1,9 @@
+
+
+# error messages:
+# gdalbuildvrt does not support heterogeneous projection: expected ETRS89 / UTM zone 32N, got ETRS89 / UTM zone 32N. Skipping tiles/326285858.jp2
+# gdalbuildvrt does not support ungeoreferenced image. Skipping tiles/326585864.jp2
+# gdalbuildvrt does not support ungeoreferenced image. Skipping tiles/326665680.jp2
+# gdalbuildvrt does not support ungeoreferenced image. Skipping tiles/326865662.jp2
+# gdalbuildvrt does not support ungeoreferenced image. Skipping tiles/327225684.jp2
+# gdalbuildvrt does not support ungeoreferenced image. Skipping tiles/327745758.jp2

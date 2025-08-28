@@ -10,5 +10,6 @@ for name in \
   U40S-0M20
 do
   echo "Processing $name"
-  gdalwarp -tr 100 100 -r nearest -multi -overwrite -wo NUM_THREADS=ALL_CPUS "tiles_$name.vrt" "tiles_$name.jp2"
+  versatiles convert tiles_$name.vpl tiles_$name.versatiles
+  versatiles convert tiles_$name.versatiles tiles_$name.mbtiles
 done

@@ -1,0 +1,12 @@
+status: done
+data:
+  - tiles_LA93-0M20
+  - tiles_U01S-0M50
+  - tiles_U20N-0M20
+  - tiles_U21N-0M20
+  - tiles_U22N-0M20
+  - tiles_U38S-0M20
+  - tiles_U40S-0M20
+license: LO 2.0
+creator: Institut national de l'information géographique et forestière (IGN-F)
+url: https://geoservices.ign.fr/documentation/donnees/ortho/bdortho

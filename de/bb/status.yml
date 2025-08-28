@@ -1,9 +1,9 @@
 status: done
 id: de/bb
 data:
-  - bb
+  - tiles
 license: DL-DE/BY-2.0
-creator: GeoBasis-DE/LGB
+creator: GeoBasis-DE/LGB; Geoportal Berlin
 url: https://data.geobasis-bb.de/geobasis/daten/dop/rgb_jpg/
 
 # Die Daten können gemäß der „Datenlizenz Deutschland - Namensnennung - Version 2.0“ (https://www.govdata.de/dl-de/by-2-0) genutzt werden.

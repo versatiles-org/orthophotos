@@ -1,3 +1,3 @@
 set -e
 
-gdalbuildvrt -addalpha -a_srs "EPSG:25833" bb.vrt tiles/*.jpg
+gdalbuildvrt -addalpha -a_srs "EPSG:25833" tiles.vrt tiles/*.jpg

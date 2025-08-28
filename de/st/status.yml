@@ -1,4 +1,9 @@
-
+status: done
+data:
+  - tiles
+license: DL-DE/BY 2.0
+creator: GeoBasis-DE / LVermGeo ST
+url: https://www.lvermgeo.sachsen-anhalt.de/de/gdp-open-data.html
 
 # error messages:
 # gdalbuildvrt does not support heterogeneous projection: expected ETRS89 / UTM zone 32N, got ETRS89 / UTM zone 32N. Skipping tiles/326285858.jp2

@@ -1,3 +1,3 @@
 set -e
 
-gdalbuildvrt -addalpha sh.vrt tiles/*.jp2
+gdalbuildvrt -b 1 -b 2 -b 3 -addalpha sh.vrt tiles/*.jp2

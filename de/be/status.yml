@@ -1,2 +1,7 @@
 status: failed
 message: Correct overlaying of images is not possible because the alpha channel is missing.
+data:
+  - tiles
+license: DL-DE/ZERO-2.0
+creator: Geoportal Berlin
+url: https://gdi.berlin.de/geonetwork/srv/api/records/01e2749e-7dca-3492-8f95-29d360c3f1aa

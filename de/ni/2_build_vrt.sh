@@ -1,3 +1,3 @@
 set -e
 
-gdalbuildvrt -addalpha ni.vrt tiles/*.tif
+gdalbuildvrt -addalpha tiles.vrt tiles/*.tif

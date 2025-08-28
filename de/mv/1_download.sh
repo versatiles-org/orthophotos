@@ -1,6 +1,5 @@
 set -e
 
-mkdir -p tiles
 mkdir -p temp
 cd temp
 
@@ -8,6 +7,7 @@ wget -O atom.xml "https://www.geodaten-mv.de/dienste/dop20_atom?type=dataset&id=
 
 grep -oP 'href="[^"]+"' atom.xml | grep 'dop20rgbi_.*\.tif"' | cut -d'"' -f2 | sed 's/amp;//g' > urls.txt
 
+mkdir -p ../tiles
 tempdir=$(mktemp -d)
 cat urls.txt | shuf | parallel --eta --bar -j 8 '
   set -e

@@ -1,18 +1,11 @@
 set -e
 
-mkdir -p temp
-cd temp
-
 wget -O index.html --no-check-certificate "https://geobasis-rlp.de/data/dop20rgb/current/jp2/"
 
 cat index.html | htmlq 'div.container table td a' --attribute href >filenames.txt
 
-mkdir -p ../tiles
+mkdir -p $DATA/tiles
 cat filenames.txt | shuf | parallel --eta --bar -j 4 '
-  if [ ! -f "../tiles/{}" ]; then
-    curl -s --insecure "https://geobasis-rlp.de/data/dop20rgb/current/jp2/{}" -o "{}.tmp" && mv "{}.tmp" "../tiles/{}"
-  fi
+  [ -f "$DATA/tiles/{}" ] && exit 0
+  curl -s --insecure "https://geobasis-rlp.de/data/dop20rgb/current/jp2/{}" -o "{}.tmp" && mv "{}.tmp" "$DATA/tiles/{}"
 '
-
-cd ..
-rm -r temp

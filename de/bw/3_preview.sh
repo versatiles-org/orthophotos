@@ -1,3 +1,3 @@
 set -e
 
-gdalwarp -tr 100 100 -r nearest -multi -overwrite -wo NUM_THREADS=ALL_CPUS tiles.vrt tiles.jp2
+gdal_translate -tr 100 100 -r nearest tiles.vrt tiles.jp2

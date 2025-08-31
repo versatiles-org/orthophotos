@@ -1,3 +1,0 @@
-from_gdal_raster filename="tiles_U38S-0M20.vrt"
-| raster_overview
-| raster_format format=webp quality=30 speed=0

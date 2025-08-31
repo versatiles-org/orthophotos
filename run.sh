@@ -64,7 +64,8 @@ case "$TASK" in
   "convert")
     sources=$(yq -r '.data[]' "$CWD/regions/$NAME/status.yml")
     for source in $sources; do
-      versatiles convert $DATA/$source.vpl $DATA/$source.versatiles
+      echo "from_gdal_raster filename=\"$DATA/$source.vrt\" | raster_overview | raster_format format=webp quality=30 speed=0" > "$TEMP/$source.vpl"
+      versatiles convert "$TEMP/$source.vpl" "$DATA/$source.versatiles"
     done
     ;;
   "upload")
@@ -75,3 +76,5 @@ case "$TASK" in
     exit 1
     ;;
 esac
+
+rm -rf "$TEMP"

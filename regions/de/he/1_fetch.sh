@@ -8,7 +8,7 @@ xmlstarlet sel -N a="http://www.w3.org/2005/Atom" \
   sed 's/amp;//g' > entries.txt
 
 mkdir -p $DATA/tiles
-cat entries.txt | shuf | parallel --eta --bar -j 1 '
+cat entries.txt | shuf | parallel --eta --bar -j 4 '
   set -e
   url=$(echo {} | cut -d"|" -f1)
   name=$(echo {} | cut -d"|" -f2)

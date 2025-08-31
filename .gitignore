@@ -1,7 +1,2 @@
 .DS_Store
-*.mbtiles
-*.tif
-*.versatiles
-*.vrt
-**/temp*/*
-**/tiles*/*
+config.env

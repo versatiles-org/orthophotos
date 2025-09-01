@@ -49,7 +49,7 @@ case "$TASK" in
     ;;
   "fetch")
     cd "$TEMP"
-    bash -c "$CWD/regions/$NAME/1_fetch.sh"
+    DATA=$DATA bash -c "$CWD/regions/$NAME/1_fetch.sh"
     ;;
   "vrt")
     cd "$DATA"

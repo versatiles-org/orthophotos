@@ -56,9 +56,11 @@ case "$TASK" in
     bash -c "$CWD/regions/$NAME/2_build_vrt.sh"
     ;;
   "4_preview")
+    cd "$DATA"
     sources=$(yq -r '.data[]' "$CWD/regions/$NAME/status.yml")
     for source in $sources; do
-      gdalwarp -tr 100 100 -r nearest -multi -wo "NUM_THREADS=ALL_CPUS" -overwrite $DATA/$source.vrt $CWD/regions/$NAME/$source.jp2
+      gdalwarp -tr 100 100 -r nearest -multi -wo "NUM_THREADS=ALL_CPUS" -overwrite $DATA/$source.vrt $TEMP/$source.jp2
+      mv $TEMP/$source.jp2 $CWD/regions/$NAME/$source.jp2
     done
     ;;
   "5_convert")

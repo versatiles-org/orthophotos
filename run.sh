@@ -1,5 +1,6 @@
 set -e
 
+cd "$(dirname "$0")"
 source config.env
 
 REQUIRED_CMDS=(7z curl gdal_translate gdalbuildvrt gdalwarp parallel unzip versatiles wget xmlstarlet yq)
@@ -36,7 +37,7 @@ if [[ ! "$NAME" =~ ^[a-z][a-z](/[a-z][a-z])?$ ]]; then
   exit 1
 fi
 
-CWD=$(pwd)
+PROJ="$(pwd)/regions/$NAME"
 DATA="$dir_data/$NAME"
 TEMP="$dir_temp/$NAME"
 
@@ -49,22 +50,22 @@ case "$TASK" in
     ;;
   "2_fetch")
     cd "$TEMP"
-    DATA=$DATA bash -c "$CWD/regions/$NAME/1_fetch.sh"
+    DATA=$DATA bash -c "$PROJ/1_fetch.sh"
     ;;
   "3_vrt")
     cd "$DATA"
-    bash -c "$CWD/regions/$NAME/2_build_vrt.sh"
+    bash -c "$PROJ/2_build_vrt.sh"
     ;;
   "4_preview")
     cd "$DATA"
-    sources=$(yq -r '.data[]' "$CWD/regions/$NAME/status.yml")
+    sources=$(yq -r '.data[]' "$PROJ/status.yml")
     for source in $sources; do
       gdalwarp -tr 100 100 -r nearest -multi -wo "NUM_THREADS=ALL_CPUS" -overwrite $DATA/$source.vrt $TEMP/$source.jp2
-      mv $TEMP/$source.jp2 $CWD/regions/$NAME/$source.jp2
+      mv $TEMP/$source.jp2 $PROJ/$source.jp2
     done
     ;;
   "5_convert")
-    sources=$(yq -r '.data[]' "$CWD/regions/$NAME/status.yml")
+    sources=$(yq -r '.data[]' "$PROJ/status.yml")
     for source in $sources; do
       echo "from_gdal_raster filename=\"$DATA/$source.vrt\" | raster_overview | raster_format format=webp quality=30 speed=0" > "$TEMP/$source.vpl"
       versatiles convert "$TEMP/$source.vpl" "$DATA/$source.versatiles"

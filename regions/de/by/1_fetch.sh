@@ -9,9 +9,12 @@ sed -nE 's/.*<url>(https:\/\/download2.bayernwolke.de\/a\/dop20\/data\/.*?\.tif)
 
 mkdir -p $DATA/tiles
 cat dop20_urls.txt | shuf | parallel --eta --bar -j 16 '
-	[ -f "$DATA/tiles/{/}" ] && exit 0
-	curl -so {/}.1tmp.tif {}
-	gdal_translate --quiet -ovr NONE -of GTiff -co COMPRESS=WEBP -co WEBP_LEVEL=90 {/}.1tmp.tif {/}.2tmp.tif
-	mv {/}.2tmp.tif $DATA/tiles/{/}
-	rm {/}*
+  set -e
+  URL={}
+  ID={/.}
+  [ -f "$DATA/tiles/$ID.jp2" ] && exit 0
+  curl -so $ID.tif $URL
+  gdal_translate $ID.tif $ID.jp2 -co QUALITY=100
+  mv $ID.jp2 $DATA/tiles/
+  rm $ID.tif
 '

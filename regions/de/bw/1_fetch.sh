@@ -17,6 +17,6 @@ find . -type f -name "*.tif" | parallel --eta --bar '
   set -e
   [ -f "$DATA/tiles/{}" ] && exit 0
   gdal_translate -q "{}" "{.}.jp2" -co QUALITY=100 -co REVERSIBLE=YES
-  mv "{.}.jp2" "$DATA/tiles/{}" 2>/dev/null
+  mv "{.}.jp2" "$DATA/tiles/{}"
   rm "{}"
 '

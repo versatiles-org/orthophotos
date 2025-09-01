@@ -14,5 +14,5 @@ wget "https://fbinter.stadt-berlin.de/fb/atom/DOP/dop20true_rgbi_2024/West.zip"
 
 ls -1 *.zip | parallel --eta --bar unzip {}
 
-mkdir -p tiles
+mkdir -p $DATA/tiles
 find . -type f -name "*.jp2" | parallel --eta --bar mv {} $DATA/tiles/

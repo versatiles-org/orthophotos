@@ -60,7 +60,7 @@ case "$TASK" in
     cd "$DATA"
     sources=$(yq -r '.data[]' "$PROJ/status.yml")
     for source in $sources; do
-      gdalwarp -tr 100 100 -r nearest -multi -wo "NUM_THREADS=ALL_CPUS" -overwrite $DATA/$source.vrt $TEMP/$source.jp2
+      gdalwarp -tr 200 200 -t_srs EPSG:3857 -r nearest -multi -wo "NUM_THREADS=ALL_CPUS" -overwrite -co QUALITY=10 $DATA/$source.vrt $TEMP/$source.jp2
       mv $TEMP/$source.jp2 $PROJ/$source.jp2
     done
     ;;

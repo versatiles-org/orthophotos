@@ -67,7 +67,7 @@ case "$TASK" in
   "5_convert")
     sources=$(yq -r '.data[]' "$PROJ/status.yml")
     for source in $sources; do
-      echo "from_gdal_raster filename=\"$DATA/$source.vrt\" level_max=18 | raster_overview | raster_format format=webp quality=30 speed=0" > "$TEMP/$source.vpl"
+      echo "from_gdal_raster filename=\"$DATA/$source.vrt\" level_max=17 | raster_overview | raster_format format=webp quality=30 speed=0" > "$TEMP/$source.vpl"
       versatiles convert "$TEMP/$source.vpl" "$DATA/$source.versatiles"
     done
     ;;

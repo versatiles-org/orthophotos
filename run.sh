@@ -44,31 +44,31 @@ mkdir -p "$DATA"
 mkdir -p "$TEMP"
 
 case "$TASK" in
-  "download")
+  "1_download")
     rsync -ahtWe "ssh -p $rsync_port -i $rsync_id" --info progress2 "$rsync_host:orthophoto/$NAME/" "$DATA/"
     ;;
-  "fetch")
+  "2_fetch")
     cd "$TEMP"
     DATA=$DATA bash -c "$CWD/regions/$NAME/1_fetch.sh"
     ;;
-  "vrt")
+  "3_vrt")
     cd "$DATA"
     bash -c "$CWD/regions/$NAME/2_build_vrt.sh"
     ;;
-  "preview")
+  "4_preview")
     sources=$(yq -r '.data[]' "$CWD/regions/$NAME/status.yml")
     for source in $sources; do
       gdalwarp -tr 100 100 -r nearest -multi -wo "NUM_THREADS=ALL_CPUS" -overwrite $DATA/$source.vrt $CWD/regions/$NAME/$source.jp2
     done
     ;;
-  "convert")
+  "5_convert")
     sources=$(yq -r '.data[]' "$CWD/regions/$NAME/status.yml")
     for source in $sources; do
       echo "from_gdal_raster filename=\"$DATA/$source.vrt\" | raster_overview | raster_format format=webp quality=30 speed=0" > "$TEMP/$source.vpl"
       versatiles convert "$TEMP/$source.vpl" "$DATA/$source.versatiles"
     done
     ;;
-  "upload")
+  "6_upload")
     rsync -ahtWe "ssh -p $rsync_port -i $rsync_id" --info progress2 "$DATA/" "$rsync_host:orthophoto/$NAME/" "$DATA/"
     ;;
   *)

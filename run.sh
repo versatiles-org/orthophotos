@@ -50,11 +50,11 @@ case "$TASK" in
     ;;
   "2_fetch")
     cd "$TEMP"
-    DATA=$DATA bash -c "$PROJ/1_fetch.sh"
+    DATA=$DATA TEMP=$TEMP PROJ=$PROJ bash -c "$PROJ/1_fetch.sh"
     ;;
   "3_vrt")
     cd "$DATA"
-    bash -c "$PROJ/2_build_vrt.sh"
+    DATA=$DATA TEMP=$TEMP PROJ=$PROJ bash -c "$PROJ/2_build_vrt.sh"
     ;;
   "4_preview")
     cd "$DATA"

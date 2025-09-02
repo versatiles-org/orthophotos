@@ -46,19 +46,20 @@ TEMP="$dir_temp/$NAME"
 mkdir -p "$DATA"
 mkdir -p "$TEMP"
 
-case "$TASK" in
-  "1_download")
+case $TASK in
+  0|0_download|download)
+    echo 
     rsync -ahtWe "ssh -p $rsync_port -i $rsync_id" --info progress2 "$rsync_host:orthophoto/$NAME/" "$DATA/"
     ;;
-  "2_fetch")
+  1|1_fetch|fetch)
     cd "$TEMP"
     DATA=$DATA TEMP=$TEMP PROJ=$PROJ bash -c "$PROJ/1_fetch.sh"
     ;;
-  "3_vrt")
+  2|2_vrt|vrt)
     cd "$DATA"
     DATA=$DATA TEMP=$TEMP PROJ=$PROJ bash -c "$PROJ/2_build_vrt.sh"
     ;;
-  "4_preview")
+  3|3_preview|preview)
     cd "$DATA"
     sources=$(yq -r '.data[]' "$PROJ/status.yml")
     for source in $sources; do
@@ -70,7 +71,7 @@ case "$TASK" in
       mv $TEMP/$source.tif $DATA/
     done
     ;;
-  "5_convert")
+  4|4_convert|convert)
     sources=$(yq -r '.data[]' "$PROJ/status.yml")
     for source in $sources; do
       echo "from_gdal_raster filename=\"$DATA/$source.vrt\" level_max=17 | raster_overview | raster_format format=webp quality=30 speed=0" > "$TEMP/$source.vpl"
@@ -79,7 +80,7 @@ case "$TASK" in
       mv "$TEMP/$source.versatiles" "$DATA/"
     done
     ;;
-  "6_upload")
+  5|5_upload|upload)
     rsync -ahtWe "ssh -p $rsync_port -i $rsync_id" --info progress2 "$DATA/" "$rsync_host:orthophoto/$NAME/"
     ;;
   *)

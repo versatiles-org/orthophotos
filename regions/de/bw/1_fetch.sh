@@ -1,22 +1,51 @@
 set -e
 
-curl "https://owsproxy.lgl-bw.de/owsproxy/wfs/WFS_LGL-BW_ATKIS_DOP_20_Bildflugkacheln_Aktualitaet?request=GetFeature&service=WFS&version=2.0.0&outputFormat=json&typeNames=verm:v_dop_20_bildflugkacheln" > list.json
-jq -rc '.features[] | .properties.dop_kachel | "dop20rgb_"+.[0:2]+"_"+.[2:5]+"_"+.[5:9]+"_2_bw.zip"' list.json | uniq > filenames.txt
+curl -s \
+  "https://owsproxy.lgl-bw.de/owsproxy/wfs/WFS_LGL-BW_ATKIS_DOP_20_Bildflugkacheln_Aktualitaet?request=GetFeature&service=WFS&version=2.0.0&outputFormat=json&typeNames=verm:v_dop_20_bildflugkacheln" \
+  > list.json
 
-cat filenames.txt | shuf | parallel --eta --bar -j 4 '
-  if [ ! -f "{}" ]; then
-    curl -s "https://opengeodata.lgl-bw.de/data/dop20/{}" -o "{}.tmp" && mv "{}.tmp" "{}"
-  fi
-'
+jq -rc '.features[] | .properties.dop_kachel | "dop20rgb_"+.[0:2]+"_"+.[2:5]+"_"+.[5:9]+"_2_bw.zip"' list.json \
+  | uniq > filenames.txt
 
-find . -type f -name "*.zip" -size +1k > zip_filenames.txt
-cat zip_filenames.txt | shuf | parallel --eta --bar -j 4 'unzip -qo {} && rm {}'
+# Ensure DATA is exported so parallel shells can see it
+export DATA
+mkdir -p "$DATA/tiles"
 
-mkdir -p $DATA/tiles
-find . -type f -name "*.tif" | parallel --eta --bar '
+# ---------- define & export the inner worker ----------
+file_to_jp2() {
   set -e
-  [ -f "$DATA/tiles/{}" ] && exit 0
-  gdal_translate -q "{}" "{.}.jp2" -co QUALITY=100 -co REVERSIBLE=YES
-  mv "{.}.jp2" "$DATA/tiles/{}"
-  rm "{}"
+  local in="$1"
+  # robust: strip the final extension, even with multiple dots
+  local base="$(basename -- "$in" | sed 's/\.[^.]*$//')"
+
+  gdal_translate -q "$in" "$base.jp2" -co QUALITY=100
+  mv "$base.jp2" "$DATA/tiles/$base.jp2"
+  rm -f "$in"
+}
+export -f file_to_jp2
+# -----------------------------------------------------
+
+# Outer parallel
+shuf < filenames.txt | parallel --eta --bar -j 4 '
+  set -e
+  NAME={}
+  ID={.}
+
+  # Skip if already processed
+  [ -f "$DATA/tiles/$ID.txt" ] && exit 0
+
+  # Download atomically
+  curl -fL -s "https://opengeodata.lgl-bw.de/data/dop20/$NAME" -o "$ID.tmp"
+  mv "$ID.tmp" "$NAME"
+
+  # Unpack into its own directory
+  unzip -qo "$NAME" -d "$ID"
+  rm -f "$NAME"
+
+  # Find TIFFs safely and process with inner parallel (no {} in the template)
+  find "$ID" -type f -name "*.tif" | parallel --env file_to_jp2 -j 4 file_to_jp2
+
+  # Mark done and clean up
+  touch "$DATA/tiles/$ID.txt"
+  rm -rf "$ID"
 '

@@ -5,7 +5,7 @@ set -e
 cd "$(dirname "$0")"
 source config.env
 
-REQUIRED_CMDS=(7z curl gdal_translate gdalbuildvrt gdalwarp parallel unzip versatiles wget xmlstarlet yq)
+REQUIRED_CMDS=(7z curl gdal_translate gdalbuildvrt gdalwarp jq parallel unzip versatiles wget xmlstarlet yq)
 for cmd in "${REQUIRED_CMDS[@]}"; do
   if ! command -v "$cmd" >/dev/null 2>&1; then
     echo "❌ Missing command: $cmd" >&2
@@ -44,54 +44,71 @@ DATA="$dir_data/$NAME"
 TEMP="$dir_temp/$NAME"
 
 mkdir -p "$DATA"
-mkdir -p "$TEMP"
 
 case $TASK in
+  all|ALL|run|full)
+    echo "Running all steps (0-6)..."
+    for step in 0 1 5 2 5 3 5 4 5 6; do
+      echo "→ Step $step"
+      "$0" "$NAME" "$step"
+    done
+    ;;
   0|0_download|download)
     echo "Downloading existing data from server..."
     rsync -ahtWe "ssh -p $rsync_port -i $rsync_id" --info progress2 "$rsync_host:orthophoto/$NAME/" "$DATA/"
     ;;
   1|1_fetch|fetch)
     echo "Fetching new data..."
+    mkdir -p "$TEMP"
     cd "$TEMP"
     DATA=$DATA TEMP=$TEMP PROJ=$PROJ bash -c "$PROJ/1_fetch.sh"
+    rm -rf "$TEMP"
     ;;
   2|2_vrt|vrt)
     echo "Building VRT..."
+    mkdir -p "$TEMP"
     cd "$DATA"
     DATA=$DATA TEMP=$TEMP PROJ=$PROJ bash -c "$PROJ/2_build_vrt.sh"
+    rm -rf "$TEMP"
     ;;
   3|3_preview|preview)
     echo "Creating preview images..."
     cd "$DATA"
     sources=$(yq -r '.data[]' "$PROJ/status.yml")
     for source in $sources; do
+      mkdir -p "$TEMP"
       gdalwarp \
         -tr 200 200 -r nearest \
         -overwrite -multi -wo "NUM_THREADS=4" \
         -co COMPRESS=ZSTD -co PREDICTOR=2 \
         $DATA/$source.vrt $TEMP/$source.tif
       mv $TEMP/$source.tif $DATA/
+      rm -rf "$TEMP"
     done
     ;;
   4|4_convert|convert)
     echo "Converting data..."
     sources=$(yq -r '.data[]' "$PROJ/status.yml")
     for source in $sources; do
+      mkdir -p "$TEMP"
       echo "from_gdal_raster filename=\"$DATA/$source.vrt\" level_max=17 | raster_overview | raster_format format=webp quality=30 speed=0" > "$TEMP/$source.vpl"
       versatiles convert "$TEMP/$source.vpl" "$TEMP/$source.mbtiles"
       versatiles convert "$TEMP/$source.mbtiles" "$TEMP/$source.versatiles"
       mv "$TEMP/$source.versatiles" "$DATA/"
+      rm -rf "$TEMP"
     done
     ;;
   5|5_upload|upload)
     echo "Uploading data to server..."
     rsync -ahtWe "ssh -p $rsync_port -i $rsync_id" --info progress2 "$DATA/" "$rsync_host:orthophoto/$NAME/"
     ;;
+  6|6_delete|delete)
+    echo "Deleting local data..."
+    rm -rf "$DATA"
+    rm -rf "$TEMP"
+    ;;
   *)
     echo "Error: Unknown task '$TASK'"
     exit 1
     ;;
 esac
-
-rm -rf "$TEMP"

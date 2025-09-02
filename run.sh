@@ -60,8 +60,12 @@ case "$TASK" in
     cd "$DATA"
     sources=$(yq -r '.data[]' "$PROJ/status.yml")
     for source in $sources; do
-      gdalwarp -tr 200 200 -r nearest -multi -wo "NUM_THREADS=ALL_CPUS" -overwrite -co QUALITY=10 $DATA/$source.vrt $TEMP/$source.jp2
-      mv $TEMP/$source.jp2 $DATA/$source.jp2
+      gdalwarp \
+        -tr 200 200 -r nearest \
+        -overwrite -multi -wo "NUM_THREADS=4" \
+        -co COMPRESS=ZSTD -co PREDICTOR=2 \
+        $DATA/$source.vrt $TEMP/$source.tif
+      mv $TEMP/$source.tif $DATA/
     done
     ;;
   "5_convert")

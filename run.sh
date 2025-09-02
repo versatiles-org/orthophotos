@@ -78,7 +78,7 @@ case "$TASK" in
     done
     ;;
   "6_upload")
-    rsync -ahtWe "ssh -p $rsync_port -i $rsync_id" --info progress2 "$DATA/" "$rsync_host:orthophoto/$NAME/" "$DATA/"
+    rsync -ahtWe "ssh -p $rsync_port -i $rsync_id" --info progress2 "$DATA/" "$rsync_host:orthophoto/$NAME/"
     ;;
   *)
     echo "Error: Unknown task '$TASK'"

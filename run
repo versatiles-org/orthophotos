@@ -48,18 +48,21 @@ mkdir -p "$TEMP"
 
 case $TASK in
   0|0_download|download)
-    echo 
+    echo "Downloading existing data from server..."
     rsync -ahtWe "ssh -p $rsync_port -i $rsync_id" --info progress2 "$rsync_host:orthophoto/$NAME/" "$DATA/"
     ;;
   1|1_fetch|fetch)
+    echo "Fetching new data..."
     cd "$TEMP"
     DATA=$DATA TEMP=$TEMP PROJ=$PROJ bash -c "$PROJ/1_fetch.sh"
     ;;
   2|2_vrt|vrt)
+    echo "Building VRT..."
     cd "$DATA"
     DATA=$DATA TEMP=$TEMP PROJ=$PROJ bash -c "$PROJ/2_build_vrt.sh"
     ;;
   3|3_preview|preview)
+    echo "Creating preview images..."
     cd "$DATA"
     sources=$(yq -r '.data[]' "$PROJ/status.yml")
     for source in $sources; do
@@ -72,6 +75,7 @@ case $TASK in
     done
     ;;
   4|4_convert|convert)
+    echo "Converting data..."
     sources=$(yq -r '.data[]' "$PROJ/status.yml")
     for source in $sources; do
       echo "from_gdal_raster filename=\"$DATA/$source.vrt\" level_max=17 | raster_overview | raster_format format=webp quality=30 speed=0" > "$TEMP/$source.vpl"
@@ -81,6 +85,7 @@ case $TASK in
     done
     ;;
   5|5_upload|upload)
+    echo "Uploading data to server..."
     rsync -ahtWe "ssh -p $rsync_port -i $rsync_id" --info progress2 "$DATA/" "$rsync_host:orthophoto/$NAME/"
     ;;
   *)

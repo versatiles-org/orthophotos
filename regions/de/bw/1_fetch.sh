@@ -33,7 +33,7 @@ shuf < ids.txt | parallel --eta --bar -I '###' '
   unzip -qo "$ID.zip" -d "$ID"
   rm -f "$ID.zip"
 
-  gdalbuildvrt -q -allow_projection_difference -a_srs "EPSG:25832" "$ID.vrt" "$ID/dop20rgb_32_${ID}_2_bw/"*.tif
+  gdalbuildvrt -q -addalpha -allow_projection_difference -a_srs "EPSG:25832" "$ID.vrt" "$ID/dop20rgb_32_${ID}_2_bw/"*.tif
   
   gdal_translate --quiet "$ID.vrt" "$ID.jp2"
 

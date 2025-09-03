@@ -1,4 +1,5 @@
-status: done
+status: warn
+message: no INSPIRE ATOM feed found
 data:
   - tiles
 license: CC BY 4.0

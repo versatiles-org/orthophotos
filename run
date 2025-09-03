@@ -5,7 +5,7 @@ set -e
 cd "$(dirname "$0")"
 source config.env
 
-REQUIRED_CMDS=(7z curl gdal_translate gdalbuildvrt gdalwarp jq parallel unzip versatiles wget xmlstarlet yq)
+REQUIRED_CMDS=(7z curl gdal_translate gdalbuildvrt gdalwarp htmlq jq parallel unzip versatiles wget xmlstarlet yq)
 for cmd in "${REQUIRED_CMDS[@]}"; do
   if ! command -v "$cmd" >/dev/null 2>&1; then
     echo "❌ Missing command: $cmd" >&2
@@ -66,6 +66,7 @@ case $TASK in
     ;;
   2|2_vrt|vrt)
     echo "Building VRT..."
+    ulimit -n 8192
     mkdir -p "$TEMP"
     cd "$DATA"
     DATA=$DATA TEMP=$TEMP PROJ=$PROJ bash -c "$PROJ/2_build_vrt.sh"
@@ -73,6 +74,7 @@ case $TASK in
     ;;
   3|3_preview|preview)
     echo "Creating preview images..."
+    ulimit -n 8192
     cd "$DATA"
     sources=$(yq -r '.data[]' "$PROJ/status.yml")
     for source in $sources; do
@@ -88,12 +90,13 @@ case $TASK in
     ;;
   4|4_convert|convert)
     echo "Converting data..."
+    ulimit -n 8192
     sources=$(yq -r '.data[]' "$PROJ/status.yml")
     for source in $sources; do
       mkdir -p "$TEMP"
       echo "from_gdal_raster filename=\"$DATA/$source.vrt\" level_max=17 | raster_overview | raster_format format=webp quality=30 speed=0" > "$TEMP/$source.vpl"
-      versatiles convert "$TEMP/$source.vpl" "$TEMP/$source.mbtiles"
-      versatiles convert "$TEMP/$source.mbtiles" "$TEMP/$source.versatiles"
+      versatiles convert "$TEMP/$source.vpl" "$TEMP/$source.versatiles"
+      #versatiles convert "$TEMP/$source.mbtiles" "$TEMP/$source.versatiles"
       mv "$TEMP/$source.versatiles" "$DATA/"
       rm -rf "$TEMP"
     done

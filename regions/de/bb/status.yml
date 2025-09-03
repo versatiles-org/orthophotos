@@ -1,4 +1,5 @@
-status: done
+status: warn
+message: download is very slow
 data:
   - tiles
 license: DL-DE/BY-2.0

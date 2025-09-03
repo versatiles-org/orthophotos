@@ -34,7 +34,7 @@ shuf < ids.txt | parallel --eta --bar -I '###' '
   rm -f "$ID.zip"
 
   gdalbuildvrt -q "$ID.vrt" "$ID/dop20rgb_32_${ID}_2_bw/"*.tif
-  gdal_translate "$ID.vrt" "$ID.jp2"
+  gdal_translate --quiet "$ID.vrt" "$ID.jp2"
   mv "$ID.jp2" "$DATA/tiles/"
   rm -f $ID.*
   rm -rf $ID

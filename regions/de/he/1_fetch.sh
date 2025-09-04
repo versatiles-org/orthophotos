@@ -16,11 +16,16 @@ mkdir -p $DATA/tiles
 echo "Downloading tiles..."
 cat entries.txt | shuf | parallel --eta --bar -j 4 '
   set -e
-  url=$(echo {} | cut -d"|" -f1)
-  name=$(echo {} | cut -d"|" -f2)
-  [ -f "$DATA/tiles/$name.jp2" ] && exit 0
-  curl -s "$url" -o "$name.tif"
-  gdal_translate --quiet -of JP2OpenJPEG "$name.tif" "$name.jp2" -co QUALITY=100
-  mv "$name.jp2" "$DATA/tiles/"
-  find . -name "$name*" -delete
+  
+  URL=$(echo {} | cut -d"|" -f1)
+  ID=$(echo {} | cut -d"|" -f2)
+
+  [ -f "$DATA/tiles/$ID.jp2" ] && exit 0
+
+  curl -so "$ID.tif"  "$URL"
+
+  gdal_translate --quiet -of JP2OpenJPEG "$ID.tif" "$ID.jp2" -co QUALITY=100
+  
+  mv "$ID.jp2" "$DATA/tiles/"
+  find . -name "$ID*" -delete
 '

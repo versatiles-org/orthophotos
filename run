@@ -104,7 +104,11 @@ case $TASK in
     ;;
   5|5_upload|upload)
     echo "Uploading data to server..."
-    rsync -ahtWe "ssh -p $rsync_port -i $rsync_id" --info progress2 "$DATA/" "$rsync_host:orthophoto/$NAME/"
+#      --exclude='tiles/' \
+#      --exclude='tiles_*/' \
+    rsync -ahtWe "ssh -p $rsync_port -i $rsync_id" \
+      --info progress2 \
+      "$DATA/" "$rsync_host:orthophoto/$NAME/"
     ;;
   6|6_delete|delete)
     echo "Deleting local data..."

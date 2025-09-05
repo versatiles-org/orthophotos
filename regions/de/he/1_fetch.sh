@@ -22,9 +22,9 @@ cat entries.txt | shuf | parallel --eta --bar -j 4 '
 
   [ -f "$DATA/tiles/$ID.jp2" ] && exit 0
 
-  curl -so "$ID.tif"  "$URL"
+  curl -so "$ID.tif" "$URL"
 
-  gdal_translate --quiet -of JP2OpenJPEG "$ID.tif" "$ID.jp2" -co QUALITY=100
+  gdal_translate --quiet -of JP2OpenJPEG "$ID.tif" "$ID.jp2"
   
   mv "$ID.jp2" "$DATA/tiles/"
   find . -name "$ID*" -delete

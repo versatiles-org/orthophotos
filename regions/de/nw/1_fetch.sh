@@ -15,6 +15,8 @@ cat filenames.txt | shuf | parallel --eta --bar -j 16 '
   [ -f "$DATA/tiles/{}" ] && exit 0
   
   curl -so "{}" "https://www.opengeodata.nrw.de/produkte/geobasis/lusat/akt/dop/dop_jp2_f10/{}"
-  
-  mv "{}" "$DATA/tiles/"
+  gdal_translate --quiet -outsize 50% 50% "{}" "{}.tmp.jp2"
+  rm "{}"
+
+  mv "{}.tmp.jp2" "$DATA/tiles/{}"
 '

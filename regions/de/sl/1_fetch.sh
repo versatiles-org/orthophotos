@@ -7,7 +7,8 @@ fi
 
 xmlstarlet sel -N a="http://www.w3.org/2005/Atom" \
   -t -m '//a:link' \
-  -v 'concat(@href,"|",substring-before(substring-after(@title,"Teil ")," "))' -n atom.xml | \
+  -v 'concat(@href,"|",substring-before(substring-after(@title,"Teil ")," "))' -n atom.xml |
+  grep -v "mapbender" | \
   sed 's/amp;//g' > entries.txt
 
 echo "Fetching tiles..."

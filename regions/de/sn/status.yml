@@ -1,4 +1,5 @@
-status: done
+status: warn
+message: Strong servers and API. Unfortunately, the URLs in the Atom feed pointed to old files that no longer exist.
 data:
   - tiles
 license: DL-DE/BY 2.0

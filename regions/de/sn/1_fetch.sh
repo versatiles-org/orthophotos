@@ -11,17 +11,21 @@ echo "Fetching tiles..."
 mkdir -p $DATA/tiles
 cat urls.txt | shuf | parallel --eta --bar -j 4 '
   set -e
+  
   URL={}
-  ID=$(echo $URL | sed -E "s/.*files=([^&]+)_tiff\.zip/\1/")
+  # quick and dirty fix to repair the URLs in the atom feed
+  URL=$(echo $URL | sed "s/index.php\/s\/UPR5mffOTv5kTiO\/download?path=%2F&files=/public.php\/dav\/files\/QQFLq6nkoSnqB5g\//")
+  
+  ID=$(echo $URL | sed -E "s/.*\/(dop20rgb_.*?+)_tiff\.zip/\1/")
 
   [ -f "$DATA/tiles/$ID.jp2" ] && exit 0
 
   curl -so "$ID.zip" "$URL"
-  unzip -q "$ID.zip"
+  unzip -oq "$ID.zip"
 
-  gdal_translate --quiet -of JP2OpenJPEG "$ID.tif" "$ID.jp2" -co QUALITY=100
+  gdal_translate --quiet -of JP2OpenJPEG "$ID.tif" "$ID.jp2"
 
   mv "$ID.jp2" "$DATA/tiles/"
 
-  find . -name "$ID.*" -delete
+  find . -name "$ID*" -delete
 '

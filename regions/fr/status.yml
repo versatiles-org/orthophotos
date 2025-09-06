@@ -1,4 +1,9 @@
-status: done
+rating: 3
+notes:
+  - "No API, such as an ATOM feed, available."
+  - "Parsing HTML is required."
+  - "Images are unnecessarily packed into container files, such as ZIP."
+  - "National license instead of an international standard."
 data:
   - tiles_LA93-0M20
   - tiles_U01S-0M50

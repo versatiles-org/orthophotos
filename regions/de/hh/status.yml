@@ -1,4 +1,10 @@
-status: done
+rating: 3
+notes:
+  - "No API, such as an ATOM feed, available."
+  - "Images are unnecessarily packed into container files, such as ZIP."
+  - "License requires attribution."
+  - "National license instead of an international standard."
+  - "Rather than a national mosaic, inconsistent regional mosaics with different access and formats are available instead."
 data:
   - tiles
 license: DL-DE/BY-2.0

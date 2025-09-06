@@ -1,0 +1,10 @@
+rating: 3
+notes:
+  - "No API, such as an ATOM feed, available."
+  - "Parsing HTML is required."
+  - "Images are unnecessarily packed into container files, such as ZIP."
+  - "Server is very slow."
+  - "License requires attribution."
+  - "National license instead of an international standard."
+  - "It is not possible to overlay images because a mask or alpha channel is missing."
+  - "Rather than a national mosaic, inconsistent regional mosaics with different access and formats are available instead."

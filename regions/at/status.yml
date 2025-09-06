@@ -1,5 +1,7 @@
-status: failed
-message: images are upside down, "gdalbuildvrt does not support positive NS resolution."
+rating: 1
+notes:
+  - "Images are upside down, and 'gdalbuildvrt' does not support positive NS resolution."
+  - "License requires attribution."
 id: at
 data:
   - at

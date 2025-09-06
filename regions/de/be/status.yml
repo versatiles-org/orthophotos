@@ -1,5 +1,11 @@
-status: failed
-message: Correct overlaying of images is not possible because the alpha channel is missing.
+rating: 2
+notes:
+  - "No API, such as an ATOM feed, available."
+  - "Parsing HTML is required."
+  - "Images are unnecessarily packed into container files, such as ZIP."
+  - "It is not possible to overlay images because a mask or alpha channel is missing."
+  - "National license instead of an international standard."
+  - "Rather than a national mosaic, inconsistent regional mosaics with different access and formats are available instead."
 data:
   - tiles
 license: DL-DE/ZERO-2.0

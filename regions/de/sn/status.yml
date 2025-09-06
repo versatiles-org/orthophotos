@@ -1,5 +1,10 @@
-status: warn
-message: Strong servers and API. Unfortunately, the URLs in the Atom feed pointed to old files that no longer exist.
+rating: 3
+notes:
+  - "The URLs in the Atom feed point to old files that no longer exist."
+  - "Images are unnecessarily packed into container files, such as ZIP."
+  - "License requires attribution."
+  - "National license instead of an international standard."
+  - "Rather than a national mosaic, inconsistent regional mosaics with different access and formats are available instead."
 data:
   - tiles
 license: DL-DE/BY 2.0

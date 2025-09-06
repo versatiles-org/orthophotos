@@ -1,5 +1,12 @@
-status: warn
-message: no INSPIRE ATOM feed found
+rating: 2
+notes:
+  - "No API, such as an ATOM feed, available."
+  - "Hacky solution is required: Guessing filenames since there is no official index."
+  - "Images are unnecessarily packed into container files, such as ZIP."
+  - "Why are 1x1km tiles grouped into 2x2km containers? And why are the offsets not a multiple of 2?"
+  - "License requires attribution."
+  - "National license instead of an international standard."
+  - "Rather than a national mosaic, inconsistent regional mosaics with different access and formats are available instead."
 data:
   - tiles
 license: DL-DE/BY-2.0

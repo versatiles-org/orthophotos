@@ -1,4 +1,8 @@
-status: done
+rating: 3
+notes:
+  - "Server is slow."
+  - "National license instead of an international standard."
+  - "Rather than a national mosaic, inconsistent regional mosaics with different access and formats are available instead."
 data:
   - tiles
 license: DL-DE/Zero 2.0

@@ -1,2 +1,9 @@
-status: failed
-message: no bulk download available
+rating: 0
+notes:
+  - "No bulk download available."
+  - "Rather than a national mosaic, inconsistent regional mosaics with different access and formats are available instead."
+data:
+  - tiles
+license: DL-DE/BY 2.0
+creator: GDI-Th
+url:  https://geoportal.thueringen.de/gdi-th/download-offene-geodaten/download-luftbilder-und-orthophotos

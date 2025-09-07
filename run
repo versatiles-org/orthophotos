@@ -104,12 +104,14 @@ case $TASK in
     ;;
   5|5_upload|upload)
     echo "Uploading data to server..."
-#      --exclude='tiles/' \
-#      --exclude='tiles_*/' \
-    rsync -ahtWe "ssh -p $rsync_port -i $rsync_id" \
-      --info progress2 \
-      "$DATA/" "$rsync_host:orthophoto/$NAME/"
-    ;;
+
+    EXCLUDES=()
+    if [[ "$NAME" != de/* ]]; then
+      EXCLUDES=(--exclude=tiles/ --exclude=tiles_*/)
+    fi
+
+    rsync -ahtWe "ssh -p $rsync_port -i $rsync_id" --info=progress2 "${EXCLUDES[@]}" "$DATA/" "$rsync_host:orthophoto/$NAME/"
+  ;;
   6|6_delete|delete)
     echo "Deleting local data..."
     rm -rf "$DATA"

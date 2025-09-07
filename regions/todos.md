@@ -1,0 +1,46 @@
+- [x] AT - Austria
+- [ ] BE - Belgium
+- [ ] BG - Bulgaria
+- [ ] HR - Croatia
+- [ ] CY - Cyprus
+- [x] CZ - Czechia
+- [ ] DK - Denmark
+- [ ] EE - Estonia
+- [ ] FI - Finland
+- [x] FR - France
+- [x] DE - Germany
+- [ ] GR - Greece
+- [ ] HU - Hungary
+- [ ] IE - Ireland
+- [ ] IT - Italy
+- [ ] LV - Latvia
+- [ ] LT - Lithuania
+- [ ] LU - Luxembourg
+- [ ] MT - Malta
+- [ ] NL - Netherlands
+- [x] PL - Poland
+- [ ] PT - Portugal
+- [ ] RO - Romania
+- [ ] SK - Slovakia
+- [ ] SI - Slovenia
+- [ ] ES - Spain
+- [ ] SE - Sweden
+- [ ] IS - Iceland
+- [ ] LI - Liechtenstein
+- [ ] NO - Norway
+- [ ] CH - Switzerland
+- [ ] AL - Albania
+- [ ] BA - Bosnia and Herzegovina
+- [ ] MD - Moldova, Republic of
+- [ ] ME - Montenegro
+- [ ] MK - North Macedonia
+- [ ] RS - Serbia
+- [ ] TR - Turkey
+- [ ] UA - Ukraine
+- [ ] AD - Andorra
+- [ ] BY - Belarus
+- [ ] MC - Monaco
+- [ ] RU - Russian Federation
+- [ ] SM - San Marino
+- [ ] GB - United Kingdom
+- [ ] VA - Vatican City

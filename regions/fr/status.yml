@@ -6,13 +6,13 @@ notes:
   - "Images are unnecessarily packed into container files, such as ZIP."
   - "National license instead of an international standard."
 data:
-  - tiles_LAMB93
-  - tiles_RGAF09UTM20
-  - tiles_RGFG95UTM22
-  - tiles_RGM04UTM38S
-  - tiles_RGR92UTM40S
-  - tiles_RGSPM06U21
   - tiles_UTM01SW84
+  - tiles_RGSPM06U21
+  - tiles_RGR92UTM40S
+  - tiles_RGM04UTM38S
+  - tiles_RGFG95UTM22
+  - tiles_RGAF09UTM20
+  - tiles_LAMB93
 license: LO 2.0
 creator: Institut national de l'information géographique et forestière (IGN-F)
 url: https://geoservices.ign.fr/documentation/donnees/ortho/bdortho

@@ -1,14 +1,14 @@
 set -e
 
 for name in \
-  LA93-0M20 \
-  U01S-0M50 \
-  U20N-0M20 \
-  U21N-0M20 \
-  U22N-0M20 \
-  U38S-0M20 \
-  U40S-0M20
+  tiles_LAMB93 \
+  tiles_RGAF09UTM20 \
+  tiles_RGFG95UTM22 \
+  tiles_RGM04UTM38S \
+  tiles_RGR92UTM40S \
+  tiles_RGSPM06U21 \
+  tiles_UTM01SW84
 do
   echo "Processing $name"
-  gdalbuildvrt -addalpha tiles_$name.vrt tiles_$name/*.jp2
+  gdalbuildvrt -addalpha $name.vrt $name/*.jp2
 done

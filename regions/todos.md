@@ -1,46 +1,46 @@
-- [x] AT - Austria
-- [ ] BE - Belgium
-- [ ] BG - Bulgaria
-- [ ] HR - Croatia
-- [ ] CY - Cyprus
-- [x] CZ - Czechia
-- [ ] DK - Denmark
-- [ ] EE - Estonia
-- [ ] FI - Finland
-- [x] FR - France
-- [x] DE - Germany
-- [ ] GR - Greece
-- [ ] HU - Hungary
-- [ ] IE - Ireland
-- [ ] IT - Italy
-- [ ] LV - Latvia
-- [ ] LT - Lithuania
-- [ ] LU - Luxembourg
-- [ ] MT - Malta
-- [ ] NL - Netherlands
-- [x] PL - Poland
-- [ ] PT - Portugal
-- [ ] RO - Romania
-- [ ] SK - Slovakia
-- [ ] SI - Slovenia
-- [ ] ES - Spain
-- [ ] SE - Sweden
-- [ ] IS - Iceland
-- [ ] LI - Liechtenstein
-- [ ] NO - Norway
-- [ ] CH - Switzerland
+- [ ] AD - Andorra
 - [ ] AL - Albania
 - [ ] BA - Bosnia and Herzegovina
+- [ ] BE - Belgium
+- [ ] BG - Bulgaria
+- [ ] BY - Belarus
+- [ ] CH - Switzerland
+- [ ] CY - Cyprus
+- [ ] DK - Denmark
+- [ ] EE - Estonia
+- [ ] ES - Spain
+- [ ] FI - Finland
+- [ ] GB - United Kingdom
+- [ ] GR - Greece
+- [ ] HR - Croatia
+- [ ] HU - Hungary
+- [ ] IE - Ireland
+- [ ] IS - Iceland
+- [ ] IT - Italy
+- [ ] LI - Liechtenstein
+- [ ] LT - Lithuania
+- [ ] LU - Luxembourg
+- [ ] LV - Latvia
+- [ ] MC - Monaco
 - [ ] MD - Moldova, Republic of
 - [ ] ME - Montenegro
 - [ ] MK - North Macedonia
+- [ ] MT - Malta
+- [ ] NO - Norway
+- [ ] PT - Portugal
+- [ ] RO - Romania
 - [ ] RS - Serbia
+- [ ] RU - Russian Federation
+- [ ] SE - Sweden
+- [ ] SI - Slovenia
+- [ ] SK - Slovakia
+- [ ] SM - San Marino
 - [ ] TR - Turkey
 - [ ] UA - Ukraine
-- [ ] AD - Andorra
-- [ ] BY - Belarus
-- [ ] MC - Monaco
-- [ ] RU - Russian Federation
-- [ ] SM - San Marino
-- [ ] GB - United Kingdom
 - [ ] VA - Vatican City
+- [x] AT - Austria
+- [x] CZ - Czechia
+- [x] DE - Germany
+- [x] FR - France
+- [x] NL - Netherlands
+- [x] PL - Poland

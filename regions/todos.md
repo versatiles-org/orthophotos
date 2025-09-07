@@ -1,5 +1,4 @@
 - [ ] AD - Andorra
-- [ ] AL - Albania
 - [ ] BA - Bosnia and Herzegovina
 - [ ] BY - Belarus
 - [ ] CH - Switzerland
@@ -35,6 +34,7 @@
 - [ ] TR - Turkey
 - [ ] UA - Ukraine
 - [ ] VA - Vatican City
+- [x] AL - Albania
 - [x] AT - Austria
 - [x] BE - Belgium
 - [x] BG - Bulgaria

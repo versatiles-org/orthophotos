@@ -1,0 +1,10 @@
+status: success
+rating: 4
+notes:
+  - "License requires attribution."
+  - "National license instead of an international standard."
+data:
+  - tiles
+license: <a href="https://www.swisstopo.admin.ch/de/nutzungsbedingungen-kostenlose-geodaten-und-geodienste">OGD</a>
+creator: Bundesamt für Landestopografie swisstopo
+url: https://www.swisstopo.admin.ch/de/orthobilder-swissimage-10-cm

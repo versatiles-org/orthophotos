@@ -1,8 +1,6 @@
 - [ ] AD - Andorra
 - [ ] AL - Albania
 - [ ] BA - Bosnia and Herzegovina
-- [ ] BE - Belgium
-- [ ] BG - Bulgaria
 - [ ] BY - Belarus
 - [ ] CH - Switzerland
 - [ ] CY - Cyprus
@@ -14,7 +12,6 @@
 - [ ] GR - Greece
 - [ ] HR - Croatia
 - [ ] HU - Hungary
-- [ ] IE - Ireland
 - [ ] IS - Iceland
 - [ ] IT - Italy
 - [ ] LI - Liechtenstein
@@ -39,8 +36,11 @@
 - [ ] UA - Ukraine
 - [ ] VA - Vatican City
 - [x] AT - Austria
+- [x] BE - Belgium
+- [x] BG - Bulgaria
 - [x] CZ - Czechia
 - [x] DE - Germany
 - [x] FR - France
+- [x] IE - Ireland
 - [x] NL - Netherlands
 - [x] PL - Poland

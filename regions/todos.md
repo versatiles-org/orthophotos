@@ -27,7 +27,6 @@
 - [ ] RO - Romania
 - [ ] RS - Serbia
 - [ ] RU - Russian Federation
-- [ ] SE - Sweden
 - [ ] SI - Slovenia
 - [ ] SK - Slovakia
 - [ ] SM - San Marino
@@ -44,3 +43,4 @@
 - [x] IE - Ireland
 - [x] NL - Netherlands
 - [x] PL - Poland
+- [x] SE - Sweden

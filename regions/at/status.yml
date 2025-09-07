@@ -1,4 +1,4 @@
-status: failed
+status: error
 rating: 2
 notes:
   - "Images are upside down, and 'gdalbuildvrt' does not support positive NS resolution."

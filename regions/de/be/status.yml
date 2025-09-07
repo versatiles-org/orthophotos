@@ -1,4 +1,4 @@
-status: success
+status: error
 rating: 2
 notes:
   - "No API, such as an ATOM feed, available."

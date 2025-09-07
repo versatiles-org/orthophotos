@@ -1,10 +1,11 @@
-rating: 1
+status: failed
+rating: 2
 notes:
   - "Images are upside down, and 'gdalbuildvrt' does not support positive NS resolution."
   - "License requires attribution."
 id: at
 data:
-  - at
+  - tiles
 license: CC BY 4.0
 creator: BEV
 url: https://data.bev.gv.at/geonetwork/srv/api/records/3c3803b3-1b53-4fb5-9595-9217b9891862

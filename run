@@ -78,6 +78,7 @@ case $TASK in
     cd "$DATA"
     sources=$(yq -r '.data[]' "$PROJ/status.yml")
     for source in $sources; do
+      [ -f "$DATA/$source.tif" ] && continue
       mkdir -p "$TEMP"
       gdalwarp \
         -tr 200 200 -r nearest \
@@ -85,7 +86,6 @@ case $TASK in
         -co COMPRESS=ZSTD -co PREDICTOR=2 \
         $DATA/$source.vrt $TEMP/$source.tif
       mv $TEMP/$source.tif $DATA/
-      rm -rf "$TEMP"
     done
     ;;
   4|4_convert|convert)
@@ -93,13 +93,14 @@ case $TASK in
     ulimit -n 8192
     sources=$(yq -r '.data[]' "$PROJ/status.yml")
     for source in $sources; do
+      [ -f "$DATA/$source.versatiles" ] && continue
       mkdir -p "$TEMP"
       echo "from_gdal_raster filename=\"$DATA/$source.vrt\" level_max=17 | raster_overview | raster_format format=webp quality=30 speed=0" > "$TEMP/$source.vpl"
       # versatiles convert "$TEMP/$source.vpl" "$TEMP/$source.versatiles"
-      versatiles convert "$TEMP/$source.vpl" "$TEMP/$source.mbtiles"
-      versatiles convert "$TEMP/$source.mbtiles" "$TEMP/$source.versatiles"
-      mv "$TEMP/$source.versatiles" "$DATA/"
-      rm -rf "$TEMP"
+      versatiles convert $TEMP/$source.vpl $TEMP/$source.mbtiles
+      versatiles convert $TEMP/$source.mbtiles $TEMP/$source.versatiles
+      mv $TEMP/$source.versatiles $DATA/
+      rm -f $TEMP/$source.mbtiles
     done
     ;;
   5|5_upload|upload)

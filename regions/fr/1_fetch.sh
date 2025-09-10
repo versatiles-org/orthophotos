@@ -55,9 +55,10 @@ while IFS= read -r group; do
 
   echo "Moving JP2 files to …/tiles_$projection/"
   export tiles_dir
-  find "$folder" -name "*.jp2" | parallel --eta --bar 'mv {} "$tiles_dir"'
+  files=$(find "$folder" -name "*.jp2")
+  echo "$files" | parallel --eta --bar 'mv {} "$tiles_dir"'
 
   echo "Cleaning up"
   rm -rf "$folder"
-  touch "$district_status"
+  echo $files > $district_status
 done < groups.txt

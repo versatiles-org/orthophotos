@@ -1,9 +1,10 @@
 status: success
-rating: 3
+rating: 2
 notes:
   - "No API, such as an ATOM feed, available."
   - "Parsing HTML is required."
   - "Images are unnecessarily packed into container files, such as ZIP."
+  - "The images have a high resolution, but they are not stored in tiled mode, which makes them extremely slow to read."
   - "National license instead of an international standard."
 data:
   - tiles_UTM01SW84

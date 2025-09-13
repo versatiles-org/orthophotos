@@ -3,24 +3,26 @@ import { scanRegions } from './lib/regions.ts';
 import { existsSync } from "@std/fs/exists";
 
 const remoteDir = Deno.env.get('dir_remote')!;
+const remoteURL = Deno.env.get('url_remote')!;
 const serverDir = Deno.env.get('dir_server')!;
 const localDir = resolve(Deno.cwd(), 'regions');
 
 const regions = scanRegions(localDir);
-const constainers = [];
+let constainers = [];
 for (const region of regions) {
 	if (region.status.status === 'error') continue;
 	const status = region.status;
 
-	const directory = resolve(remoteDir, 'orthophoto', region.directory);
 
 	for (const file of status.data) {
-		const src = resolve(directory, file + '.versatiles');
-		if (!existsSync(src)) continue;
-		constainers.push(`from_container filename="${src}"`);
+		const srcPath = resolve(remoteDir, 'orthophoto', region.directory, file + '.versatiles');
+		if (!existsSync(srcPath)) continue;
+		const srcUrl = `${remoteURL}orthophoto/${region.directory}/${file}.versatiles`;
+		constainers.push(`from_container filename="${srcUrl}" | raster_overscale`);
 	}
 }
-constainers.push(`from_container filename="${resolve(remoteDir,'download/satellite/satellite.versatiles')}" | raster_overscale`);
+constainers.length=1;
+constainers.push(`from_container filename="${remoteURL}download/satellite/satellite.versatiles" | raster_overscale`);
 
 const vpl = `from_stacked_raster [
   ${constainers.join(',\n  ')}

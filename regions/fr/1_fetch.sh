@@ -33,15 +33,16 @@ while IFS= read -r group; do
   projection=$(echo $group | cut -d '_' -f 5)
   district=$(echo $group | cut -d '_' -f 6)
   tiles_dir="$DATA/tiles_$projection/"
+  export tiles_dir
   mkdir -p "$tiles_dir"
 
   district_status="$tiles_dir/$district.check"
   [ -f "$district_status" ] && continue
 
   folder="$TEMP/$group"
-  rm -rf "$folder"
-  mkdir -p "$folder"
   export folder
+
+  mkdir -p "$folder"
 
   echo -e "${YELLOW}Downloading $n files${NC}"
   grep "$group" urls.txt | parallel --eta --bar -j 4 '
@@ -60,12 +61,15 @@ while IFS= read -r group; do
   7z e -o"$folder" -bb0 -aoa "$main_file"
 
   echo -e "${YELLOW}Converting JP2 files${NC}"
-  rm -rf "$folder/tmp"
   mkdir -p "$folder/tmp"
-  find "$folder" -name "*.jp2" | parallel --eta --bar -j 50% 'gdal_translate --quiet {} "$folder/tmp/{/}"'
-
-  echo -e "${YELLOW}Moving JP2 files to …/tiles_$projection/${NC}"
-  find "$folder/tmp/" -name "*.jp2" | parallel --eta --bar 'mv {} "$tiles_dir"'
+  files=$(find "$folder" -name "*.jp2")
+  echo "$files" | parallel --eta --bar -j 50% '
+    set -e
+    [ -f "$tiles_dir/{/}" ] && exit 0
+    gdal_translate --quiet {} "$folder/tmp/{/}"
+    mv "$folder/tmp/{/}" "$tiles_dir{/}"
+    rm {}
+  '
 
   echo -e "${YELLOW}Cleaning up${NC}"
   rm -rf "$folder"

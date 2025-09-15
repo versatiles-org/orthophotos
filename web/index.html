@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Orthophotos - Test</title>
+	<meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+	<!-- Load MapLibre GL JS -->
+	<script src="https://tiles.versatiles.org/assets/lib/maplibre-gl/maplibre-gl.js"></script>
+	<link href="https://tiles.versatiles.org/assets/lib/maplibre-gl/maplibre-gl.css" rel="stylesheet" />
+	 
+</head>
+<body>
+	<div id="map" style="height:100vh"></div>
+	<script>
+		const style = {
+			version: 8,
+			sources: {
+				"orthophotos": {
+					type: "raster",
+					tiles: [
+						"http://138.199.157.211:8080/tiles/sat/{z}/{x}/{y}"
+					],
+					tileSize: 512,
+				}
+			},
+			layers: [
+				{
+					id: "orthophotos",
+					type: "raster",
+					source: "orthophotos",
+					minzoom: 0,
+					maxzoom: 18
+				}
+			]
+		};
+		new maplibregl.Map({
+			container: 'map', 
+			style,
+		});
+	</script>
+</body>
+
+</html>

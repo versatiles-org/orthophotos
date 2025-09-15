@@ -1,7 +1,12 @@
-status: error
-rating: 0
+status: success
+rating: 2
 notes:
-  - "No bulk download available."
+  - "No API, such as an ATOM feed, available."
+  - "Parsing JSON or hardcoded IDs are required."
+  - "Images are unnecessarily packed into container files, such as ZIP."
+  - "Server is very slow."
+  - "License requires attribution."
+  - "National license instead of an international standard."
   - "Rather than a national mosaic, inconsistent regional mosaics with different access and formats are available instead."
 data:
   - tiles

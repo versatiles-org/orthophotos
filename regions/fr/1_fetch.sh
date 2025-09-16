@@ -67,7 +67,7 @@ while IFS= read -r group; do
     set -e
     [ -f "$tiles_dir/{/}" ] && exit 0
     gdal_translate --quiet {} "$folder/tmp/{/}"
-    mv "$folder/tmp/{/}" "$tiles_dir{/}"
+    mv "$folder/tmp/{/}" "$tiles_dir/{/}" 2> >(grep -v "failed to preserve ownership" >&2)
     rm {}
   '
 

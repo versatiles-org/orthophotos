@@ -1,7 +1,8 @@
 {
   "tasks": {
     "vpl": "deno run -A --env-file=config.env src/build_vpl.ts",
-    "server_prepare": "deno run -A --env-file=config.env src/prepare_server.ts"
+    "server-prepare": "deno run -A --env-file=config.env src/prepare_server.ts",
+    "server-start": "versatiles serve -p 8080 -s web -s frontend-dev.br.tar orthophotos.vpl"
   },
   "imports": {
     "@std/fs": "jsr:@std/fs@^1.0.19",

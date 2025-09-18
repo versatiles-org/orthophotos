@@ -1,6 +1,6 @@
-import { downloadOrthophotos } from './lib/rsync.ts';
+import { downloadOrthophotos, downloadSatellite } from './lib/rsync.ts';
 
 
 await downloadOrthophotos();
-//await downloadSatellite();
+await downloadSatellite();
 //generateVPL();

@@ -2,7 +2,9 @@ set -e
 
 if [ ! -f index.csv ]; then
   echo "Downloading index.csv"
-  curl -so index.csv "https://ogd.swisstopo.admin.ch/resources/ch.swisstopo.swissimage-dop10-FolIi7E8.csv"
+  curl -so index.json "https://ogd.swisstopo.admin.ch/services/swiseld/services/assets/ch.swisstopo.swissimage-dop10/search?format=image%2Ftiff%3B%20application%3Dgeotiff%3B%20profile%3Dcloud-optimized&resolution=0.1&srid=2056&state=current&csv=true"
+  url=$(jq -r '.href' index.json)
+  curl -so index.csv "$url"
 fi
 
 echo "Downloading tiles..."

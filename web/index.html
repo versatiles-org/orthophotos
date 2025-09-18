@@ -25,14 +25,13 @@
 			width: 100%;
 		}
 
-		#overlay {
+		#popup {
 			position: absolute;
 			top: 0;
 			left: 0;
-			right: 0;
 			height: auto;
 			background-color: rgba(255, 255, 255, 0.8);
-			padding: 6px;
+			padding: 6px 12px 6px 6px;
 			font-family: sans-serif;
 			font-size: 14px;
 			display: flex;
@@ -40,36 +39,59 @@
 			align-items: center;
 			column-gap: 1em;
 			backdrop-filter: blur(4px);
+			z-index: 10000;
 		}
 
-		#overlay p {
+		#popup p {
 			margin: 0.3em 0;
 			padding: 0;
+		}
+
+		#popup #text {
+			padding-right: 1em;
+		}
+
+		#popup #btn_close {
+			position: absolute;
+			top: 0.4em;
+			right: 0.4em;
+			font-size: 16px;
+			cursor: pointer;
 		}
 
 		a {
 			color: inherit !important;
 		}
 	</style>
+	<script>
+		function close_popup() {
+			console.log('close');
+			document.getElementById('text').style.display = 'none';
+			document.getElementById('btn_close').style.display = 'none';
+			const popup = document.getElementById('popup');
+			popup.style.backdropFilter = 'none';
+			popup.style.background='none';
+		}
+	</script>
 </head>
 
 <body style="margin:0;height:100%;">
 	<div id="map" class="maplibregl-compact"></div>
-	<div id="overlay">
+	<div id="popup">
 		<div>
 			<a href="https://versatiles.org"><img src="/assets/images/versatiles-logo.png" alt="VersaTiles" width="32"></a>
 		</div>
-		<div>
+		<div id="text">
 			<p>This is the first test of orthophotos from various sources, overlaid on Sentinel-2 and Blue Marble imagery.
 			</p>
 			<p>It was created and served with <a href="https://versatiles.org">VersaTiles</a>.</p>
 			<p>Please <a href="https://github.com/versatiles-org/orthophotos/issues">report issues</a> on <a
 					href="https://github.com/versatiles-org/orthophotos">GitHub</a>.</p>
 		</div>
+		<div id="btn_close" onclick="close_popup()">&#x2715;</div>
 	</div>
 	<script>
 		const baseUrl = window.location.origin;
-
 
 		const style = VersaTilesStyle.graybeard({
 			baseUrl: 'https://tiles.versatiles.org',
@@ -105,9 +127,6 @@
 				layer.paint['line-opacity'] = v;
 			}
 		});
-
-
-		console.log(style.layers);
 
 		style.sources.orthophotos = {
 			type: 'raster',

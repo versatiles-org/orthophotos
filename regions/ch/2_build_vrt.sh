@@ -1,3 +1,4 @@
 set -e
 
-gdalbuildvrt -addalpha tiles.vrt tiles/*.tif
+find tiles -name "*.tif" > $TEMP/list.txt
+gdalbuildvrt -addalpha tiles.vrt -input_file_list $TEMP/list.txt

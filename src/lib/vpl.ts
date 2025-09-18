@@ -11,10 +11,10 @@ export function generateVPL(filename: string) {
 		constainers.push(`from_container filename="${container.path}" | raster_overscale`);
 	}
 
-	constainers.push(`from_container filename="${srcSatellite}s2gm/s2gm_overview.versatiles" | raster_overscale`);
-	constainers.push(`from_container filename="${srcSatellite}bluemarble/bluemarble.versatiles" | raster_levels gamma=0.8 | raster_overscale`);
+	constainers.push(`from_container filename="${srcSatellite}/s2gm/s2gm_overview.versatiles" | raster_overscale`);
+	constainers.push(`from_container filename="${srcSatellite}/bluemarble/bluemarble.versatiles" | raster_levels gamma=0.8 | raster_overscale`);
 
-	const vpl = `from_stacked_raster [
+	const vpl = `from_stacked_raster minimize_recompression=true [
   		${constainers.join(',\n  ')}
 	]
       | filter level_max=19

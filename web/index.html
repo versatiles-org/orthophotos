@@ -1,41 +1,144 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-	<title>Orthophotos - Test</title>
+	<meta charset="utf-8">
+	<title>VersaTiles - Preview</title>
 	<meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
-	<!-- Load MapLibre GL JS -->
-	<script src="https://tiles.versatiles.org/assets/lib/maplibre-gl/maplibre-gl.js"></script>
-	<link href="https://tiles.versatiles.org/assets/lib/maplibre-gl/maplibre-gl.css" rel="stylesheet" />
-	 
+	<link rel="icon" type="image/png" href="/assets/images/versatiles-logo.png">
+
+	<script src="/assets/lib/maplibre-gl/maplibre-gl.js"></script>
+	<link href="/assets/lib/maplibre-gl/maplibre-gl.css" rel="stylesheet">
+
+	<script src="/assets/lib/versatiles-style/versatiles-style.js"></script>
+
+	<style>
+		body {
+			margin: 0;
+			padding: 0;
+		}
+
+		#map {
+			position: absolute;
+			top: 0;
+			bottom: 0;
+			width: 100%;
+		}
+
+		#overlay {
+			position: absolute;
+			top: 0;
+			left: 0;
+			right: 0;
+			height: auto;
+			background-color: rgba(255, 255, 255, 0.8);
+			padding: 6px;
+			font-family: sans-serif;
+			font-size: 14px;
+			display: flex;
+			flex-direction: row;
+			align-items: center;
+			column-gap: 1em;
+			backdrop-filter: blur(4px);
+		}
+
+		#overlay p {
+			margin: 0.3em 0;
+			padding: 0;
+		}
+
+		a {
+			color: inherit !important;
+		}
+	</style>
 </head>
-<body>
-	<div id="map" style="height:100vh"></div>
+
+<body style="margin:0;height:100%;">
+	<div id="map" class="maplibregl-compact"></div>
+	<div id="overlay">
+		<div>
+			<a href="https://versatiles.org"><img src="/assets/images/versatiles-logo.png" alt="VersaTiles" width="32"></a>
+		</div>
+		<div>
+			<p>This is the first test of orthophotos from various sources, overlaid on Sentinel-2 and Blue Marble imagery.
+			</p>
+			<p>It was created and served with <a href="https://versatiles.org">VersaTiles</a>.</p>
+			<p>Please <a href="https://github.com/versatiles-org/orthophotos/issues">report issues</a> on <a
+					href="https://github.com/versatiles-org/orthophotos">GitHub</a>.</p>
+		</div>
+	</div>
 	<script>
-		const style = {
-			version: 8,
-			sources: {
-				"orthophotos": {
-					type: "raster",
-					tiles: [
-						"http://138.199.157.211:8080/tiles/sat/{z}/{x}/{y}"
-					],
-					tileSize: 512,
-				}
+		const baseUrl = window.location.origin;
+
+
+		const style = VersaTilesStyle.graybeard({
+			baseUrl: 'https://tiles.versatiles.org',
+			colors: {
+				label: '#000', // render all labels in black
 			},
-			layers: [
-				{
-					id: "orthophotos",
-					type: "raster",
-					source: "orthophotos",
-					minzoom: 0,
-					maxzoom: 18
-				}
-			]
-		};
-		new maplibregl.Map({
-			container: 'map', 
-			style,
 		});
+
+		style.layers = style.layers.filter(l => l.id != 'background' && l.type != 'fill' && !/^(land|water|site|airport|tunnel)-/.test(l.id));
+
+		style.layers.forEach(layer => {
+			if (!layer.paint) return;
+			if (layer.type == 'symbol') {
+				if (layer.paint['text-halo-blur']) {
+					layer.paint['text-halo-blur'] = 0;
+				}
+				if (layer.paint['text-halo-width']) {
+					layer.paint['text-halo-width'] = 1;
+				}
+			}
+			if (layer.type == 'line') {
+				let opacity = 0.2;
+				let v = layer.paint['line-opacity'];
+				if (!v) {
+					v = opacity;
+				} else if (typeof v == 'number') {
+					v = v * opacity;
+				} else if ('stops' in v) {
+					v.stops = v.stops.map(s => [s[0], s[1] * opacity]);
+				} else {
+					console.log(v);
+				}
+				layer.paint['line-opacity'] = v;
+			}
+		});
+
+
+		console.log(style.layers);
+
+		style.sources.orthophotos = {
+			type: 'raster',
+			tiles: [`${origin}/tiles/orthophotos/{z}/{x}/{y}`],
+			tileSize: 512,
+			attribution: '© VersaTiles',
+			maxzoom: 17,
+		};
+		style.layers.unshift({
+			id: 'orthophotos',
+			type: 'raster',
+			source: 'orthophotos',
+			minzoom: 0,
+		});
+
+		const map = new maplibregl.Map({
+			container: 'map',
+			bounds: [-23.213, 34.9, 45.112, 62.671],
+			zoom: 5,
+			maxZoom: 18,
+			hash: true,
+			maxPitch: 0,
+			style,
+			dragRotate: false,
+		});
+
+		map.addControl(new maplibregl.NavigationControl(), 'top-right');
+
+
+		// collapse attribution control
+		document.getElementsByClassName('maplibregl-ctrl-attrib')[0].classList.remove('maplibregl-compact-show');
 	</script>
 </body>
 

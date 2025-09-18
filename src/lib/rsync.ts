@@ -24,6 +24,7 @@ async function rsync(srcDir: string, dstDir: string) {
 		'--delete',
 		'--prune-empty-dirs',
 		'--include', '*/',
+		'--exclude', '**/s2gm_original.versatiles',
 		'--include', '*.versatiles',
 		'--exclude', '*',
 		src,

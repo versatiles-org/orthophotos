@@ -63,7 +63,7 @@ while IFS= read -r group; do
   echo -e "${YELLOW}Converting JP2 files${NC}"
   mkdir -p "$folder/tmp"
   files=$(find "$folder" -name "*.jp2")
-  echo "$files" | parallel --eta --bar -j 67% '
+  echo "$files" | shuf | parallel --eta --bar -j 67% '
     set -e
     [ -f "$tiles_dir/{/}" ] && exit 0
     gdal_translate --quiet {} "$folder/tmp/{/}"

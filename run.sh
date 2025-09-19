@@ -107,7 +107,7 @@ case $TASK in
     echo "Uploading data to server..."
 
     EXCLUDES=()
-    if [[ "$NAME" != de/* ]]; then
+    if [[ "$NAME" != de/* ]] && [[ "$NAME" != fr ]]; then
       EXCLUDES=(--exclude=tiles/ --exclude=tiles_*/)
     fi
 

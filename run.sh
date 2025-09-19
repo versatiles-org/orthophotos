@@ -96,9 +96,9 @@ case $TASK in
       [ -f "$DATA/$source.versatiles" ] && continue
       mkdir -p "$TEMP"
       echo "from_gdal_raster filename=\"$DATA/$source.vrt\" level_max=17 max_reuse_gdal=8 | raster_overview | raster_format format=webp quality=30 speed=0" > "$TEMP/$source.vpl"
-      # versatiles convert "$TEMP/$source.vpl" "$TEMP/$source.versatiles"
-      versatiles convert $TEMP/$source.vpl $TEMP/$source.mbtiles
-      versatiles convert $TEMP/$source.mbtiles $TEMP/$source.versatiles
+      versatiles convert "$TEMP/$source.vpl" "$TEMP/$source.versatiles"
+      # versatiles convert $TEMP/$source.vpl $TEMP/$source.mbtiles
+      # versatiles convert $TEMP/$source.mbtiles $TEMP/$source.versatiles
       mv $TEMP/$source.versatiles $DATA/
       rm -f $TEMP/$source.mbtiles
     done

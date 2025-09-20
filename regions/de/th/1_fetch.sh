@@ -4,7 +4,7 @@ echo "Fetching tiles..."
 mkdir -p $DATA/tiles
 
 # hardcoded sequence for 2024 orthophotos:
-seq 550991 551707 | shuf | parallel --eta --bar -j 4 '
+{ seq 549560 550273; seq 550991 551707; seq 562891 567396; seq 567402 570960; seq 582562 583553; seq 588341 590100; } | shuf | parallel --eta --bar -j 4 '
   set -e
   ID={}
   [ -f "$DATA/tiles/$ID.jp2" ] && exit 0

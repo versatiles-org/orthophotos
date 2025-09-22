@@ -21,7 +21,7 @@ async function rsync(srcDir: string, dstDir: string) {
 		'-avht',
 		'-e', `ssh -p ${rsync_port} -i ${rsync_id} -o StrictHostKeyChecking=no`,
 		'--info=progress2',
-		'--delete',
+		//'--delete',
 		'--prune-empty-dirs',
 		'--include', '*/',
 		'--exclude', '**/s2gm_original.versatiles',

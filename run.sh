@@ -45,81 +45,93 @@ TEMP="$dir_temp/$NAME"
 
 mkdir -p "$DATA"
 
-case $TASK in
-  all|ALL|run|full)
-    echo "Running all steps (0-6)..."
-    for step in 0 1 5 2 5 3 5 4 5 6; do
-      echo "→ Step $step"
-      "$0" "$NAME" "$step"
-    done
-    ;;
-  0|0_download|download)
-    echo "Downloading existing data from server..."
-    rsync -ahtWe "ssh -p $rsync_port -i $rsync_id" --info progress2 "$rsync_host:orthophoto/$NAME/" "$DATA/"
-    ;;
-  1|1_fetch|fetch)
-    echo "Fetching new data..."
-    mkdir -p "$TEMP"
-    cd "$TEMP"
-    DATA=$DATA TEMP=$TEMP PROJ=$PROJ bash -c "$PROJ/1_fetch.sh"
-    rm -rf "$TEMP"
-    ;;
-  2|2_vrt|vrt)
-    echo "Building VRT..."
-    ulimit -n 8192
-    mkdir -p "$TEMP"
-    cd "$DATA"
-    DATA=$DATA TEMP=$TEMP PROJ=$PROJ bash -c "$PROJ/2_build_vrt.sh"
-    rm -rf "$TEMP"
-    ;;
-  3|3_preview|preview)
-    echo "Creating preview images..."
-    ulimit -n 8192
-    cd "$DATA"
-    sources=$(yq -r '.data[]' "$PROJ/status.yml")
-    for source in $sources; do
-      [ -f "$DATA/$source.tif" ] && continue
-      mkdir -p "$TEMP"
-      gdalwarp \
-        -tr 200 200 -r nearest \
-        -overwrite -multi -wo "NUM_THREADS=4" \
-        -co COMPRESS=ZSTD -co PREDICTOR=2 \
-        $DATA/$source.vrt $TEMP/$source.tif
-      mv $TEMP/$source.tif $DATA/
-    done
-    ;;
-  4|4_convert|convert)
-    echo "Converting data..."
-    ulimit -n 8192
-    sources=$(yq -r '.data[]' "$PROJ/status.yml")
-    for source in $sources; do
-      [ -f "$DATA/$source.versatiles" ] && continue
-      mkdir -p "$TEMP"
-      echo "from_gdal_raster filename=\"$DATA/$source.vrt\" level_max=17 max_reuse_gdal=8 | raster_overview | raster_format format=webp quality=\"70,16:50,17:30\" speed=0" > "$TEMP/$source.vpl"
-      versatiles convert "$TEMP/$source.vpl" "$TEMP/$source.versatiles"
-      # versatiles convert $TEMP/$source.vpl $TEMP/$source.mbtiles
-      # versatiles convert $TEMP/$source.mbtiles $TEMP/$source.versatiles
-      mv $TEMP/$source.versatiles $DATA/
-      rm -f $TEMP/$source.mbtiles
-    done
-    ;;
-  5|5_upload|upload)
-    echo "Uploading data to server..."
+IFS=',' read -ra RAW_TASKS <<< "$TASK"
+TASKS=()
 
-    EXCLUDES=()
-    if [[ "$NAME" != de/* ]] && [[ "$NAME" != fr ]]; then
-      EXCLUDES=(--exclude=tiles/ --exclude=tiles_*/)
-    fi
+for t in "${RAW_TASKS[@]}"; do
+  if [[ $t =~ ^([0-9]+)-([0-9]+)$ ]]; then
+    start=${BASH_REMATCH[1]}
+    end=${BASH_REMATCH[2]}
+    for ((i=start; i<=end; i++)); do
+      TASKS+=("$i")
+    done
+  elif [[ $t =~ ^(all|ALL)$ ]]; then
+    TASKS+=(0 1 5 2 5 3 5 4 5 6)
+  else
+    TASKS+=("$t")
+  fi
+done
 
-    rsync -ahtWe "ssh -p $rsync_port -i $rsync_id" --info=progress2 "${EXCLUDES[@]}" "$DATA/" "$rsync_host:orthophoto/$NAME/"
-  ;;
-  6|6_delete|delete)
-    echo "Deleting local data..."
-    rm -rf "$DATA"
-    rm -rf "$TEMP"
+for TASK in "${TASKS[@]}"; do
+  case $TASK in
+    0|0_download|download)
+      echo "Downloading existing data from server..."
+      rsync -ahtWe "ssh -p $rsync_port -i $rsync_id" --info progress2 "$rsync_host:orthophoto/$NAME/" "$DATA/"
+      ;;
+    1|1_fetch|fetch)
+      echo "Fetching new data..."
+      mkdir -p "$TEMP"
+      cd "$TEMP"
+      DATA=$DATA TEMP=$TEMP PROJ=$PROJ bash -c "$PROJ/1_fetch.sh"
+      rm -rf "$TEMP"
+      ;;
+    2|2_vrt|vrt)
+      echo "Building VRT..."
+      ulimit -n 8192
+      mkdir -p "$TEMP"
+      cd "$DATA"
+      DATA=$DATA TEMP=$TEMP PROJ=$PROJ bash -c "$PROJ/2_build_vrt.sh"
+      rm -rf "$TEMP"
+      ;;
+    3|3_preview|preview)
+      echo "Creating preview images..."
+      ulimit -n 8192
+      cd "$DATA"
+      sources=$(yq -r '.data[]' "$PROJ/status.yml")
+      for source in $sources; do
+        [ -f "$DATA/$source.tif" ] && continue
+        mkdir -p "$TEMP"
+        gdalwarp \
+          -tr 200 200 -r nearest \
+          -overwrite -multi -wo "NUM_THREADS=4" \
+          -co COMPRESS=ZSTD -co PREDICTOR=2 \
+          $DATA/$source.vrt $TEMP/$source.tif
+        mv $TEMP/$source.tif $DATA/
+      done
+      ;;
+    4|4_convert|convert)
+      echo "Converting data..."
+      ulimit -n 8192
+      sources=$(yq -r '.data[]' "$PROJ/status.yml")
+      for source in $sources; do
+        [ -f "$DATA/$source.versatiles" ] && continue
+        mkdir -p "$TEMP"
+        echo "from_gdal_raster filename=\"$DATA/$source.vrt\" level_max=17 max_reuse_gdal=8 | raster_overview | raster_format format=webp quality=\"70,16:50,17:30\" speed=0" > "$TEMP/$source.vpl"
+        versatiles convert "$TEMP/$source.vpl" "$TEMP/$source.versatiles"
+        # versatiles convert $TEMP/$source.vpl $TEMP/$source.mbtiles
+        # versatiles convert $TEMP/$source.mbtiles $TEMP/$source.versatiles
+        mv $TEMP/$source.versatiles $DATA/
+        rm -f $TEMP/$source.mbtiles
+      done
+      ;;
+    5|5_upload|upload)
+      echo "Uploading data to server..."
+
+      EXCLUDES=()
+      if [[ "$NAME" != de/* ]] && [[ "$NAME" != fr ]]; then
+        EXCLUDES=(--exclude=tiles/ --exclude=tiles_*/)
+      fi
+
+      rsync -ahtWe "ssh -p $rsync_port -i $rsync_id" --info=progress2 "${EXCLUDES[@]}" "$DATA/" "$rsync_host:orthophoto/$NAME/"
     ;;
-  *)
-    echo "Error: Unknown task '$TASK'"
-    exit 1
-    ;;
-esac
+    6|6_delete|delete)
+      echo "Deleting local data..."
+      rm -rf "$DATA"
+      rm -rf "$TEMP"
+      ;;
+    *)
+      echo "Error: Unknown task '$TASK'"
+      exit 1
+      ;;
+  esac
+done

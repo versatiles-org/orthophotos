@@ -4,6 +4,7 @@ curl -s "https://atom.cuzk.gov.cz/OI/OI.xml" >atom.xml
 xmlstarlet sel -N a="http://www.w3.org/2005/Atom" -t -m '//a:entry//a:id' -v '.' -n atom.xml > urls.txt
 
 mkdir -p $DATA/tiles
+mkdir -p $DATA/alpha
 
 cat urls.txt | shuf | parallel --eta --bar -j 4 '
   set -e
@@ -19,5 +20,17 @@ cat urls.txt | shuf | parallel --eta --bar -j 4 '
     mv "$id/$id.jp2" "$DATA/tiles/"
     rm -r "$id"
     rm $id.*
+  fi
+
+  if [ ! -f "$DATA/alpha/$id.tif" ]; then
+    gdal raster calc \
+      -i "A=$DATA/tiles/$id.jp2" \
+      --calc="255*(((A[1]<254)+(A[2]<254)+(A[3]<254))>0)" \
+      --overwrite \
+      --datatype=Byte \
+      --co TILED=YES --co COMPRESS=DEFLATE \
+      -o "$id.tif"
+      
+    mv "$id.tif" "$DATA/alpha/"
   fi
 '

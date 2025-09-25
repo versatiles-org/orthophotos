@@ -14,7 +14,9 @@ cat urls.txt | shuf | parallel --eta --bar -j 4 '
     url_zip=$(xmlstarlet sel -N a="http://www.w3.org/2005/Atom" -t -m '//a:entry//a:id' -v '.' -n $id.xml | head -n 1)
     curl -s "$url_zip" > "$id.zip"
     unzip -qod "$id" "$id.zip"
-    mv "$id/$id.{jp2,j2w}" "$DATA/tiles/"
+    rm "$id.zip"
+    mv "$id/$id.j2w" "$DATA/tiles/"
+    mv "$id/$id.jp2" "$DATA/tiles/"
     rm -r "$id"
     rm $id.*
   fi

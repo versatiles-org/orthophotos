@@ -2,7 +2,8 @@
   "tasks": {
     "vpl": "deno run -A --env-file=config.env src/build_vpl.ts",
     "server-prepare": "deno run -A --env-file=config.env src/prepare_server.ts",
-    "server-start": "./server.sh"
+    "server-start": "./server.sh",
+    "server": "deno task server-prepare && deno task server-start"
   },
   "imports": {
     "@std/fs": "jsr:@std/fs@^1.0.19",

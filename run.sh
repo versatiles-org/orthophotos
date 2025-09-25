@@ -178,7 +178,7 @@ for TASK in "${TASKS[@]}"; do
       ulimit -n 8192
       sources=$(yq -r '.data[]' "$PROJ/status.yml")
       for source in $sources; do
-        [ -f "$DATA/$source.versatiles" ] && continue
+        #[ -f "$DATA/$source.versatiles" ] && continue
         mkdir -p "$TEMP"
         echo "from_gdal_raster filename=\"$DATA/$source.vrt\" level_max=17 max_reuse_gdal=8 | raster_overview | raster_format format=webp quality=\"70,16:50,17:30\" speed=0" > "$TEMP/$source.vpl"
         versatiles convert "$TEMP/$source.vpl" "$TEMP/$source.versatiles"

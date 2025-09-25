@@ -18,7 +18,7 @@ async function rsync(srcDir: string, dstDir: string) {
 	await ensureDir(dst);
 
 	const args = [
-		'-avht',
+		'-avhtW',
 		'-e', `ssh -p ${rsync_port} -i ${rsync_id} -o StrictHostKeyChecking=no`,
 		'--info=progress',
 		//'--delete',

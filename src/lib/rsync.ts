@@ -20,7 +20,7 @@ async function rsync(srcDir: string, dstDir: string) {
 	const args = [
 		'-avht',
 		'-e', `ssh -p ${rsync_port} -i ${rsync_id} -o StrictHostKeyChecking=no`,
-		'--info=progress2',
+		'--info=progress',
 		//'--delete',
 		'--prune-empty-dirs',
 		'--include', '*/',

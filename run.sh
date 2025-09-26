@@ -146,16 +146,14 @@ for TASK in "${TASKS[@]}"; do
       echo "Fetching new data..."
       mkdir -p "$TEMP"
       cd "$TEMP"
-      DATA=$DATA TEMP=$TEMP PROJ=$PROJ bash -c "$PROJ/1_fetch.sh"
-      rm -rf "$TEMP"
+      DATA=$DATA TEMP=$TEMP PROJ=$PROJ bash -c "$PROJ/1_fetch.sh" && rm -rf "$TEMP"
       ;;
     2|2_vrt|vrt)
       echo "Building VRT..."
       ulimit -n 8192
       mkdir -p "$TEMP"
       cd "$DATA"
-      DATA=$DATA TEMP=$TEMP PROJ=$PROJ bash -c "$PROJ/2_build_vrt.sh"
-      rm -rf "$TEMP"
+      DATA=$DATA TEMP=$TEMP PROJ=$PROJ bash -c "$PROJ/2_build_vrt.sh" && rm -rf "$TEMP"
       ;;
     3|3_preview|preview)
       echo "Creating preview images..."

@@ -19,7 +19,8 @@ cat ids.txt | shuf | parallel --eta --bar -j 4 '
 
   curl -so "$ID.tif" "$URL"
 
-  gdal_translate --quiet -of JP2OpenJPEG "$ID.tif" "$ID.jp2" -co QUALITY=100
+  gdal raster edit --nodata 255 "$ID.tif"
+  gdal_translate --quiet -b 1 -b 2 -b 3 -b mask -colorinterp_4 alpha "$ID.tif" "$ID.jp2"
 
   mv "$ID.jp2" "$DATA/tiles/"
 

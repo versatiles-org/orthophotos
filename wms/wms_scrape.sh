@@ -166,7 +166,7 @@ wms_scrape() {
 
   # ---------- Write WMS XML (GDAL WMS driver) ----------
   local WMS_XML="${TEMP}/wms.xml"
-  gdal_translate "WMS:$WMS_URL?Layers=Raster&SRS=${WMS_CRS_VAL}&ImageFormat=image/png&Transparent=TRUE&BandsCount=4&UserAgent=${GDAL_HTTP_USERAGENT}" -of wms "$WMS_XML"
+  gdal_translate "WMS:$WMS_URL?Layers=${LAYER}&SRS=${WMS_CRS_VAL}&ImageFormat=image/png&Transparent=TRUE&BandsCount=4&UserAgent=${GDAL_HTTP_USERAGENT}" -of wms "$WMS_XML"
 
   # ---------- Enumerate blocks (CSV: id,x0,y0,x1,y1) ----------
   local OUT_TILES_DIR="${DATA}/tiles"

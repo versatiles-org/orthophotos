@@ -21,7 +21,7 @@ wms_scrape() {
   fi
 
   # ---------- Dependencies ----------
-  for cmd in gdal_translate gdalinfo gdaltransform xmllint parallel awk sed mktemp curl; do
+  for cmd in gdal_translate gdalinfo gdaltransform xmllint parallel awk sed curl; do
     command -v "$cmd" >/dev/null 2>&1 || { echo "Missing dependency: $cmd" >&2; return 2; }
   done
 
@@ -41,7 +41,7 @@ wms_scrape() {
   export GDAL_HTTP_MAX_RETRY="${GDAL_HTTP_MAX_RETRY:-5}"
   export GDAL_HTTP_RETRY_DELAY="${GDAL_HTTP_RETRY_DELAY:-1}"
   export CPL_VSIL_CURL_CACHE_SIZE="${CPL_VSIL_CURL_CACHE_SIZE:-16777216}" # 16MB
-  export GDAL_HTTP_USERAGENT="${GDAL_HTTP_USERAGENT:-versatiles-wms-scraper/1.0}"
+  export GDAL_HTTP_USERAGENT="${GDAL_HTTP_USERAGENT:-versatiles/orthophotos}"
 
   # Grid / math constants (Web Mercator)
   local XMIN="-20037508.342789244"
@@ -54,9 +54,7 @@ wms_scrape() {
   local WMS_CRS_VAL="EPSG:3857"
 
   # ---------- Working dirs ----------
-  local CAPS_XML
-  CAPS_XML="$(mktemp "${TEMP}/caps.XXXXXX.xml")"
-  trap 'rm -f "$CAPS_XML" "$WMS_XML" "$BLOCKS_CSV"' EXIT
+  local CAPS_XML="${TEMP}/caps.xml"
 
   # Normalize URL (ensure it ends with ? or & for safe param appending)
   local SEP="&"
@@ -68,26 +66,27 @@ wms_scrape() {
 
   # ---------- If no LAYER provided: list and exit ----------
   if [[ -z "${LAYER}" ]]; then
-    echo "Available layers (from GetCapabilities ${WMS_VERSION}):"
-    # List <Layer><Name> + optional <Title>
-    xmllint --xpath \
-      'string-join(//Layer[Name]/concat(Name,"  —  ",normalize-space(Title),"
-"),"")' \
-      "$CAPS_XML" 2>/dev/null || true
-    echo
-    echo "Re-run with a LAYER argument." >&2
+    echo "Select one of the following available layers:"
+    local LCOUNT
+    LCOUNT=$(xmllint --xpath 'count(//Layer[Name]/Name)' "$CAPS_XML" 2>/dev/null || echo 0)
+    LCOUNT=${LCOUNT%.*}
+    if (( LCOUNT == 0 )); then
+      echo "(none found)"
+      return 0
+    fi
+    for i in $(seq 1 "$LCOUNT"); do
+      xmllint --xpath "string((//Layer[Name]/Name)[$i])" "$CAPS_XML" 2>/dev/null || true; echo
+    done
     return 0
   fi
 
-  # ---------- Find layer node path ----------
-  # Get the XPath to the layer with exact Name == LAYER
-  local LAYER_PATH
-  LAYER_PATH=$(xmllint --xpath \
-     "string(//*[local-name()='Layer'][*[local-name()='Name' and text()='${LAYER}']][1]/name())" \
-     "$CAPS_XML" 2>/dev/null || true)
-
-  if [[ -z "$LAYER_PATH" ]]; then
+  # ---------- Ensure the layer exists ----------
+  local LAYER_COUNT
+  LAYER_COUNT=$(xmllint --xpath "count(//Layer[Name='${LAYER}'])" "$CAPS_XML" 2>/dev/null || echo 0)
+  LAYER_COUNT=${LAYER_COUNT%.*}
+  if (( LAYER_COUNT == 0 )); then
     echo "Layer '${LAYER}' not found in capabilities." >&2
+    echo "Hint: list layers by running: wms_scrape \"${WMS_URL}\" ${ZOOM}" >&2
     return 3
   fi
 
@@ -167,34 +166,8 @@ wms_scrape() {
   echo "Chosen block size: ${BLOCK_PX}x${BLOCK_PX} px  =>  ${BW}x${BH} tiles of 512px" >&2
 
   # ---------- Write WMS XML (GDAL WMS driver) ----------
-  local WMS_XML
-  WMS_XML="$(mktemp "${TEMP}/wms.XXXXXX.xml")"
-  cat > "$WMS_XML" <<XML
-<WMS>
-  <Service name="WMS">
-    <Version>${WMS_VERSION}</Version>
-    <ServerUrl>${WMS_URL}</ServerUrl>
-  </Service>
-  <DataWindow>
-    <UpperLeftX>${XMIN}</UpperLeftX>
-    <UpperLeftY>${YMAX}</UpperLeftY>
-    <LowerRightX>${XMAX}</LowerRightX>
-    <LowerRightY>${YMIN}</LowerRightY>
-    <SizeX>256</SizeX>
-    <SizeY>256</SizeY>
-  </DataWindow>
-  <Projection>${WMS_CRS_VAL}</Projection>
-  <BandsCount>4</BandsCount>
-  <Format>image/png</Format>
-  <Transparent>on</Transparent>
-  <Layers>${LAYER}</Layers>
-  <Styles></Styles>
-  <SRS>${WMS_CRS_VAL}</SRS>
-  <BlockSizeX>512</BlockSizeX>
-  <BlockSizeY>512</BlockSizeY>
-  <UserAgent>${GDAL_HTTP_USERAGENT}</UserAgent>
-</WMS>
-XML
+  local WMS_XML="${TEMP}/wms.xml"
+  gdal_translate "WMS:$WMS_URL?Layers=Raster&SRS=${WMS_CRS_VAL}&ImageFormat=image/png&Transparent=TRUE&BandsCount=4&UserAgent=${GDAL_HTTP_USERAGENT}" -of wms "$WMS_XML"
 
   # ---------- Enumerate blocks (CSV: id,x0,y0,x1,y1) ----------
   local OUT_TILES_DIR="${DATA}/tiles"
@@ -234,7 +207,7 @@ XML
 
              # CSV columns:
              # 1:id, 2:x0, 3:y0, 4:x1, 5:y1
-             id = sprintf("z%d_x%d_y%d_bw%d_bh%d", z, tx, ty, bw, bh)
+             id = sprintf("%d_%d", tx, ty)
              printf "%s,%.12f,%.12f,%.12f,%.12f\n", id, x0, y0, x1, y1
            }
          }
@@ -248,27 +221,23 @@ XML
   # Note: -projwin expects ULx ULy LRx LRy (x0 y1 x1 y0)
   w=$((BW*TILE_PX));
   h=$((BH*TILE_PX));
-  export WMS_XML w h  # for parallel
-  parallel --colsep ',' --jobs 1 --delay 1 --retries 3 --halt soon,fail=5 '
+  export DATA WMS_XML w h  # for parallel
+  cat "$BLOCKS_CSV" | shuf | parallel --eta --bar --colsep ',' --jobs 1 --delay 1 --retries 3 --halt soon,fail=5 '
+    set -e
     id="{1}"; x0="{2}"; y0="{3}"; x1="{4}"; y1="{5}";
 
     [[ -f "$DATA/tiles/$id.jp2" ]] && exit 0
 
-    gdal_translate "$WMS_XML" "$TEMP/$id.tif" \
+    gdal_translate --quiet "$WMS_XML" "$id.tif" \
       -projwin "$x0" "$y1" "$x1" "$y0" \
       -projwin_srs EPSG:3857 \
       -outsize "$w" "$h" \
-      -r bilinear \
       -of GTiff \
-      -co TILED=YES -co COMPRESS=DEFLATE -co PREDICTOR=2 -co ALPHA=YES \
-      >/dev/null
+      -co COMPRESS=DEFLATE -co PREDICTOR=2 -co ALPHA=YES
 
-    gdal_translate "$TEMP/$id.tif" "$TEMP/$id.jp2" \
-      -of JP2OpenJPEG \
-      -co TILEXSIZE=512 -co TILEYSIZE=512 \
-      >/dev/null
+    gdal_translate --quiet "$id.tif" "$id.jp2"
 
-    mv "$TEMP/$id.jp2" "$DATA/tiles/"
-    rm -f "$TEMP/$id*"
-  ' :::: "$BLOCKS_CSV"
+    mv "$id.jp2" "$DATA/tiles/" 2> >(grep -v "failed to preserve ownership" >&2)
+    rm $id*
+  '
 }

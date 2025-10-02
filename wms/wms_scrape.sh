@@ -74,9 +74,8 @@ wms_scrape() {
       echo "(none found)"
       return 0
     fi
-    for i in $(seq 1 "$LCOUNT"); do
-      xmllint --xpath "string((//Layer[Name]/Name)[$i])" "$CAPS_XML" 2>/dev/null || true
-    done
+    xmllint --xpath "//Layer[Name]/Name" "$CAPS_XML" 2>/dev/null \
+      | sed -e 's:</Name><Name>:\n:g' -e 's:<Name>::g' -e 's:</Name>::g'
     return 0
   fi
 

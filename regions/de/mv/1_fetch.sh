@@ -19,7 +19,7 @@ cat urls.txt | shuf | parallel --eta --bar -j 8 '
   
   curl -so "$ID.tif" {}
   
-  gdal_translate -q "$ID.tif" "$ID.jp2"
+  gdal_translate --quiet "$ID.tif" "$ID.jp2"
   
   mv "$ID.jp2" "$DATA/tiles/"
   rm "$ID.tif"

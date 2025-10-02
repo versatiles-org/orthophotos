@@ -22,7 +22,7 @@ cat ids.txt | shuf | parallel --eta --bar -j 1 '
   curl -so "$ID.tif" "$url"
 
   if [ "$(wc -c < "$ID.tif")" -ne 46 ]; then
-    gdal_translate --quiet -of JP2OpenJPEG "$ID.tif" "$ID.jp2" -co QUALITY=100
+    gdal_translate --quiet "$ID.tif" "$ID.jp2" -co QUALITY=100
     mv "$ID.jp2" "$DATA/tiles/"
   fi
   

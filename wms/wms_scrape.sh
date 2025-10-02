@@ -75,7 +75,7 @@ wms_scrape() {
       return 0
     fi
     for i in $(seq 1 "$LCOUNT"); do
-      xmllint --xpath "string((//Layer[Name]/Name)[$i])" "$CAPS_XML" 2>/dev/null || true; echo
+      xmllint --xpath "string((//Layer[Name]/Name)[$i])" "$CAPS_XML" 2>/dev/null || true
     done
     return 0
   fi

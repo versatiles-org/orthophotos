@@ -3,7 +3,7 @@
 # https://mapy.geoportal.gov.pl/wss/service/PZGIK/ORTO/WMS/TrueOrtho
 # https://mapy.geoportal.gov.pl/wss/service/PZGIK/ORTO/WMS/StandardResolution
 # https://mapy.geoportal.gov.pl/wss/service/PZGIK/ORTO/WMTS/StandardResolution
- set -e
+set -e
 
 source "$(dirname "$0")/../../wms/wms_scrape.sh"
 

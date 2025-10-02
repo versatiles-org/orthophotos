@@ -7,5 +7,5 @@
 
 source "$(dirname "$0")/../../wms/wms_scrape.sh"
 
-wms_scrape "https://mapy.geoportal.gov.pl/wss/service/PZGIK/ORTO/WMS/StandardResolution" 17
+wms_scrape "https://mapy.geoportal.gov.pl/wss/service/PZGIK/ORTO/WMS/StandardResolution" 17 Raster
 

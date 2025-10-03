@@ -17,7 +17,7 @@ cat index.txt | parallel --eta --bar -j 1 '
 
   curl -s "$URL" -o "$ID.zip"
 
-  unzip -od "$ID" "$ID.zip"
+  unzip -qod "$ID" "$ID.zip"
   rm "$ID.zip"
 
   gdalbuildvrt -q "$ID.vrt" "$ID"/*.tif

@@ -61,8 +61,10 @@ wms_scrape() {
   if [[ "$WMS_URL" != *\?* ]]; then SEP="?"; fi
 
   # ---------- Fetch capabilities ----------
-  echo "Fetching GetCapabilities..." >&2
-  curl -fsSL "${WMS_URL}${SEP}service=WMS&request=GetCapabilities&version=${WMS_VERSION}" -o "$CAPS_XML"
+  if [ ! -f "$CAPS_XML" ]; then
+    echo "Fetching GetCapabilities..." >&2
+    curl -fsSL "${WMS_URL}${SEP}service=WMS&request=GetCapabilities&version=${WMS_VERSION}" -o "$CAPS_XML"
+  fi
 
   # ---------- If no LAYER provided: list and exit ----------
   if [[ -z "${LAYER}" ]]; then

@@ -1,5 +1,7 @@
 # Usage:
 #   source wms/wms_scrape.sh
+#   wms_scrape "https://example.com/wms?" 17 MyLayerName black
+#   wms_scrape "https://example.com/wms?" 17 MyLayerName white
 #   wms_scrape "https://example.com/wms?" 17 MyLayerName
 #   wms_scrape "https://example.com/wms?" 17               # lists layers and exits
 #
@@ -13,15 +15,20 @@ wms_scrape() {
   # ---------- Inputs ----------
   local WMS_URL="${1:-}"; shift || true
   local ZOOM="${1:-}";    shift || true
-  local LAYER="${1:-}"    # optional
+  local LAYER="${1:-}";   shift || true  # optional
+  local MASK_COLOR="${1:-}"              # optional: black|white
+  if [[ -n "${MASK_COLOR}" && "${MASK_COLOR}" != "black" && "${MASK_COLOR}" != "white" ]]; then
+    echo "ERROR: 4th argument must be either 'black' or 'white' (or omitted)." >&2
+    return 2
+  fi
 
   if [[ -z "${WMS_URL}" || -z "${ZOOM}" ]]; then
-    echo "Usage: wms_scrape <WMS_URL> <ZOOM> [LAYER]" >&2
+    echo "Usage: wms_scrape <WMS_URL> <ZOOM> [LAYER] [black|white]" >&2
     return 2
   fi
 
   # ---------- Dependencies ----------
-  for cmd in gdal_translate gdalinfo gdaltransform xmllint parallel awk sed curl; do
+  for cmd in gdal gdal_translate gdalinfo gdaltransform xmllint parallel awk sed curl; do
     command -v "$cmd" >/dev/null 2>&1 || { echo "Missing dependency: $cmd" >&2; return 2; }
   done
 
@@ -222,7 +229,7 @@ wms_scrape() {
   # Note: -projwin expects ULx ULy LRx LRy (x0 y1 x1 y0)
   w=$((BW*TILE_PX));
   h=$((BH*TILE_PX));
-  export DATA WMS_XML w h  # for parallel
+  export DATA WMS_XML w h MASK_COLOR  # for parallel
   cat "$BLOCKS_CSV" | shuf | parallel --eta --bar --colsep ',' --jobs 1 --delay 1 --retries 3 --halt soon,fail=5 '
     set -e
     id="{1}"; x0="{2}"; y0="{3}"; x1="{4}"; y1="{5}";
@@ -236,9 +243,21 @@ wms_scrape() {
       -of GTiff \
       -co COMPRESS=DEFLATE -co PREDICTOR=2 -co ALPHA=YES
 
-    gdal_translate --quiet "$id.tif" "$id.jp2"
+    if [[ -n "$MASK_COLOR" ]]; then
+      if [[ "$MASK_COLOR" == "black" ]]; then
+        gdal raster edit --nodata 0 "$id.tif"
+      elif [[ "$MASK_COLOR" == "white" ]]; then
+        gdal raster edit --nodata 255 "$id.tif"
+      else
+        echo "Internal error: invalid MASK_COLOR '$MASK_COLOR'" >&2
+        exit 1
+      fi
+      gdal_translate --quiet -b 1 -b 2 -b 3 -b mask -colorinterp_4 alpha "$id.tif" "$id.jp2"
+    else
+      gdal_translate --quiet "$id.tif" "$id.jp2"
+    fi
 
     mv "$id.jp2" "$DATA/tiles/" 2> >(grep -v "failed to preserve ownership" >&2)
-    rm $id*
+    rm -f $id.*
   '
 }

@@ -1,0 +1,12 @@
+status: success
+rating: 1
+notes:
+  - "Atom feed provides only proprietary data formats."
+  - "Only WMS is usable."
+  - "Server is very, very slow."
+  - "No license information found."
+data:
+  - tiles
+license: "?"
+creator: "?"
+url: "https://www.geoportal.lt/geoportal/paieska"

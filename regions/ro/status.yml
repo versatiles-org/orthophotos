@@ -1,0 +1,9 @@
+status: success
+rating: 4
+notes:
+  - "Images are unnecessarily packed into container files, such as ZIP."
+data:
+  - tiles
+license: "CC BY"
+creator: 'Agenția de Informații Geospațiale a Apărării "General de Divizie Constantin Barozzi"'
+url: https://data.gov.ro/en/dataset/ortofotoplan-scara-1-5000-pentru-teritoriul-romaniei

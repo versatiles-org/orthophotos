@@ -13,14 +13,15 @@ cat urls.txt | shuf | parallel --eta --bar -j 4 '
   set -e
   url={}
   id=$(echo "$url" | grep -oE "........-....-....-....-............")
-  if [ ! -f "../tiles/$id.jp2" ]; then
-    curl -s "$url" -o "$id.xml"
-    tif=$(xmlstarlet sel -N a="http://www.w3.org/2005/Atom" -t -m "//a:entry//a:id" -v "." -n $id.xml)
-    curl -s "$tif" -o "$id.tif"
+  [ -f "../tiles/$id.jp2" ] && exit 0
+
+  curl -s "$url" -o "$id.xml"
+  tif=$(xmlstarlet sel -N a="http://www.w3.org/2005/Atom" -t -m "//a:entry//a:id" -v "." -n $id.xml)
   
-    mv "$id.tif" "../tiles/"
-    rm "$id*"
-  fi
+  curl -s "$tif" -o "$id.tif"
+  
+  mv "$id.tif" "../tiles/"
+  rm "$id*"
 '
 
 ls -1 *.zip | parallel --eta --bar -j 16 'unzip -qo {} && rm {}'

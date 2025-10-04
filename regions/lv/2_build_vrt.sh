@@ -1,3 +1,3 @@
 set -e
 
-gdalbuildvrt -addalpha tiles.vrt tiles/*.jp2
+gdalbuildvrt -addalpha -a_srs EPSG:3059 tiles.vrt tiles/*.jp2

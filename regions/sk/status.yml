@@ -1,0 +1,10 @@
+status: success
+rating: 4
+notes:
+  - "Images are unnecessarily packed into container files, such as ZIP."
+  - "License requires attribution."
+data:
+  - tiles
+license: "CC BY"
+creator: "GKÚ"
+url: https://rpi.gov.sk/metadata/3b046df1-7867-4377-b15b-6ae6bac999da

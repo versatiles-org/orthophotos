@@ -1,10 +1,11 @@
-status: success
+status: failed
 rating: 2
 notes:
   - "No bulk download available."
   - "Only WMS available."
   - "Server is very, very slow."
   - "Unknown license."
+  - "Server returns errors."
 data:
   - tiles
 license: "?"

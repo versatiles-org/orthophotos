@@ -2,6 +2,7 @@ status: success
 rating: 4
 notes:
   - "Images are unnecessarily packed into container files, such as ZIP."
+  - "License requires attribution."
 data:
   - tiles
 license: "CC BY"

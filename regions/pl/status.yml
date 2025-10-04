@@ -4,6 +4,7 @@ notes:
   - "No bulk download available."
   - "Only WMS available."
   - "Server is very, very slow."
+  - "Unknown license."
 data:
   - tiles
 license: "?"

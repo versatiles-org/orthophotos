@@ -161,7 +161,6 @@ for TASK in "${TASKS[@]}"; do
       cd "$DATA"
       sources=$(yq -r '.data[]' "$PROJ/status.yml")
       for source in $sources; do
-        [ -f "$DATA/$source.tif" ] && continue
         mkdir -p "$TEMP"
         gdalwarp \
           -tr 200 200 -r nearest \
@@ -190,9 +189,9 @@ for TASK in "${TASKS[@]}"; do
       echo "Uploading data to server..."
 
       EXCLUDES=()
-      if [[ "$NAME" != de/* ]] && [[ "$NAME" != fr ]]; then
+      #if [[ "$NAME" != fr ]]; then
         EXCLUDES=(--exclude=tiles/ --exclude=tiles_*/)
-      fi
+      #fi
 
       rsync -ahtWe "ssh -p $rsync_port -i $rsync_id" --info=progress2 "${EXCLUDES[@]}" "$DATA/" "$rsync_host:orthophoto/$NAME/"
     ;;

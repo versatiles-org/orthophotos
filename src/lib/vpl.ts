@@ -8,13 +8,13 @@ export function generateVPL(filename: string) {
 
 	const constainers: string[] = [];
 	for (const container of walkSync(srcOrthophotos, { exts: ['.versatiles'], includeDirs: false })) {
-		constainers.push(`from_container filename="${container.path}" | raster_overscale | filter level_min=6`);
+		constainers.push(`from_container filename="${container.path}" | raster_overscale | filter level_min=4`);
 	}
 
 	constainers.push(`from_container filename="${srcSatellite}/s2gm/s2gm_overview.versatiles" | raster_overscale`);
 	constainers.push(`from_container filename="${srcSatellite}/bluemarble/bluemarble.versatiles" | raster_levels gamma=0.8 brightness=0.2 contrast=0.8 | raster_overscale`);
 
-	const vpl = `from_stacked_raster minimize_recompression=true [
+	const vpl = `from_stacked_raster [
   		${constainers.join(',\n  ')}
 	]
       | filter level_max=19

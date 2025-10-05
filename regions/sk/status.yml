@@ -1,5 +1,5 @@
-status: success
-rating: 4
+status: failed
+rating: 3
 notes:
   - "Images are unnecessarily packed into container files, such as ZIP."
   - "License requires attribution."

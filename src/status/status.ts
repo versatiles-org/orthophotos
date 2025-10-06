@@ -20,7 +20,6 @@ export interface StatusSuccess {
 	data: string[];
 	license: License;
 	creator: Creator;
-	url: string;
 }
 
 export interface StatusError {
@@ -33,16 +32,20 @@ export function readStatus(filename: string): Status {
 	const status = parse(text) as Status;
 
 	if (status.status === 'success') {
-		checkStatusSuccess(status);
-		return status;
+		return checkStatusSuccess(status);
 	}
 
 	if (status.status === 'error') {
-		checkStatusError(status);
-		return status;
+		return checkStatusError(status);
 	}
 
 	return status;
+}
+
+function cleanupKeys<T>(obj: T, allowedKeys: (keyof T)[]): T {
+	return Object.fromEntries(
+		allowedKeys.map(key => [key, obj[key]]).filter(([_, value]) => value !== undefined)
+	);
 }
 
 function checkUrl(url: string): void {
@@ -66,6 +69,7 @@ function checkLicense(license: License | string | undefined): License {
 	}
 
 	if (typeof license !== 'object') throw new Error(`License must be an object`);
+	license = cleanupKeys(license, ['name', 'url', 'requiresAttribution']);
 
 	if (typeof license.name !== 'string') {
 		throw new Error(`Invalid license name: ${license.name}`);
@@ -84,17 +88,26 @@ function checkLicense(license: License | string | undefined): License {
 	return license;
 }
 
-function checkCreator(creator: Creator): void {
+function checkCreator(creator: Creator): Creator {
 	if (typeof creator !== 'object') throw new Error(`Creator must be an object`);
+	creator = cleanupKeys(creator, ['name', 'url']);
+
 	if (typeof creator.name !== 'string') throw new Error(`Invalid creator name: ${creator.name}`);
 	try {
 		checkUrl(creator.url);
 	} catch (cause) {
 		throw new Error(`Invalid creator URL`, { cause });
 	}
+
+	return creator;
 }
 
-function checkStatusSuccess(status: StatusSuccess): void {
+function checkStatusSuccess(status: StatusSuccess): StatusSuccess {
+	if (typeof status !== 'object') {
+		throw new Error(`Status must be an object`);
+	}
+	status = cleanupKeys(status, ['status', 'rating', 'notes', 'data', 'license', 'creator']);
+
 	if (typeof status.rating !== 'number' || status.rating < 0 || status.rating > 5) {
 		throw new Error(`Invalid rating: ${status.rating}`);
 	}
@@ -108,11 +121,19 @@ function checkStatusSuccess(status: StatusSuccess): void {
 	}
 
 	status.license = checkLicense(status.license);
-	checkCreator(status.creator);
+	status.creator = checkCreator(status.creator);
+
+	return status;
 }
 
-function checkStatusError(status: StatusError): void {
+function checkStatusError(status: StatusError): StatusError {
+	if (typeof status !== 'object') {
+		throw new Error(`Status must be an object`);
+	}
+	status = cleanupKeys(status, ['status', 'notes']);
+
 	if (!Array.isArray(status.notes) || !status.notes.every((n) => typeof n === 'string')) {
 		throw new Error(`Invalid notes: ${status.notes}`);
 	}
+	return status;
 }

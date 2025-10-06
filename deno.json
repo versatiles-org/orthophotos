@@ -22,5 +22,15 @@
     "include": [
       "src/**/*.ts"
     ]
+  },
+  "lint": {
+    "include": [
+      "src/"
+    ],
+    "rules": {
+      "tags": [
+        "recommended"
+      ]
+    }
   }
 }

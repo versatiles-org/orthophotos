@@ -4,7 +4,7 @@ notes:
   - "You have to use an undocumented API to get a constantly changing URL for a CSV file that contains the URLs for the actual tiles."
   - "License requires attribution."
   - "National license instead of an international standard."
-data:
+entries:
   - tiles
 license:
   name: Open Government Data (OGD)

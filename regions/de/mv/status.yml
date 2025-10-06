@@ -4,7 +4,7 @@ notes:
   - "Server is slow."
   - "License requires attribution."
   - "Rather than a national mosaic, inconsistent regional mosaics with different access and formats are available instead."
-data:
+entries:
   - tiles
 license: CC BY 4.0
 creator:

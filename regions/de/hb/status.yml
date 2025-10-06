@@ -6,7 +6,7 @@ notes:
   - "License requires attribution."
   - "JPEGs with World files are provided, but not more convenient GeoTIFFs/JPEG2000."
   - "Rather than a national mosaic, inconsistent regional mosaics with different access and formats are available instead."
-data:
+entries:
   - tiles_hb
   - tiles_bhv
 license: CC BY 4.0

@@ -159,7 +159,7 @@ for TASK in "${TASKS[@]}"; do
       echo "Creating preview images..."
       ulimit -n 8192
       cd "$DATA"
-      sources=$(yq -r '.data[]' "$PROJ/status.yml")
+      sources=$(yq -r '.entries[]' "$PROJ/status.yml")
       for source in $sources; do
         mkdir -p "$TEMP"
         gdalwarp \
@@ -173,7 +173,7 @@ for TASK in "${TASKS[@]}"; do
     4|4_convert|convert)
       echo "Converting data..."
       ulimit -n 8192
-      sources=$(yq -r '.data[]' "$PROJ/status.yml")
+      sources=$(yq -r '.entries[]' "$PROJ/status.yml")
       for source in $sources; do
         #[ -f "$DATA/$source.versatiles" ] && continue
         mkdir -p "$TEMP"

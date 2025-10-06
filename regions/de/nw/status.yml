@@ -3,7 +3,7 @@ rating: 4
 notes:
   - "National license instead of an international standard."
   - "Rather than a national mosaic, inconsistent regional mosaics with different access and formats are available instead."
-data:
+entries:
   - tiles
 license: DL-DE->Zero-2.0
 creator:

@@ -17,7 +17,7 @@ export interface StatusSuccess {
 	status: 'success';
 	rating: number;
 	notes: string[];
-	data: string[];
+	entries: string[];
 	license: License;
 	creator: Creator;
 }
@@ -106,7 +106,7 @@ function checkStatusSuccess(status: StatusSuccess): StatusSuccess {
 	if (typeof status !== 'object') {
 		throw new Error(`Status must be an object`);
 	}
-	status = cleanupKeys(status, ['status', 'rating', 'notes', 'data', 'license', 'creator']);
+	status = cleanupKeys(status, ['status', 'rating', 'notes', 'entries', 'license', 'creator']);
 
 	if (typeof status.rating !== 'number' || status.rating < 0 || status.rating > 5) {
 		throw new Error(`Invalid rating: ${status.rating}`);
@@ -116,8 +116,8 @@ function checkStatusSuccess(status: StatusSuccess): StatusSuccess {
 		throw new Error(`Invalid notes: ${status.notes}`);
 	}
 
-	if (!Array.isArray(status.data) || !status.data.every((n) => typeof n === 'string')) {
-		throw new Error(`Invalid data: ${status.data}`);
+	if (!Array.isArray(status.entries) || !status.entries.every((n) => typeof n === 'string')) {
+		throw new Error(`Invalid entries: ${status.entries}`);
 	}
 
 	status.license = checkLicense(status.license);

@@ -4,7 +4,7 @@ notes:
   - "Images are upside down, and 'gdalbuildvrt' does not support positive NS resolution."
   - "License requires attribution."
 id: at
-data:
+entries:
   - tiles
 license: CC BY 4.0
 creator: BEV

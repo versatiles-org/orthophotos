@@ -5,7 +5,7 @@ notes:
   - "Only WMS is usable."
   - "Server is very, very slow."
   - "No license information found."
-data:
+entries:
   - tiles
 license: "CC0"
 creator:

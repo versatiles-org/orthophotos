@@ -1,7 +1,7 @@
 set -e
 
 cwd="$(dirname "$0")"
-sources=$(yq -r '.data[]' "$cwd/status.yml")
+sources=$(yq -r '.entries[]' "$cwd/status.yml")
 
 for source in $sources; do
   echo "Processing $source"

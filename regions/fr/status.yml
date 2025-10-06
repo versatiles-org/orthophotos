@@ -6,7 +6,7 @@ notes:
   - "Images are unnecessarily packed into container files, such as 7ZIP."
   - "The images have a high resolution, but they are not stored in tiled mode, which makes them extremely slow to read."
   - "National license instead of an international standard."
-data:
+entries:
   - tiles_UTM01SW84
   - tiles_RGSPM06U21
   - tiles_RGR92UTM40S

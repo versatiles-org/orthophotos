@@ -6,7 +6,7 @@ notes:
   - "Server is very, very slow."
   - "Unknown license."
   - "Server returns errors."
-data:
+entries:
   - tiles
 license: "?"
 creator: "?"

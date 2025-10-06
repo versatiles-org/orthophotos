@@ -2,7 +2,7 @@ status: success
 rating: 4
 notes:
   - "License requires attribution."
-data:
+entries:
   - tiles
 license: CC BY 4.0
 creator:

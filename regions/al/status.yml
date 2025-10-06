@@ -4,7 +4,7 @@ notes:
   - "Only WMS found."
   - "Server is very slow."
   - "Full coverage only for 2015."
-data:
+entries:
   - tiles
 license: CC0
 creator:

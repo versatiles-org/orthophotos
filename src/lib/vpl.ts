@@ -8,7 +8,7 @@ export function generateVPL(filename: string) {
 
 	const constainers: string[] = [];
 	for (const container of walkSync(srcOrthophotos, { exts: ['.versatiles'], includeDirs: false })) {
-		constainers.push(`from_container filename="${container.path}" | raster_overscale | filter level_min=4`);
+		constainers.push(`from_container filename="${container.path}" | raster_overscale`);
 	}
 
 	constainers.push(`from_container filename="${srcSatellite}/s2gm/s2gm_overview.versatiles" | raster_overscale`);

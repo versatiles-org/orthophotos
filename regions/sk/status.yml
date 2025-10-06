@@ -1,4 +1,4 @@
-status: failed
+status: error
 rating: 3
 notes:
   - "Images are unnecessarily packed into container files, such as ZIP."

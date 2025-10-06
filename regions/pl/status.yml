@@ -1,4 +1,4 @@
-status: failed
+status: error
 rating: 2
 notes:
   - "No bulk download available."

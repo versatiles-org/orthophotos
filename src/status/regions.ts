@@ -3,7 +3,7 @@ import { existsSync } from '@std/fs';
 import { readStatus, Status } from './status.ts';
 
 interface Region {
-	directory: string;
+	id: string;
 	status: Status;
 }
 
@@ -15,8 +15,13 @@ export function scanRegions(base_directory: string): Region[] {
 	function recursive(directory: string) {
 		const statusFilename = resolve(directory, 'status.yml');
 		if (existsSync(statusFilename)) {
-			const status = readStatus(statusFilename);
-			entries.push({ directory: relative(base_directory, directory), status });
+			try {
+				const status = readStatus(statusFilename);
+				entries.push({ id: relative(base_directory, directory), status });
+			} catch (error) {
+				console.error(`Error reading ${statusFilename}`);
+				throw error;
+			}
 		} else {
 			for (const entry of Deno.readDirSync(directory)) {
 				if (entry.isDirectory) {

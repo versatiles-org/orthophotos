@@ -1,0 +1,6 @@
+import { resolve } from '@std/path/resolve';
+import { scanRegions } from './regions.ts';
+
+const regions_directory = resolve(import.meta.dirname!, '../../regions');
+const regions = scanRegions(regions_directory);
+console.log(regions);

@@ -1,6 +1,9 @@
 # Orthophotos
 
-This repository contains scripts and tools to fetch, process, and serve raster tiles generated from orthophotos. It provides automated workflows for downloading raw orthophoto data, processing it into *.versatiles containers, and preparing a server to preview them.
+This repository contains scripts and tools to fetch, process, and serve raster tiles generated from orthophotos. It provides automated workflows for downloading raw orthophoto data, processing it into `*.versatiles` containers, and preparing a server to preview them.
+
+> [!WARNING]
+> This project is a jumble of experimental, loosely structured glue code. Please watch your step and be careful.
 
 ## Contents
 

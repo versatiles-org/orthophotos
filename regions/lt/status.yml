@@ -7,6 +7,7 @@ notes:
   - "No license information found."
 data:
   - tiles
-license: "?"
-creator: "?"
-url: "https://www.geoportal.lt/geoportal/paieska"
+license: "CC0"
+creator:
+  name: "Nacionalinė žemės tarnyba prie Aplinkos ministerijos"
+  url: "https://www.geoportal.lt/geoportal/paieska"

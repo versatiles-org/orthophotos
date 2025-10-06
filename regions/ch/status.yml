@@ -6,6 +6,10 @@ notes:
   - "National license instead of an international standard."
 data:
   - tiles
-license: <a href="https://www.swisstopo.admin.ch/de/nutzungsbedingungen-kostenlose-geodaten-und-geodienste">OGD</a>
-creator: Bundesamt für Landestopografie swisstopo
-url: https://www.swisstopo.admin.ch/de/orthobilder-swissimage-10-cm
+license:
+  name: Open Government Data (OGD)
+  url: https://www.swisstopo.admin.ch/de/nutzungsbedingungen-kostenlose-geodaten-und-geodienste
+  requiresAttribution: true
+creator:
+  name: Bundesamt für Landestopografie swisstopo
+  url: https://www.swisstopo.admin.ch/de/orthobilder-swissimage-10-cm

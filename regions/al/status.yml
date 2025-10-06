@@ -3,12 +3,12 @@ rating: 4
 notes:
   - "Only WMS found."
   - "Server is very slow."
-  - "No license information found."
   - "Full coverage only for 2015."
 data:
   - tiles
-license: "public domain"
-creator: "ASIG"
-url: "https://geoportal.asig.gov.al/geonetwork/srv/alb/catalog.search#/metadata/b50abc17-b932-4a96-b97a-ae6cba52c2fb"
+license: CC0
+creator:
+  name: "ASIG"
+  url: "https://geoportal.asig.gov.al/geonetwork/srv/alb/catalog.search#/metadata/b50abc17-b932-4a96-b97a-ae6cba52c2fb"
 
 # preview https://geoportal.asig.gov.al/map/?fc_name=OrthoImagery_20cm&auto=true

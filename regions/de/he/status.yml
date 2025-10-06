@@ -6,6 +6,7 @@ notes:
   - "Rather than a national mosaic, inconsistent regional mosaics with different access and formats are available instead."
 data:
   - tiles
-license: DL-DE/Zero 2.0
-creator: Hessisches Landesamt für Bodenmanagement und Geoinformation
-url: https://www.geoportal.hessen.de/mapbender/php/mod_showMetadata.php?resource=layer&layout=tabs&redirectToMetadataUrl=1&id=54936
+license: DL-DE->Zero-2.0
+creator:
+  name: Hessisches Landesamt für Bodenmanagement und Geoinformation
+  url: https://www.geoportal.hessen.de/mapbender/php/mod_showMetadata.php?resource=layer&layout=tabs&redirectToMetadataUrl=1&id=54936

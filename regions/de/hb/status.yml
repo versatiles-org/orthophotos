@@ -10,5 +10,6 @@ data:
   - tiles_hb
   - tiles_bhv
 license: CC BY 4.0
-creator: Landesamt GeoInformation Bremen
-url: https://metaver.de/trefferanzeige?cmd=doShowDocument&docuuid=910260F7-AC66-40F3-8BA2-E7108C3C71C9
+creator:
+  name: Landesamt GeoInformation Bremen
+  url: https://metaver.de/trefferanzeige?cmd=doShowDocument&docuuid=910260F7-AC66-40F3-8BA2-E7108C3C71C9

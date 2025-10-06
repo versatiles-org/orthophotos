@@ -8,6 +8,7 @@ notes:
   - "Rather than a national mosaic, inconsistent regional mosaics with different access and formats are available instead."
 data:
   - tiles
-license: DL-DE/BY-2.0
-creator: Freie und Hansestadt Hamburg, Landesbetrieb Geoinformation und Vermessung (LGV)
-url: https://metaver.de/trefferanzeige?docuuid=5DF0990B-9195-41E7-9960-9214BC85B4DA
+license: DL-DE->BY-2.0
+creator:
+  name: Freie und Hansestadt Hamburg, Landesbetrieb Geoinformation und Vermessung (LGV)
+  url: https://metaver.de/trefferanzeige?docuuid=5DF0990B-9195-41E7-9960-9214BC85B4DA

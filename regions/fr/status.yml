@@ -14,6 +14,10 @@ data:
   - tiles_RGFG95UTM22
   - tiles_RGAF09UTM20
   - tiles_LAMB93
-license: LO 2.0
-creator: Institut national de l'information géographique et forestière (IGN-F)
-url: https://geoservices.ign.fr/documentation/donnees/ortho/bdortho
+license:
+  name: LO 2.0
+  url: https://www.data.gouv.fr/datasets/licence-ouverte-2-0
+  requiresAttribution: true
+creator:
+  name: Institut national de l'information géographique et forestière (IGN-F)
+  url: https://geoservices.ign.fr/documentation/donnees/ortho/bdortho

@@ -8,6 +8,7 @@ notes:
   - "Rather than a national mosaic, inconsistent regional mosaics with different access and formats are available instead."
 data:
   - tiles
-license: DL-DE/BY 2.0
-creator: GeoSN
-url: https://www.geodaten.sachsen.de/luftbild-produkte-3995.html
+license: DL-DE->BY-2.0
+creator:
+  name: GeoSN
+  url: https://www.geodaten.sachsen.de/luftbild-produkte-3995.html

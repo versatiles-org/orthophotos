@@ -5,6 +5,7 @@ notes:
   - "Rather than a national mosaic, inconsistent regional mosaics with different access and formats are available instead."
 data:
   - tiles
-license: DL-DE/Zero 2.0
-creator: Geobasis NRW
-url: https://www.opengeodata.nrw.de/produkte/geobasis/lusat/akt/dop/dop_jp2_f10/
+license: DL-DE->Zero-2.0
+creator:
+  name: Geobasis NRW
+  url: https://www.opengeodata.nrw.de/produkte/geobasis/lusat/akt/dop/dop_jp2_f10/

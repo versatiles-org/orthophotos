@@ -5,6 +5,7 @@ notes:
   - "License requires attribution."
 data:
   - tiles
-license: "CC BY"
-creator: 'Agenția de Informații Geospațiale a Apărării "General de Divizie Constantin Barozzi"'
-url: https://data.gov.ro/en/dataset/ortofotoplan-scara-1-5000-pentru-teritoriul-romaniei
+license: "CC BY 4.0"
+creator:
+  name: 'Agenția de Informații Geospațiale a Apărării "General de Divizie Constantin Barozzi"'
+  url: https://data.gov.ro/en/dataset/ortofotoplan-scara-1-5000-pentru-teritoriul-romaniei

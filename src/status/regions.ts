@@ -23,7 +23,9 @@ export function scanRegions(base_directory: string): Region[] {
 				throw error;
 			}
 		} else {
-			for (const entry of Deno.readDirSync(directory)) {
+			const directoryEntries = [...Deno.readDirSync(directory)];
+			directoryEntries.sort((a, b) => a.name.localeCompare(b.name));
+			for (const entry of directoryEntries) {
 				if (entry.isDirectory) {
 					recursive(resolve(directory, entry.name));
 				}

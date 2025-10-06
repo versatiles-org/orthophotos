@@ -7,6 +7,7 @@ notes:
   - "Rather than a national mosaic, inconsistent regional mosaics with different access and formats are available instead."
 data:
   - tiles
-license: DL-DE/BY 2.0
-creator: GeoBasis DE/LVGL-SL (2025)
-url: https://geoportal.saarland.de/app-article/geobasisdatenuebersicht/
+license: DL-DE->BY-2.0
+creator:
+  name: GeoBasis DE/LVGL-SL (2025)
+  url: https://geoportal.saarland.de/app-article/geobasisdatenuebersicht/

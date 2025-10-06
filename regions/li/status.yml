@@ -5,5 +5,6 @@ notes:
 data:
   - tiles
 license: CC BY 4.0
-creator: Amt für Tiefbau und Geoinformation
-url: https://www.opendata.li/de/daten#esc_entry=159&esc_context=24
+creator:
+  name: Amt für Tiefbau und Geoinformation
+  url: https://www.opendata.li/de/daten#esc_entry=159&esc_context=24

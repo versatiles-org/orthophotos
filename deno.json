@@ -1,5 +1,6 @@
 {
   "tasks": {
+    "format": "deno fmt",
     "vpl": "deno run -A --env-file=config.env src/build_vpl.ts",
     "server-prepare": "deno run -A --env-file=config.env src/prepare_server.ts",
     "server-start": "./server.sh",
@@ -9,5 +10,17 @@
     "@std/fs": "jsr:@std/fs@^1.0.19",
     "@std/path": "jsr:@std/path@^1.1.2",
     "@std/yaml": "jsr:@std/yaml@^1.0.9"
+  },
+  "fmt": {
+    "lineWidth": 100,
+    "indentWidth": 3,
+    "useTabs": true,
+    "semiColons": true,
+    "proseWrap": "preserve",
+    "singleQuote": true,
+    "trailingCommas": "onlyMultiLine",
+    "include": [
+      "src/**/*.ts"
+    ]
   }
 }

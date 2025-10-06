@@ -24,7 +24,7 @@ export function readStatus(filename: string): Status {
 		throw new Error(`Invalid status: ${status.status}`);
 	}
 
-	if (!Array.isArray(status.notes) || !status.notes.every(n => typeof n === 'string')) {
+	if (!Array.isArray(status.notes) || !status.notes.every((n) => typeof n === 'string')) {
 		throw new Error(`Invalid notes: ${status.notes}`);
 	}
 
@@ -34,7 +34,7 @@ export function readStatus(filename: string): Status {
 		throw new Error(`Invalid rating: ${status.rating}`);
 	}
 
-	if (!Array.isArray(status.data) || !status.data.every(n => typeof n === 'string')) {
+	if (!Array.isArray(status.data) || !status.data.every((n) => typeof n === 'string')) {
 		throw new Error(`Invalid data: ${status.data}`);
 	}
 

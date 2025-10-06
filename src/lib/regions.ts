@@ -1,6 +1,6 @@
 import { relative, resolve } from '@std/path';
 import { existsSync } from '@std/fs';
-import { readStatus, Status } from "./status.ts";
+import { readStatus, Status } from './status.ts';
 
 interface Region {
 	directory: string;

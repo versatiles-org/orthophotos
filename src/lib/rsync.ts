@@ -14,22 +14,27 @@ async function rsync(srcDir: string, dstDir: string) {
 	const rsync_port = Deno.env.get('rsync_port')!;
 	const rsync_id = Deno.env.get('rsync_id')!;
 	const src = `${rsync_host}:${srcDir}/`;
-	const dst = resolve(Deno.env.get('dir_data')!, dstDir+'/');
+	const dst = resolve(Deno.env.get('dir_data')!, dstDir + '/');
 	await ensureDir(dst);
 
 	const args = [
 		'-avhtW',
-		'-e', `ssh -p ${rsync_port} -i ${rsync_id} -o StrictHostKeyChecking=no`,
+		'-e',
+		`ssh -p ${rsync_port} -i ${rsync_id} -o StrictHostKeyChecking=no`,
 		'--info=progress',
 		//'--delete',
 		'--prune-empty-dirs',
-		'--include', '*/',
-		'--exclude', '**/s2gm_original.versatiles',
-		'--include', '*.versatiles',
-		'--exclude', '*',
+		'--include',
+		'*/',
+		'--exclude',
+		'**/s2gm_original.versatiles',
+		'--include',
+		'*.versatiles',
+		'--exclude',
+		'*',
 		src,
-		dst
-	]
+		dst,
+	];
 
 	const command = new Deno.Command('rsync', { args, stdout: 'inherit', stderr: 'inherit' });
 	await command.output();

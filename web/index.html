@@ -5,12 +5,12 @@
 	<meta charset="utf-8">
 	<title>VersaTiles - Satellite/Orthophoto Preview</title>
 	<meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
-	<link rel="icon" type="image/png" href="/assets/images/versatiles-logo.png">
+	<link rel="icon" type="image/png" href="https://icarus.versatiles.org/assets/images/versatiles-logo.png">
 
-	<script src="/assets/lib/maplibre-gl/maplibre-gl.js"></script>
-	<link href="/assets/lib/maplibre-gl/maplibre-gl.css" rel="stylesheet">
+	<script src="https://icarus.versatiles.org/assets/lib/maplibre-gl/maplibre-gl.js"></script>
+	<link href="https://icarus.versatiles.org/assets/lib/maplibre-gl/maplibre-gl.css" rel="stylesheet">
 
-	<script src="/assets/lib/versatiles-style/versatiles-style.js"></script>
+	<script src="https://icarus.versatiles.org/assets/lib/versatiles-style/versatiles-style.js"></script>
 
 	<style>
 		body {
@@ -103,8 +103,6 @@
 		<div id="btn_close" onclick="close_popup()">&#x2715;</div>
 	</div>
 	<script>
-		const baseUrl = window.location.origin;
-
 		const style = VersaTilesStyle.graybeard({
 			baseUrl: 'https://tiles.versatiles.org',
 			colors: {
@@ -142,7 +140,7 @@
 
 		style.sources.orthophotos = {
 			type: 'raster',
-			tiles: [`${origin}/tiles/orthophotos/{z}/{x}/{y}`],
+			tiles: ['https://icarus.versatiles.org/tiles/orthophotos/{z}/{x}/{y}'],
 			tileSize: 512,
 			attribution: '© VersaTiles',
 			maxzoom: 17,

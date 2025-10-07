@@ -2,7 +2,7 @@
 
 import { resolve } from '@std/path/resolve';
 import { gunzipSync } from 'node:zlib';
-import type { Feature, Polygon, MultiPolygon } from 'geojson';
+import type { Feature, Polygon, MultiPolygon, Geometry, FeatureCollection } from 'geojson';
 import * as topojson from 'topojson-client';
 import { string2ascii } from './ascii.ts';
 
@@ -11,7 +11,7 @@ export type KnownRegion = Feature<Polygon | MultiPolygon, { id: string, name: st
 
 export function loadKnownRegions(folder: string): KnownRegion[] {
 	const regions: KnownRegion[] = [];
-	regions.push(...parseNUTS(loadData(resolve(folder, 'NUTS_RG_01M_2024_4326.topojson.gz'))));
+	regions.push(...parseNUTS(loadData(resolve(folder, 'NUTS_RG_03M_2024_4326.topojson.gz'))));
 
 	return regions;
 }
@@ -86,6 +86,7 @@ function extractFeatures(geojson: any): Feature[] {
 	if (geojson.type !== 'FeatureCollection' || !Array.isArray(geojson.features)) {
 		throw new Error('Invalid GeoJSON format');
 	}
+	reducePrecision(geojson);
 	return geojson.features;
 }
 
@@ -100,8 +101,38 @@ function loadTopoJSON(buffer: Uint8Array): Feature[] {
 	}
 	const objectKey = Object.keys(topojsonData.objects)[0];
 	const geojson = topojson.feature(topojsonData, topojsonData.objects[objectKey]);
-	if (geojson.type !== 'FeatureCollection' || !Array.isArray(geojson.features)) {
-		throw new Error('Invalid GeoJSON format extracted from TopoJSON');
+	return extractFeatures(geojson);
+}
+
+export function reducePrecision(geometry: Geometry | Feature | FeatureCollection) {
+	function roundCoord1(coord: GeoJSON.Position) {
+		coord[0] = Math.round(coord[0] * 1e6) / 1e6;
+		coord[1] = Math.round(coord[1] * 1e6) / 1e6;
 	}
-	return geojson.features;
+	function roundCoord2(coords: GeoJSON.Position[]) {
+		for (const coord of coords) roundCoord1(coord);
+	}
+	function roundCoord3(coords: GeoJSON.Position[][]) {
+		for (const ring of coords) roundCoord2(ring);
+	}
+	function roundCoord4(coords: GeoJSON.Position[][][]) {
+		for (const polygon of coords) roundCoord3(polygon);
+	}
+	const type = geometry.type;
+	switch (type) {
+		case 'Point': return roundCoord1(geometry.coordinates);
+		case 'MultiPoint': return roundCoord2(geometry.coordinates);
+		case 'LineString': return roundCoord2(geometry.coordinates);
+		case 'MultiLineString': return roundCoord3(geometry.coordinates);
+		case 'Polygon': return roundCoord3(geometry.coordinates);
+		case 'MultiPolygon': return roundCoord4(geometry.coordinates);
+		case 'Feature': return reducePrecision(geometry.geometry);
+		case 'FeatureCollection':
+			for (const feature of geometry.features) reducePrecision(feature);
+			return;
+		case 'GeometryCollection':
+			for (const geom of geometry.geometries) reducePrecision(geom);
+			return;
+		default: throw new Error(`Unknown geometry type: ${type}`);
+	}
 }

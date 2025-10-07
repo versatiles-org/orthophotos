@@ -1,7 +1,8 @@
 import { relative, resolve } from '@std/path';
 import { existsSync } from '@std/fs';
 import { readStatus, Status } from './status.ts';
-import { KnownRegion } from './geojson.ts';
+import { KnownRegion, reducePrecision } from './geojson.ts';
+import type { Feature } from 'geojson';
 
 interface Region {
 	id: string;
@@ -60,5 +61,43 @@ export function scanRegions(base_directory: string, knownRegions: KnownRegion[])
 			}
 			return matches;
 		}
+	}
+}
+
+export async function updateRegionEntries(regions: Region[]): Promise<void> {
+	const orthophotosPath = resolve(Deno.env.get('dir_data')!, 'orthophotos/');
+	for (const region of regions) {
+		if (region.status.status !== 'success') continue;
+		for (const entry of region.status.entries) {
+			const versaTilesFilename = resolve(
+				orthophotosPath,
+				region.id,
+				`${entry.name}.versatiles`
+			);
+			entry.versaTilesExists = existsSync(versaTilesFilename);
+
+			const geoJsonFilename = resolve(
+				orthophotosPath,
+				region.id,
+				`${entry.name}.geojson`
+			);
+			if (!existsSync(geoJsonFilename)) {
+				console.log(`Creating GeoJSON for ${versaTilesFilename}`);
+				const args = [
+					'dev',
+					'export-outline',
+					versaTilesFilename,
+					geoJsonFilename,
+				];
+				const command = new Deno.Command('versatiles', { args, stdout: 'inherit', stderr: 'inherit' });
+				await command.output();
+			}
+			if (!existsSync(geoJsonFilename)) {
+				throw new Error(`Failed to create ${geoJsonFilename}`);
+			}
+
+			entry.geoJSON = JSON.parse(await Deno.readTextFile(geoJsonFilename)) as Feature;
+			reducePrecision(entry.geoJSON);
+		};
 	}
 }

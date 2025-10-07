@@ -4,7 +4,7 @@
     "server-prepare": "deno run -A --env-file=config.env src/server-prepare.ts",
     "server-start": "./server.sh",
     "server": "deno task server-prepare && deno task server-start",
-    "status-check": "deno run -A src/status-check.ts"
+    "status-check": "deno run -A --env-file=config.env src/status-check.ts"
   },
   "imports": {
     "@std/fs": "jsr:@std/fs@^1.0.19",

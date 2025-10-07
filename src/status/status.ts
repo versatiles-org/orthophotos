@@ -1,4 +1,5 @@
 import { parse } from '@std/yaml';
+import type { Feature } from 'geojson';
 
 export type Status = StatusSuccess | StatusError;
 
@@ -16,7 +17,7 @@ export interface Creator {
 export interface Entry {
 	name: string;
 	versaTilesExists: boolean;
-	hasGeoJSON: boolean;
+	geoJSON?: Feature;
 }
 
 export interface StatusSuccess {
@@ -62,11 +63,10 @@ function checkUrl(url: string): void {
 
 function checkEntry(entry: Entry): Entry {
 	if (typeof entry !== 'object') throw new Error(`Entry must be an object`);
-	entry = cleanupKeys(entry, ['name', 'versaTilesExists', 'hasGeoJSON']);
+	entry = cleanupKeys(entry, ['name', 'versaTilesExists', 'geoJSON']);
 
 	if (typeof entry.name !== 'string') throw new Error(`Invalid entry name: ${entry.name}`);
 	if (typeof entry.versaTilesExists !== 'boolean') throw new Error(`Invalid entry versaTilesExists: ${entry.versaTilesExists}`);
-	if (typeof entry.hasGeoJSON !== 'boolean') throw new Error(`Invalid entry hasGeoJSON: ${entry.hasGeoJSON}`);
 
 	return entry;
 }
@@ -144,7 +144,6 @@ function checkStatusSuccess(status: StatusSuccess): StatusSuccess {
 		const entry: Entry = {
 			name,
 			versaTilesExists: false,
-			hasGeoJSON: false
 		};
 		return checkEntry(entry);
 	})

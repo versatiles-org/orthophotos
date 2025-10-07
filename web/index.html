@@ -115,11 +115,16 @@
 		style.layers.forEach(layer => {
 			if (!layer.paint) return;
 			if (layer.type == 'symbol') {
-				if (layer.paint['text-halo-blur']) {
-					layer.paint['text-halo-blur'] = 0;
-				}
-				if (layer.paint['text-halo-width']) {
-					layer.paint['text-halo-width'] = 1;
+				if (layer.layout['text-font']) {
+					layer.layout['text-font'] = ['noto_sans_bold'];
+					layer.paint['text-color'] = '#fff';
+					layer.paint['text-halo-color'] = '#000';
+					if (layer.paint['text-halo-blur']) {
+						layer.paint['text-halo-blur'] = 0;
+					}
+					if (layer.paint['text-halo-width']) {
+						layer.paint['text-halo-width'] = 1;
+					}
 				}
 			}
 			if (layer.type == 'line') {

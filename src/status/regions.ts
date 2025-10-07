@@ -6,10 +6,11 @@ import { KnownRegion } from './geojson.ts';
 interface Region {
 	id: string;
 	status: Status;
+	region: KnownRegion;
 }
 
-export function scanProcessedRegions(base_directory: string, knownRegions: KnownRegion[]): Region[] {
-	const knownRegionIds = new Set(knownRegions.map((region) => region.properties.id));
+export function scanRegions(base_directory: string, knownRegions: KnownRegion[]): Region[] {
+	const knownRegionIds = new Map<string, KnownRegion>(knownRegions.map((r) => [r.properties.id, r]));
 	const entries: Region[] = [];
 
 	recursive(base_directory);
@@ -20,11 +21,12 @@ export function scanProcessedRegions(base_directory: string, knownRegions: Known
 			try {
 				const status = readStatus(statusFilename);
 				const id = relative(base_directory, directory).replaceAll('\\', '/');
-				if (!knownRegionIds.has(id)) {
+				const region = knownRegionIds.get(id);
+				if (!region) {
 					console.log('Similar Ids:', find(id));
 					throw new Error(`Unknown region ID: ${id}`);
 				}
-				entries.push({ id, status });
+				entries.push({ id, status, region });
 			} catch (error) {
 				console.error(`Error reading ${statusFilename}`);
 				throw error;

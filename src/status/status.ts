@@ -13,11 +13,17 @@ export interface Creator {
 	url: string;
 }
 
+export interface Entry {
+	name: string;
+	versaTilesExists: boolean;
+	hasGeoJSON: boolean;
+}
+
 export interface StatusSuccess {
 	status: 'success';
 	rating: number;
 	notes: string[];
-	entries: string[];
+	entries: Entry[];
 	license: License;
 	creator: Creator;
 }
@@ -52,6 +58,17 @@ function checkUrl(url: string): void {
 	if (typeof url !== 'string' || !url.startsWith('http')) {
 		throw new Error(`Invalid URL: ${url}`);
 	}
+}
+
+function checkEntry(entry: Entry): Entry {
+	if (typeof entry !== 'object') throw new Error(`Entry must be an object`);
+	entry = cleanupKeys(entry, ['name', 'versaTilesExists', 'hasGeoJSON']);
+
+	if (typeof entry.name !== 'string') throw new Error(`Invalid entry name: ${entry.name}`);
+	if (typeof entry.versaTilesExists !== 'boolean') throw new Error(`Invalid entry versaTilesExists: ${entry.versaTilesExists}`);
+	if (typeof entry.hasGeoJSON !== 'boolean') throw new Error(`Invalid entry hasGeoJSON: ${entry.hasGeoJSON}`);
+
+	return entry;
 }
 
 function checkLicense(license: License | string | undefined): License {
@@ -116,9 +133,21 @@ function checkStatusSuccess(status: StatusSuccess): StatusSuccess {
 		throw new Error(`Invalid notes: ${status.notes}`);
 	}
 
-	if (!Array.isArray(status.entries) || !status.entries.every((n) => typeof n === 'string')) {
-		throw new Error(`Invalid entries: ${status.entries}`);
+	if (!Array.isArray(status.entries)) {
+		throw new Error(`Entries must be an array`);
 	}
+
+	status.entries = status.entries.map((name) => {
+		if (typeof name !== 'string') {
+			throw new Error(`Entry must be a string: ${name}`);
+		}
+		const entry: Entry = {
+			name,
+			versaTilesExists: false,
+			hasGeoJSON: false
+		};
+		return checkEntry(entry);
+	})
 
 	status.license = checkLicense(status.license);
 	status.creator = checkCreator(status.creator);

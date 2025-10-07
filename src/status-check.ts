@@ -1,5 +1,7 @@
 import { resolve } from '@std/path/resolve';
-import { scanRegions } from './status/regions.ts';
+import { scanProcessedRegions } from './status/regions.ts';
+import { loadKnownRegions } from './status/geojson.ts';
 
-const regions_directory = resolve(import.meta.dirname!, '../regions');
-scanRegions(regions_directory);
+const knownRegions = loadKnownRegions(resolve(import.meta.dirname!, '../data'));
+
+scanProcessedRegions(resolve(import.meta.dirname!, '../regions'), knownRegions);

@@ -1,0 +1,107 @@
+// deno-lint-ignore-file no-explicit-any
+
+import { resolve } from '@std/path/resolve';
+import { gunzipSync } from 'node:zlib';
+import type { Feature, Polygon, MultiPolygon } from 'geojson';
+import * as topojson from 'topojson-client';
+import { string2ascii } from './ascii.ts';
+
+export type ValidRegion = Feature<Polygon | MultiPolygon, Record<string, any>>;
+export type KnownRegion = Feature<Polygon | MultiPolygon, { id: string, name: string }>;
+
+export function loadKnownRegions(folder: string): KnownRegion[] {
+	const regions: KnownRegion[] = [];
+	regions.push(...parseNUTS(loadData(resolve(folder, 'NUTS_RG_01M_2024_4326.topojson.gz'))));
+
+	return regions;
+}
+
+function parseNUTS(validRegions: ValidRegion[]): KnownRegion[] {
+	const knownIds = new Set<string>();
+	const list: KnownRegion[] = [];
+
+	function add(region: ValidRegion, id: string, name: string) {
+		id = id.split('#').map(s => string2ascii(s)).join('/');
+
+		const knownRegion: KnownRegion = {
+			type: 'Feature',
+			geometry: region.geometry,
+			properties: { id, name }
+		};
+		if (!knownIds.has(id)) {
+			knownIds.add(id);
+			list.push(knownRegion);
+		}
+	}
+
+	validRegions.sort((a, b) => (a.properties.LEVL_CODE - b.properties.LEVL_CODE) || (a.properties.NUTS_ID.localeCompare(b.properties.NUTS_ID)));
+
+	// add level 0 regions (countries)
+	for (const v of validRegions) {
+		const p = v.properties;
+		if (p.LEVL_CODE === 0) add(v, p.CNTR_CODE, p.NAME_LATN);
+	}
+
+	// add other levels
+	for (const v of validRegions) {
+		const p = v.properties;
+		if (p.LEVL_CODE > 0) {
+			add(v, p.CNTR_CODE + '#' + p.NAME_LATN, p.NAME_LATN);
+		}
+	}
+
+	return list;
+}
+
+function loadData(filePath: string): ValidRegion[] {
+	let buffer: Uint8Array = Deno.readFileSync(filePath);
+
+	const extensions = filePath.split('.').slice(1).reverse();
+	if (extensions[0] === 'gz') {
+		buffer = gunzipSync(buffer);
+		extensions.shift();
+	}
+
+	if (extensions.length !== 1) {
+		throw new Error(`Unsupported file extension: ${filePath}`);
+	}
+
+	let features: Feature[] = [];
+	switch (extensions[0]) {
+		case 'geojson': features = loadGeoJSON(buffer); break;
+		case 'topojson': features = loadTopoJSON(buffer); break;
+	}
+
+	for (const feature of features) {
+		if (feature.geometry?.type !== 'Polygon' && feature.geometry?.type !== 'MultiPolygon') {
+			throw new Error('Invalid geometry type, expected Polygon or MultiPolygon');
+		}
+		if (!feature.properties) feature.properties = {};
+	}
+
+	return features as ValidRegion[];
+}
+
+function extractFeatures(geojson: any): Feature[] {
+	if (geojson.type !== 'FeatureCollection' || !Array.isArray(geojson.features)) {
+		throw new Error('Invalid GeoJSON format');
+	}
+	return geojson.features;
+}
+
+function loadGeoJSON(buffer: Uint8Array): Feature[] {
+	return extractFeatures(JSON.parse(new TextDecoder().decode(buffer)));
+}
+
+function loadTopoJSON(buffer: Uint8Array): Feature[] {
+	const topojsonData = JSON.parse(new TextDecoder().decode(buffer));
+	if (!topojsonData.objects || typeof topojsonData.objects !== 'object') {
+		throw new Error('Invalid TopoJSON format');
+	}
+	const objectKey = Object.keys(topojsonData.objects)[0];
+	const geojson = topojson.feature(topojsonData, topojsonData.objects[objectKey]);
+	if (geojson.type !== 'FeatureCollection' || !Array.isArray(geojson.features)) {
+		throw new Error('Invalid GeoJSON format extracted from TopoJSON');
+	}
+	return geojson.features;
+}

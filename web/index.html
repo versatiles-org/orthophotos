@@ -103,20 +103,21 @@
 		</div>
 		<div id="text">
 			<p>
-				This is the first test demonstrating the overlay of orthophotos from various sources on Sentinel-2 and Blue
-				Marble imagery. It was created and is being served using <a href="https://versatiles.org">VersaTiles</a> (<a
+				This preview overlays orthophotos on top of <a href="https://s2gm.land.copernicus.eu/">Sentinel-2</a> and <a
+					href="https://visibleearth.nasa.gov/collection/1484/blue-marble">Blue Marble</a>. Zoom in to explore
+				details; zoom out to see metadata.<br>
+				It is built and served with <a href="https://versatiles.org">VersaTiles</a> (<a
 					href="https://versatiles.org">Website</a>, <a href="https://github.com/versatiles-org">GitHub</a>). Once
-				complete, the map tiles will be made available for free at <a
-					href="https://download.versatiles.org/">download.versatiles.org</a>. Visit the <a
-					href="https://github.com/versatiles-org/orthophotos">GitHub repository</a> for more information and to
-				report any <a href="https://github.com/versatiles-org/orthophotos/issues">issues</a>.
+				finished, the tiles will be freely available at <a
+					href="https://download.versatiles.org/">download.versatiles.org</a>. Learn more or report <a
+					href="https://github.com/versatiles-org/orthophotos/issues">issues</a> in the <a
+					href="https://github.com/versatiles-org/orthophotos">GitHub repository</a>.
 			</p>
 			<p>
-				<b>Please help me cover the infrastructure costs by becoming a <a
-						href="https://github.com/sponsors/MichaelKreil">GitHub sponsor</a> or an <a
-						href="https://opencollective.com/versatiles">Open Collective backer</a>!</b>
-				The monthly rental cost for a machine with 32 cores, 192 GB of RAM, 5 TB SSD and 20 TB HDD is around €500.
-				Generating map tiles for countries such as France or Germany costs around €100 to €150 each.
+				<b>Please help to cover the infrastructure costs by becoming a <a
+						href="https://github.com/sponsors/MichaelKreil">GitHub Sponsor</a> or an <a
+						href="https://opencollective.com/versatiles">Open Collective backer</a>.</b><br>
+				Processing terabytes of imagery using a rented 'powerhouse' server costs around €500/month.
 			</p>
 		</div>
 		<div id="btn_close" onclick="close_banner()">&#x2715;</div>
@@ -178,19 +179,18 @@
 
 		const map = new maplibregl.Map({
 			container: 'map',
-			bounds: [-23.213, 34.9, 45.112, 62.671],
-			zoom: 5,
+			//bounds: [-23.213, 34.9, 45.112, 62.671],
+			center: [10, 50],
+			zoom: 4,
 			maxZoom: 18,
 			hash: true,
 			maxPitch: 0,
 			style,
 			dragRotate: false,
+			attributionControl: { compact: false },
 		});
 
 		map.addControl(new maplibregl.NavigationControl(), 'top-right');
-
-		// collapse attribution control
-		document.getElementsByClassName('maplibregl-ctrl-attrib')[0].classList.remove('maplibregl-compact-show');
 
 		// load json file from url
 		(async () => {
@@ -227,7 +227,7 @@
 				id: 'regions',
 				type: 'fill',
 				source: 'regions',
-				maxzoom: 5,
+				maxzoom: 3.9,
 				paint: {
 					'fill-color': '#f00',
 					'fill-opacity': 0.5,
@@ -237,7 +237,7 @@
 				id: 'mapdata',
 				type: 'fill',
 				source: 'mapdata',
-				maxzoom: 5,
+				maxzoom: 3.9,
 				paint: {
 					'fill-color': '#66f',
 					'fill-opacity': 0.5,
@@ -259,7 +259,6 @@
 					const entry = regionsById.get(id);
 					if (entry) {
 						const { status, region, id } = entry;
-						console.log(status.rating);
 						const stars = [0, 1, 2, 3, 4].map(i => i < status.rating ? '★' : '<i>★</i>').join('');
 						const description = [
 							`<b>Region: ${region.properties.name}</b>`,

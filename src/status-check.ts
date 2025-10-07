@@ -5,7 +5,7 @@ import { loadKnownRegions } from './status/geojson.ts';
 
 const knownRegions = loadKnownRegions(resolve(import.meta.dirname!, '../data'));
 const regions = scanRegions(resolve(import.meta.dirname!, '../regions'), knownRegions);
-updateRegionEntries(regions);
+await updateRegionEntries(regions);
 
 const result = JSON.stringify(regions);
 Deno.writeTextFileSync(resolve(import.meta.dirname!, '../web/status.json'), result);

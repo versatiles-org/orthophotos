@@ -25,7 +25,7 @@
 			width: 100%;
 		}
 
-		#popup {
+		#banner {
 			position: absolute;
 			top: 0;
 			left: 0;
@@ -42,16 +42,16 @@
 			z-index: 10000;
 		}
 
-		#popup p {
+		#banner p {
 			margin: 0.3em 0;
 			padding: 0;
 		}
 
-		#popup #text {
+		#banner #text {
 			padding-right: 1em;
 		}
 
-		#popup #btn_close {
+		#banner #btn_close {
 			position: absolute;
 			top: 0.4em;
 			right: 0.4em;
@@ -62,22 +62,41 @@
 		a {
 			color: inherit !important;
 		}
+
+		.maplibregl-popup-content {
+			line-height: 1.4em;
+			user-select: none;
+			pointer-events: none;
+		}
+
+		.maplibregl-popup-content a {
+			outline: none;
+		}
+
+		.maplibregl-popup-content .stars {
+			color: black;
+		}
+
+		.maplibregl-popup-content .stars i {
+			opacity: 0.3;
+			font-style: normal;
+		}
 	</style>
 	<script>
-		function close_popup() {
+		function close_banner() {
 			console.log('close');
 			document.getElementById('text').style.display = 'none';
 			document.getElementById('btn_close').style.display = 'none';
-			const popup = document.getElementById('popup');
-			popup.style.backdropFilter = 'none';
-			popup.style.background = 'none';
+			const banner = document.getElementById('banner');
+			banner.style.backdropFilter = 'none';
+			banner.style.background = 'none';
 		}
 	</script>
 </head>
 
 <body style="margin:0;height:100%;">
 	<div id="map" class="maplibregl-compact"></div>
-	<div id="popup">
+	<div id="banner">
 		<div>
 			<a href="https://versatiles.org"><img src="https://tiles.versatiles.org/assets/images/versatiles-logo.png"
 					alt="VersaTiles" width="32"></a>
@@ -100,7 +119,7 @@
 				Generating map tiles for countries such as France or Germany costs around €100 to €150 each.
 			</p>
 		</div>
-		<div id="btn_close" onclick="close_popup()">&#x2715;</div>
+		<div id="btn_close" onclick="close_banner()">&#x2715;</div>
 	</div>
 	<script>
 		const style = VersaTilesStyle.graybeard({
@@ -170,9 +189,100 @@
 
 		map.addControl(new maplibregl.NavigationControl(), 'top-right');
 
-
 		// collapse attribution control
 		document.getElementsByClassName('maplibregl-ctrl-attrib')[0].classList.remove('maplibregl-compact-show');
+
+		// load json file from url
+		(async () => {
+			const response = await fetch('https://icarus.versatiles.org/status.json');
+			const regions = await response.json();
+			const featuresRegions = [];
+			const featuresData = [];
+			const regionsById = new Map();
+			for (const region of regions) {
+				if (region.status.status != 'success') continue;
+
+				const id = region.id;
+				featuresRegions.push(region.region);
+				regionsById.set(id, region);
+				for (const entry of region.status.entries) {
+					if (!entry.versaTilesExists) continue;
+					const name = entry.name;
+					const featureData = entry.geoJSON;
+					featureData.properties = { id, name };
+					featuresData.push(featureData);
+				}
+			}
+			map.addSource('regions', {
+				type: 'geojson',
+				data: { type: 'FeatureCollection', features: featuresRegions },
+
+			});
+			map.addSource('mapdata', {
+				type: 'geojson',
+				data: { type: 'FeatureCollection', features: featuresData },
+
+			});
+			map.addLayer({
+				id: 'regions',
+				type: 'fill',
+				source: 'regions',
+				maxzoom: 5,
+				paint: {
+					'fill-color': '#f00',
+					'fill-opacity': 0.5,
+				},
+			});
+			map.addLayer({
+				id: 'mapdata',
+				type: 'fill',
+				source: 'mapdata',
+				maxzoom: 5,
+				paint: {
+					'fill-color': '#66f',
+					'fill-opacity': 0.5,
+				},
+			});
+			const popup = new maplibregl.Popup({
+				maxWidth: '300px',
+				closeButton: false,
+				closeOnClick: false
+			});
+
+			const canvas = map.getCanvas();
+			map.on('mousemove', 'regions', (e) => {
+				const features = e.features;
+				let cursor = '';
+				const feature = features[0];
+				if (feature) {
+					const id = feature.properties.id;
+					const entry = regionsById.get(id);
+					if (entry) {
+						const { status, region, id } = entry;
+						console.log(status.rating);
+						const stars = [0, 1, 2, 3, 4].map(i => i < status.rating ? '★' : '<i>★</i>').join('');
+						const description = [
+							`<b>Region: ${region.properties.name}</b>`,
+							`<b>Rating:</b> <span class="stars">${stars}</span>`,
+							`<b>Problems:</b> ${status.notes.length}`,
+							`<b>Source:</b> <a href="${status.creator.url}" tabindex="-1">${status.creator.name}</a>`,
+							`<b>License:</b> <a href="${status.license.url}" tabindex="-1">${status.license.name}</a>`,
+						].join('<br>');
+						popup.setLngLat(e.lngLat).setHTML(description).addTo(map);
+						cursor = 'pointer';
+					}
+				}
+				canvas.style.cursor = cursor;
+			});
+			map.on('mouseout', 'regions', (e) => {
+				canvas.style.cursor = '';
+				popup.remove();
+			});
+			map.on('mouseleave', 'regions', (e) => {
+				canvas.style.cursor = '';
+				popup.remove();
+			});
+		})();
 	</script>
 </body>
 

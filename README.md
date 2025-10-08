@@ -52,7 +52,7 @@ Refer to the script’s help output for additional options and detailed usage.
 
 ## Preview Server
 
-The preview server is a VersaTiles server showing all the processed orthophoto data. It works by downloading all `.versatiles` containers from long-term storage and using Deno to build a `.vpl` (VersaTiles Pipeline Language) file. This `.vpl` file defines a raster source onto which satellite data is overlaid with the processed orthophotos. The server is publicly accessible at [icarus.versatiles.org](https://icarus.versatiles.org/). Its primary purpose is to facilitate debugging and quality control by displaying orthophotos at all zoom levels, which makes it easier to identify problems and defects. The final product, which will be available at [download.versatiles.org](https://download.versatiles.org/), will display orthophotos at the appropriate zoom levels, beginning at zoom levels 11 or 12.
+The preview server is a VersaTiles server showing all the processed orthophoto data. It works by downloading all `.versatiles` containers from long-term storage and using Deno to build a `.vpl` (VersaTiles Pipeline Language) file. This `.vpl` file defines a raster source onto which satellite data is overlaid with the processed orthophotos. The demo is publicly accessible at [versatiles.org/satellite_demo/](https://versatiles.org/satellite_demo/). Its primary purpose is to facilitate debugging and quality control by displaying orthophotos at all zoom levels, which makes it easier to identify problems and defects. The final product, which will be available at [download.versatiles.org](https://download.versatiles.org/), will display orthophotos at the appropriate zoom levels, beginning at zoom levels 11 or 12.
 
 ## Notes
 

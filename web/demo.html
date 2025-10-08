@@ -12,25 +12,25 @@
 	<meta property="og:site_name" content="VersaTiles">
 	<meta property="og:title" content="VersaTiles Satellite Demo">
 	<meta property="og:description" content="Try the beta version of our free satellite map tiles.">
-	<meta property="og:image" content="https://icarus.versatiles.org/preview.jpg">
+	<meta property="og:image" content="https://versatiles-satellite.b-cdn.net/preview.jpg">
 	<meta property="og:image:alt" content="Satellite view of Europe with the VersaTiles logo">
 
 	<!-- Twitter -->
 	<meta name="twitter:card" content="summary_large_image">
 	<meta name="twitter:title" content="VersaTiles Satellite Demo">
 	<meta name="twitter:description" content="Try the beta version of our free satellite map tiles.">
-	<meta name="twitter:image" content="https://icarus.versatiles.org/preview.jpg">
+	<meta name="twitter:image" content="https://versatiles-satellite.b-cdn.net/preview.jpg">
 	<meta name="twitter:image:alt" content="Satellite view of Europe with the VersaTiles logo">
 
 	<!-- Optional UI color -->
 	<meta name="theme-color" content="#111111">
 
-	<link rel="icon" type="image/png" href="https://icarus.versatiles.org/assets/images/versatiles-logo.png">
+	<link rel="icon" type="image/png" href="https://versatiles-satellite.b-cdn.net/assets/images/versatiles-logo.png">
 
-	<script src="https://icarus.versatiles.org/assets/lib/maplibre-gl/maplibre-gl.js"></script>
-	<link href="https://icarus.versatiles.org/assets/lib/maplibre-gl/maplibre-gl.css" rel="stylesheet">
+	<script src="https://versatiles-satellite.b-cdn.net/assets/lib/maplibre-gl/maplibre-gl.js"></script>
+	<link href="https://versatiles-satellite.b-cdn.net/assets/lib/maplibre-gl/maplibre-gl.css" rel="stylesheet">
 
-	<script src="https://icarus.versatiles.org/assets/lib/versatiles-style/versatiles-style.js"></script>
+	<script src="https://versatiles-satellite.b-cdn.net/assets/lib/versatiles-style/versatiles-style.js"></script>
 
 	<style>
 		body {
@@ -184,7 +184,7 @@
 
 		style.sources.orthophotos = {
 			type: 'raster',
-			tiles: ['https://icarus.versatiles.org/tiles/orthophotos/{z}/{x}/{y}'],
+			tiles: ['https://versatiles-satellite.b-cdn.net/tiles/orthophotos/{z}/{x}/{y}'],
 			tileSize: 512,
 			attribution: '© VersaTiles',
 			maxzoom: 17,
@@ -213,7 +213,7 @@
 
 		// load json file from url
 		(async () => {
-			const response = await fetch('https://icarus.versatiles.org/status.json');
+			const response = await fetch('https://versatiles-satellite.b-cdn.net/status.json');
 			const regions = await response.json();
 			const featuresRegions = [];
 			const featuresData = [];

@@ -1,5 +1,12 @@
-status: error
-rating: 0
+status: success
+rating: 3
 notes:
-  - "Access restricted"
-  - "The only available format is the proprietary ECW format."
+  - "License requires attribution"
+  - "Only WMS available"
+  - "Access requires token"
+entries:
+  - tiles
+license: CC BY 4.0
+creator:
+  name: GeoDanmark
+  url: https://dataforsyningen.dk/data/981

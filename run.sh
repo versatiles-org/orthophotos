@@ -65,6 +65,7 @@ EOF
 
 cd "$(dirname "$0")"
 source config.env
+export LC_ALL="C"
 
 # early help
 if [[ "$1" == "-h" || "$1" == "--help" || "$1" == "help" ]]; then

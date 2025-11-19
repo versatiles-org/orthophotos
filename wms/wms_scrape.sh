@@ -146,13 +146,15 @@ wms_scrape() {
   fi
 
   # Clamp to world extent
-  awk -v xmin="$XMIN" -v ymin="$YMIN" -v xmax="$XMAX" -v ymax="$YMAX" \
-      -v lxmin="$LXMIN" -v lymin="$LYMIN" -v lxmax="$LXMAX" -v lymax="$LYMAX" \
-      'BEGIN{
-        if(lxmin<xmin) lxmin=xmin; if(lymin<ymin) lymin=ymin;
-        if(lxmax>xmax) lxmax=xmax; if(lymax>ymax) lymax=ymax;
-        printf "Layer bbox (EPSG:3857): [%.6f, %.6f, %.6f, %.6f]\n", lxmin, lymin, lxmax, lymax > "/dev/stderr";
-      }' >/dev/null
+  read LXMIN LYMIN LXMAX LYMAX <<<"$(awk \
+    -v xmin="$XMIN" -v ymin="$YMIN" -v xmax="$XMAX" -v ymax="$YMAX" \
+    -v lxmin="$LXMIN" -v lymin="$LYMIN" -v lxmax="$LXMAX" -v lymax="$LYMAX" \
+    'BEGIN{
+       if(lxmin<xmin) lxmin=xmin; if(lymin<ymin) lymin=ymin;
+       if(lxmax>xmax) lxmax=xmax; if(lymax>ymax) lymax=ymax;
+       printf "%.12f %.12f %.12f %.12f\n", lxmin, lymin, lxmax, lymax;
+     }')"
+  echo "Layer bbox (EPSG:3857): [$LXMIN, $LYMIN, $LXMAX, $LYMAX]" >&2
 
   # ---------- Compute block size (square, power of two, <= min(MAXW,MAXH), multiple of 512) ----------
   local LIMIT MIN_LIM

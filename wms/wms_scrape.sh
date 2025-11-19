@@ -197,8 +197,8 @@ wms_scrape() {
          # tile indices (512px) covering layer bbox
          txmin = floor((lxmin -  xmin) / (tile_px * r))
          tymin = floor(( ymax - lymax) / (tile_px * r))
-         txmax = ceil ((lxmax -  xmin) / (tile_px * r)) - 1
-         tymax = ceil (( ymax - lymin) / (tile_px * r)) - 1
+         txmax = ceil((lxmax -  xmin) / (tile_px * r)) - 1
+         tymax = ceil(( ymax - lymin) / (tile_px * r)) - 1
 
          # expand to block-aligned ranges (multiples of bw/bh)
          tx0 = (txmin >= 0) ? ( (txmin / bw)*bw ) : ( -ceil((-txmin)/bw)*bw )

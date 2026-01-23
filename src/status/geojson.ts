@@ -2,12 +2,15 @@
 
 import { resolve } from '@std/path/resolve';
 import { gunzipSync } from 'node:zlib';
-import type { Feature, Polygon, MultiPolygon, Geometry, FeatureCollection } from 'geojson';
+import type { Feature, FeatureCollection, Geometry, MultiPolygon, Polygon } from 'geojson';
 import * as topojson from 'topojson-client';
 import { string2ascii } from './ascii.ts';
 
 export type ValidRegion = Feature<Polygon | MultiPolygon, Record<string, any>>;
-export type KnownRegion = Feature<Polygon | MultiPolygon, { id: string, name: string, fullname: string }>;
+export type KnownRegion = Feature<
+	Polygon | MultiPolygon,
+	{ id: string; name: string; fullname: string }
+>;
 
 export function loadKnownRegions(folder: string): KnownRegion[] {
 	const regions: KnownRegion[] = [];
@@ -22,12 +25,12 @@ function parseNUTS(validRegions: ValidRegion[]): KnownRegion[] {
 	const list: KnownRegion[] = [];
 
 	function add(region: ValidRegion, id: string, name: string, fullname: string) {
-		id = id.split('#').map(s => string2ascii(s)).join('/');
+		id = id.split('#').map((s) => string2ascii(s)).join('/');
 
 		const knownRegion: KnownRegion = {
 			type: 'Feature',
 			geometry: region.geometry,
-			properties: { id, name, fullname }
+			properties: { id, name, fullname },
 		};
 		if (!knownIds.has(id)) {
 			knownIds.add(id);
@@ -35,7 +38,10 @@ function parseNUTS(validRegions: ValidRegion[]): KnownRegion[] {
 		}
 	}
 
-	validRegions.sort((a, b) => (a.properties.LEVL_CODE - b.properties.LEVL_CODE) || (a.properties.NUTS_ID.localeCompare(b.properties.NUTS_ID)));
+	validRegions.sort((a, b) =>
+		(a.properties.LEVL_CODE - b.properties.LEVL_CODE) ||
+		(a.properties.NUTS_ID.localeCompare(b.properties.NUTS_ID))
+	);
 
 	// add level 0 regions (countries)
 	for (const v of validRegions) {
@@ -76,8 +82,12 @@ function loadData(filePath: string): ValidRegion[] {
 
 	let features: Feature[] = [];
 	switch (extensions[0]) {
-		case 'geojson': features = loadGeoJSON(buffer); break;
-		case 'topojson': features = loadTopoJSON(buffer); break;
+		case 'geojson':
+			features = loadGeoJSON(buffer);
+			break;
+		case 'topojson':
+			features = loadTopoJSON(buffer);
+			break;
 	}
 
 	for (const feature of features) {
@@ -128,19 +138,27 @@ export function reducePrecision(geometry: Geometry | Feature | FeatureCollection
 	}
 	const type = geometry.type;
 	switch (type) {
-		case 'Point': return roundCoord1(geometry.coordinates);
-		case 'MultiPoint': return roundCoord2(geometry.coordinates);
-		case 'LineString': return roundCoord2(geometry.coordinates);
-		case 'MultiLineString': return roundCoord3(geometry.coordinates);
-		case 'Polygon': return roundCoord3(geometry.coordinates);
-		case 'MultiPolygon': return roundCoord4(geometry.coordinates);
-		case 'Feature': return reducePrecision(geometry.geometry);
+		case 'Point':
+			return roundCoord1(geometry.coordinates);
+		case 'MultiPoint':
+			return roundCoord2(geometry.coordinates);
+		case 'LineString':
+			return roundCoord2(geometry.coordinates);
+		case 'MultiLineString':
+			return roundCoord3(geometry.coordinates);
+		case 'Polygon':
+			return roundCoord3(geometry.coordinates);
+		case 'MultiPolygon':
+			return roundCoord4(geometry.coordinates);
+		case 'Feature':
+			return reducePrecision(geometry.geometry);
 		case 'FeatureCollection':
 			for (const feature of geometry.features) reducePrecision(feature);
 			return;
 		case 'GeometryCollection':
 			for (const geom of geometry.geometries) reducePrecision(geom);
 			return;
-		default: throw new Error(`Unknown geometry type: ${type}`);
+		default:
+			throw new Error(`Unknown geometry type: ${type}`);
 	}
 }

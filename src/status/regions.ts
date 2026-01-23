@@ -11,7 +11,9 @@ interface Region {
 }
 
 export function scanRegions(base_directory: string, knownRegions: KnownRegion[]): Region[] {
-	const knownRegionIds = new Map<string, KnownRegion>(knownRegions.map((r) => [r.properties.id, r]));
+	const knownRegionIds = new Map<string, KnownRegion>(
+		knownRegions.map((r) => [r.properties.id, r]),
+	);
 	const entries: Region[] = [];
 
 	recursive(base_directory);
@@ -48,7 +50,7 @@ export function scanRegions(base_directory: string, knownRegions: KnownRegion[])
 	function find(id: string): string[] {
 		const ids = knownRegions.map((r) => ({
 			id: r.properties.id,
-			distance: matchingCharacters(id, r.properties.id)
+			distance: matchingCharacters(id, r.properties.id),
 		}));
 		ids.sort((a, b) => b.distance - a.distance);
 		return ids.slice(0, 10).map((r) => r.id);
@@ -73,11 +75,11 @@ export async function updateRegionEntries(regions: Region[]): Promise<void> {
 			const versaTilesFilename = resolve(
 				orthophotosPath,
 				region.id,
-				`${entry.name}.versatiles`
+				`${entry.name}.versatiles`,
 			);
 
 			entry.versaTilesExists = existsSync(versaTilesFilename);
-			
+
 			if (!entry.versaTilesExists) {
 				console.warn(`Warning: Missing ${relative(orthophotosPath, versaTilesFilename)}`);
 				continue;
@@ -86,7 +88,7 @@ export async function updateRegionEntries(regions: Region[]): Promise<void> {
 			const geoJsonFilename = resolve(
 				orthophotosPath,
 				region.id,
-				`${entry.name}.geojson`
+				`${entry.name}.geojson`,
 			);
 
 			if (!existsSync(geoJsonFilename)) {
@@ -97,7 +99,11 @@ export async function updateRegionEntries(regions: Region[]): Promise<void> {
 					versaTilesFilename,
 					geoJsonFilename,
 				];
-				const command = new Deno.Command('versatiles', { args, stdout: 'inherit', stderr: 'inherit' });
+				const command = new Deno.Command('versatiles', {
+					args,
+					stdout: 'inherit',
+					stderr: 'inherit',
+				});
 				await command.output();
 			}
 
@@ -112,6 +118,6 @@ export async function updateRegionEntries(regions: Region[]): Promise<void> {
 				geometry: geoJSON.geometry,
 				properties: {},
 			};
-		};
+		}
 	}
 }

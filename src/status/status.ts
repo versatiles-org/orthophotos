@@ -51,7 +51,7 @@ export function readStatus(filename: string): Status {
 
 function cleanupKeys<T>(obj: T, allowedKeys: (keyof T)[]): T {
 	return Object.fromEntries(
-		allowedKeys.map(key => [key, obj[key]]).filter(([_, value]) => value !== undefined)
+		allowedKeys.map((key) => [key, obj[key]]).filter(([_, value]) => value !== undefined),
 	);
 }
 
@@ -66,21 +66,39 @@ function checkEntry(entry: Entry): Entry {
 	entry = cleanupKeys(entry, ['name', 'versaTilesExists', 'geoJSON']);
 
 	if (typeof entry.name !== 'string') throw new Error(`Invalid entry name: ${entry.name}`);
-	if (typeof entry.versaTilesExists !== 'boolean') throw new Error(`Invalid entry versaTilesExists: ${entry.versaTilesExists}`);
+	if (typeof entry.versaTilesExists !== 'boolean') {
+		throw new Error(`Invalid entry versaTilesExists: ${entry.versaTilesExists}`);
+	}
 
 	return entry;
 }
 
 function checkLicense(license: License | string | undefined): License {
 	const KNOWN_LICENSES: License[] = [
-		{ name: 'CC0', url: 'https://creativecommons.org/publicdomain/zero/1.0/', requiresAttribution: false },
-		{ name: 'CC BY 4.0', url: 'https://creativecommons.org/licenses/by/4.0/', requiresAttribution: true },
-		{ name: 'DL-DE->BY-2.0', url: 'https://www.govdata.de/dl-de/by-2-0', requiresAttribution: true },
-		{ name: 'DL-DE->Zero-2.0', url: 'https://www.govdata.de/dl-de/zero-2-0', requiresAttribution: false }
+		{
+			name: 'CC0',
+			url: 'https://creativecommons.org/publicdomain/zero/1.0/',
+			requiresAttribution: false,
+		},
+		{
+			name: 'CC BY 4.0',
+			url: 'https://creativecommons.org/licenses/by/4.0/',
+			requiresAttribution: true,
+		},
+		{
+			name: 'DL-DE->BY-2.0',
+			url: 'https://www.govdata.de/dl-de/by-2-0',
+			requiresAttribution: true,
+		},
+		{
+			name: 'DL-DE->Zero-2.0',
+			url: 'https://www.govdata.de/dl-de/zero-2-0',
+			requiresAttribution: false,
+		},
 	];
 
 	if (typeof license === 'string') {
-		const foundLicense = KNOWN_LICENSES.find(l => l.name === license);
+		const foundLicense = KNOWN_LICENSES.find((l) => l.name === license);
 		if (!foundLicense) throw new Error(`Unknown license: ${license}`);
 		license = foundLicense;
 	}
@@ -146,7 +164,7 @@ function checkStatusSuccess(status: StatusSuccess): StatusSuccess {
 			versaTilesExists: false,
 		};
 		return checkEntry(entry);
-	})
+	});
 
 	status.license = checkLicense(status.license);
 	status.creator = checkCreator(status.creator);

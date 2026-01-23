@@ -7,9 +7,9 @@
     "status-check": "deno run -A --env-file=config.env src/status-check.ts"
   },
   "imports": {
-    "@std/fs": "jsr:@std/fs@^1.0.19",
-    "@std/path": "jsr:@std/path@^1.1.2",
-    "@std/yaml": "jsr:@std/yaml@^1.0.9",
+    "@std/fs": "jsr:@std/fs@^1.0.22",
+    "@std/path": "jsr:@std/path@^1.1.4",
+    "@std/yaml": "jsr:@std/yaml@^1.0.11",
     "@types/geojson": "npm:@types/geojson@^7946.0.16",
     "geojson": "npm:geojson@^0.5.0",
     "topojson-client": "npm:topojson-client@^3.1.0"

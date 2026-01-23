@@ -1,5 +1,6 @@
 {
   "tasks": {
+    "check": "deno fmt --check && deno lint",
     "format": "deno fmt",
     "server-prepare": "deno run -A --env-file=config.env src/server-prepare.ts",
     "server-start": "./server.sh",

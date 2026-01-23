@@ -7,7 +7,7 @@ import * as topojson from 'topojson-client';
 import { string2ascii } from './ascii.ts';
 
 export type ValidRegion = Feature<Polygon | MultiPolygon, Record<string, any>>;
-export type KnownRegion = Feature<Polygon | MultiPolygon, { id: string, name: string }>;
+export type KnownRegion = Feature<Polygon | MultiPolygon, { id: string, name: string, fullname: string }>;
 
 export function loadKnownRegions(folder: string): KnownRegion[] {
 	const regions: KnownRegion[] = [];
@@ -18,15 +18,16 @@ export function loadKnownRegions(folder: string): KnownRegion[] {
 
 function parseNUTS(validRegions: ValidRegion[]): KnownRegion[] {
 	const knownIds = new Set<string>();
+	const knownCountries = new Map<string, string>();
 	const list: KnownRegion[] = [];
 
-	function add(region: ValidRegion, id: string, name: string) {
+	function add(region: ValidRegion, id: string, name: string, fullname: string) {
 		id = id.split('#').map(s => string2ascii(s)).join('/');
 
 		const knownRegion: KnownRegion = {
 			type: 'Feature',
 			geometry: region.geometry,
-			properties: { id, name }
+			properties: { id, name, fullname }
 		};
 		if (!knownIds.has(id)) {
 			knownIds.add(id);
@@ -39,14 +40,21 @@ function parseNUTS(validRegions: ValidRegion[]): KnownRegion[] {
 	// add level 0 regions (countries)
 	for (const v of validRegions) {
 		const p = v.properties;
-		if (p.LEVL_CODE === 0) add(v, p.CNTR_CODE, p.NAME_LATN);
+		if (p.LEVL_CODE === 0) {
+			add(v, p.CNTR_CODE, p.NAME_LATN, p.NAME_LATN);
+			knownCountries.set(p.CNTR_CODE, p.NAME_LATN);
+		}
 	}
 
 	// add other levels
 	for (const v of validRegions) {
 		const p = v.properties;
 		if (p.LEVL_CODE > 0) {
-			add(v, p.CNTR_CODE + '#' + p.NAME_LATN, p.NAME_LATN);
+			const countryName = knownCountries.get(p.CNTR_CODE);
+			if (!countryName) {
+				throw new Error(`Unknown country code: ${p.CNTR_CODE}`);
+			}
+			add(v, p.CNTR_CODE + '#' + p.NAME_LATN, p.NAME_LATN, countryName + ' - ' + p.NAME_LATN);
 		}
 	}
 

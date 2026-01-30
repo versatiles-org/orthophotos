@@ -2,7 +2,7 @@ import { resolve } from '@std/path';
 import { move } from '@std/fs/move';
 import { existsSync } from '@std/fs/exists';
 import { getDataDir } from '../config.ts';
-import { withRetry } from '../retry.ts';
+import { runCommandWithRetry } from '../lib/command.ts';
 
 /**
  * Downloads the VersaTiles frontend archive from GitHub releases.
@@ -18,24 +18,14 @@ export async function downloadFrontend() {
 	}
 
 	console.log('Downloading frontend archive...');
-	await withRetry(async () => {
-		const command = new Deno.Command('curl', {
-			args: [
-				'-L',
-				'-o',
-				filename + '.tmp',
-				'-z',
-				filename,
-				'https://github.com/versatiles-org/versatiles-frontend/releases/latest/download/frontend-dev.br.tar.gz',
-			],
-			stdout: 'inherit',
-			stderr: 'inherit',
-		});
-		const output = await command.output();
-		if (!output.success) {
-			throw new Error(`curl exited with code ${output.code}`);
-		}
-	});
+	await runCommandWithRetry('curl', [
+		'-L',
+		'-o',
+		filename + '.tmp',
+		'-z',
+		filename,
+		'https://github.com/versatiles-org/versatiles-frontend/releases/latest/download/frontend-dev.br.tar.gz',
+	]);
 
 	if (existsSync(filename + '.tmp')) {
 		move(filename + '.tmp', filename, { overwrite: true });

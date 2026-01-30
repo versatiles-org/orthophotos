@@ -1,4 +1,4 @@
-import { parse } from '@std/yaml';
+import { parseYamlFile } from '../lib/yaml.ts';
 import type { Feature } from 'geojson';
 
 export type Status = StatusSuccess | StatusError;
@@ -35,8 +35,7 @@ export interface StatusError {
 }
 
 export function readStatus(filename: string): Status {
-	const text = Deno.readTextFileSync(filename);
-	const status = parse(text) as Status;
+	const status = parseYamlFile<Status>(filename);
 
 	if (status.status === 'success') {
 		return checkStatusSuccess(status);

@@ -2,7 +2,7 @@
  * Retry logic wrapper for operations that may fail due to transient issues.
  */
 
-interface RetryOptions {
+export interface RetryOptions {
 	maxAttempts?: number;
 	initialDelayMs?: number;
 	maxDelayMs?: number;
@@ -55,31 +55,4 @@ export async function withRetry<T>(
 	}
 
 	throw lastError;
-}
-
-/**
- * Executes a Deno.Command with retry logic.
- * @param commandName The command to execute
- * @param args Command arguments
- * @param options Retry configuration options
- * @returns The command output
- * @throws If the command fails after all retry attempts
- */
-export function runCommandWithRetry(
-	commandName: string,
-	args: string[],
-	options: RetryOptions = {},
-): Promise<Deno.CommandOutput> {
-	return withRetry(async () => {
-		const command = new Deno.Command(commandName, {
-			args,
-			stdout: 'inherit',
-			stderr: 'inherit',
-		});
-		const output = await command.output();
-		if (!output.success) {
-			throw new Error(`${commandName} exited with code ${output.code}`);
-		}
-		return output;
-	}, options);
 }

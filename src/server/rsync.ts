@@ -1,7 +1,7 @@
 import { resolve } from '@std/path';
 import { ensureDir } from '@std/fs';
 import { getDataDir, requireRsyncConfig } from '../config.ts';
-import { withRetry } from '../retry.ts';
+import { runCommandWithRetry } from '../lib/command.ts';
 
 /**
  * Downloads orthophoto VersaTiles containers from the remote server.
@@ -44,11 +44,5 @@ async function rsync(srcDir: string, dstDir: string) {
 		dst,
 	];
 
-	await withRetry(async () => {
-		const command = new Deno.Command('rsync', { args, stdout: 'inherit', stderr: 'inherit' });
-		const output = await command.output();
-		if (!output.success) {
-			throw new Error(`rsync exited with code ${output.code}`);
-		}
-	});
+	await runCommandWithRetry('rsync', args);
 }

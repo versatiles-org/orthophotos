@@ -12,7 +12,9 @@ import {
 	runRsyncUpload,
 	runVersatiles,
 } from './commands.ts';
-import { readStatusEntries } from './status-yaml.ts';
+import { TASK_NUMBER_TO_NAME } from './tasks.constants.ts';
+import { readStatusEntries } from '../lib/yaml.ts';
+import { safeRemoveDir, safeRemoveFile } from '../lib/fs.ts';
 
 export interface TaskContext {
 	name: string; // Region identifier (e.g., "de/bw")
@@ -21,22 +23,11 @@ export interface TaskContext {
 	tempDir: string; // Path to $dir_temp/<name>
 }
 
-/** Task names for display */
-const TASK_NAMES: Record<number, string> = {
-	0: 'download',
-	1: 'fetch',
-	2: 'vrt',
-	3: 'preview',
-	4: 'convert',
-	5: 'upload',
-	6: 'delete',
-};
-
 /**
  * Runs a single task.
  */
 export async function runTask(taskNum: number, ctx: TaskContext): Promise<void> {
-	const taskName = TASK_NAMES[taskNum] ?? `unknown(${taskNum})`;
+	const taskName = TASK_NUMBER_TO_NAME[taskNum] ?? `unknown(${taskNum})`;
 	console.log(`\n=== Task ${taskNum}: ${taskName} ===`);
 
 	switch (taskNum) {
@@ -93,7 +84,7 @@ async function taskFetch(ctx: TaskContext): Promise<void> {
 	await runBashScript(scriptPath, env, ctx.tempDir);
 
 	// Clean up temp directory after successful completion
-	await Deno.remove(ctx.tempDir, { recursive: true }).catch(() => {});
+	await safeRemoveDir(ctx.tempDir);
 }
 
 /**
@@ -114,7 +105,7 @@ async function taskVrt(ctx: TaskContext): Promise<void> {
 	await runBashScript(scriptPath, env, ctx.dataDir);
 
 	// Clean up temp directory after successful completion
-	await Deno.remove(ctx.tempDir, { recursive: true }).catch(() => {});
+	await safeRemoveDir(ctx.tempDir);
 }
 
 /**
@@ -173,7 +164,7 @@ async function taskConvert(ctx: TaskContext): Promise<void> {
 		await Deno.rename(tempVersatiles, outputVersatiles);
 
 		// Clean up temp files
-		await Deno.remove(vplPath).catch(() => {});
+		await safeRemoveFile(vplPath);
 	}
 }
 
@@ -193,17 +184,8 @@ async function taskUpload(ctx: TaskContext): Promise<void> {
 async function taskDelete(ctx: TaskContext): Promise<void> {
 	console.log('Deleting local data...');
 
-	await Deno.remove(ctx.dataDir, { recursive: true }).catch((e) => {
-		if (!(e instanceof Deno.errors.NotFound)) {
-			throw e;
-		}
-	});
-
-	await Deno.remove(ctx.tempDir, { recursive: true }).catch((e) => {
-		if (!(e instanceof Deno.errors.NotFound)) {
-			throw e;
-		}
-	});
+	await safeRemoveDir(ctx.dataDir);
+	await safeRemoveDir(ctx.tempDir);
 
 	console.log('  Local data deleted.');
 }

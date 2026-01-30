@@ -1,5 +1,5 @@
 import { assertEquals, assertRejects } from '@std/assert';
-import { withRetry } from './retry.ts';
+import { withRetry } from './lib/retry.ts';
 
 Deno.test('withRetry - succeeds on first attempt', async () => {
 	let attempts = 0;

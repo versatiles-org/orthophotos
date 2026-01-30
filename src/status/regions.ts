@@ -4,6 +4,7 @@ import { readStatus, Status } from './status.ts';
 import { KnownRegion, reducePrecision } from './geojson.ts';
 import type { Feature } from 'geojson';
 import { getDataDir } from '../config.ts';
+import { runCommand } from '../lib/command.ts';
 
 export interface Region {
 	id: string;
@@ -97,17 +98,7 @@ async function createGeoJsonOutline(
 	geoJsonFilename: string,
 ): Promise<void> {
 	console.log(`Creating GeoJSON for ${versaTilesFilename}`);
-	const command = new Deno.Command('versatiles', {
-		args: ['dev', 'export-outline', versaTilesFilename, geoJsonFilename],
-		stdout: 'inherit',
-		stderr: 'inherit',
-	});
-	const output = await command.output();
-	if (!output.success) {
-		throw new Error(
-			`Failed to create GeoJSON for ${versaTilesFilename}: versatiles exited with code ${output.code}`,
-		);
-	}
+	await runCommand('versatiles', ['dev', 'export-outline', versaTilesFilename, geoJsonFilename]);
 }
 
 /**

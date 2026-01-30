@@ -3,29 +3,7 @@
  * Validates region names and expands task specifications.
  */
 
-/** Map of named tasks to their numeric values */
-const TASK_NAMES: Record<string, number> = {
-	download: 0,
-	'0_download': 0,
-	fetch: 1,
-	'1_fetch': 1,
-	vrt: 2,
-	'2_vrt': 2,
-	preview: 3,
-	'3_preview': 3,
-	convert: 4,
-	'4_convert': 4,
-	upload: 5,
-	'5_upload': 5,
-	delete: 6,
-	'6_delete': 6,
-};
-
-/** The full pipeline order: 0 1 5 2 5 3 5 4 5 6 */
-const ALL_TASKS = [0, 1, 5, 2, 5, 3, 5, 4, 5, 6];
-
-/** Valid task numbers */
-const VALID_TASK_NUMBERS = new Set([0, 1, 2, 3, 4, 5, 6]);
+import { ALL_TASKS, TASK_NAME_TO_NUMBER, VALID_TASK_NUMBERS } from './tasks.constants.ts';
 
 export interface ParsedArgs {
 	name: string;
@@ -56,8 +34,8 @@ function parseTaskToken(token: string): number[] {
 		return [...ALL_TASKS];
 	}
 
-	if (lowerToken in TASK_NAMES) {
-		return [TASK_NAMES[lowerToken]];
+	if (lowerToken in TASK_NAME_TO_NUMBER) {
+		return [TASK_NAME_TO_NUMBER[lowerToken]];
 	}
 
 	// Check for range (e.g., "1-3")

@@ -3,6 +3,7 @@
  */
 
 import { requireRsyncConfig } from '../config.ts';
+import { runCommand } from '../lib/command.ts';
 
 /** Required CLI tools (excluding yq which is replaced by native YAML parsing) */
 const REQUIRED_COMMANDS = [
@@ -25,13 +26,8 @@ const REQUIRED_COMMANDS = [
  */
 async function commandExists(cmd: string): Promise<boolean> {
 	try {
-		const command = new Deno.Command('which', {
-			args: [cmd],
-			stdout: 'null',
-			stderr: 'null',
-		});
-		const result = await command.output();
-		return result.success;
+		await runCommand('which', [cmd], { stdout: 'null', stderr: 'null' });
+		return true;
 	} catch {
 		return false;
 	}
@@ -53,28 +49,6 @@ export async function checkRequiredCommands(): Promise<void> {
 	if (missing.length > 0) {
 		const list = missing.map((cmd) => `  - ${cmd}`).join('\n');
 		throw new Error(`Missing required commands:\n${list}`);
-	}
-}
-
-/**
- * Generic command runner with stdout/stderr inheritance.
- */
-async function runCommand(
-	cmd: string,
-	args: string[],
-	options?: { cwd?: string; env?: Record<string, string> },
-): Promise<void> {
-	const command = new Deno.Command(cmd, {
-		args,
-		cwd: options?.cwd,
-		env: options?.env ? { ...Deno.env.toObject(), ...options.env } : undefined,
-		stdout: 'inherit',
-		stderr: 'inherit',
-	});
-
-	const result = await command.output();
-	if (!result.success) {
-		throw new Error(`Command "${cmd}" exited with code ${result.code}`);
 	}
 }
 

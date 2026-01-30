@@ -3,10 +3,18 @@ import { ensureDir } from '@std/fs';
 import { getDataDir, requireRsyncConfig } from '../config.ts';
 import { withRetry } from '../retry.ts';
 
+/**
+ * Downloads orthophoto VersaTiles containers from the remote server.
+ * Uses rsync with retry logic for resilience.
+ */
 export async function downloadOrthophotos() {
 	await rsync('orthophoto', 'orthophotos');
 }
 
+/**
+ * Downloads satellite imagery VersaTiles containers from the remote server.
+ * Includes S2GM and Blue Marble data.
+ */
 export async function downloadSatellite() {
 	await rsync('satellite', 'satellite');
 }

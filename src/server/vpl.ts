@@ -2,6 +2,11 @@ import { resolve } from '@std/path';
 import { walkSync } from '@std/fs';
 import { getDataDir } from '../config.ts';
 
+/**
+ * Generates a VersaTiles Pipeline Language (VPL) configuration file.
+ * Combines orthophoto tiles with satellite imagery (S2GM and Blue Marble).
+ * @param filename - Output filename for the VPL file (relative to data directory)
+ */
 export function generateVPL(filename: string) {
 	const path = resolve(getDataDir());
 	const srcOrthophotos = resolve(path, 'orthophotos/');

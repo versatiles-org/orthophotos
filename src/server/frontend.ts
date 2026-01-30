@@ -4,6 +4,11 @@ import { existsSync } from '@std/fs/exists';
 import { getDataDir } from '../config.ts';
 import { withRetry } from '../retry.ts';
 
+/**
+ * Downloads the VersaTiles frontend archive from GitHub releases.
+ * Skips download if the archive already exists.
+ * Uses retry logic for resilience against transient network failures.
+ */
 export async function downloadFrontend() {
 	const path = resolve(getDataDir());
 	const filename = resolve(path, 'frontend-dev.br.tar.gz');

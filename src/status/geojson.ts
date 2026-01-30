@@ -18,6 +18,11 @@ export type KnownRegion = Feature<
 	{ id: string; name: string; fullname: string }
 >;
 
+/**
+ * Loads known NUTS regions from TopoJSON files in the given folder.
+ * @param folder - Path to the folder containing NUTS region data
+ * @returns Array of known regions with normalized IDs and geometry
+ */
 export function loadKnownRegions(folder: string): KnownRegion[] {
 	const regions: KnownRegion[] = [];
 	regions.push(...parseNUTS(loadData(resolve(folder, 'NUTS_RG_03M_2024_4326.topojson.gz'))));
@@ -128,6 +133,11 @@ function loadTopoJSON(buffer: Uint8Array): Feature[] {
 	return extractFeatures(geojson);
 }
 
+/**
+ * Reduces coordinate precision to 6 decimal places to save space.
+ * Modifies the geometry in place.
+ * @param geometry - GeoJSON geometry, feature, or feature collection to process
+ */
 export function reducePrecision(geometry: Geometry | Feature | FeatureCollection) {
 	function roundCoord1(coord: GeoJSON.Position) {
 		coord[0] = Math.round(coord[0] * 1e6) / 1e6;

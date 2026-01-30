@@ -73,6 +73,13 @@ function scanDirectory(
 	}
 }
 
+/**
+ * Scans a directory tree for region status files and matches them with known regions.
+ * @param baseDirectory - Root directory to scan for status.yml files
+ * @param knownRegions - Array of known NUTS regions to match against
+ * @returns Array of regions with their status and geometry
+ * @throws Error if a region ID doesn't match any known region
+ */
 export function scanRegions(baseDirectory: string, knownRegions: KnownRegion[]): Region[] {
 	const knownRegionIds = new Map<string, KnownRegion>(
 		knownRegions.map((r) => [r.properties.id, r]),
@@ -103,6 +110,11 @@ async function createGeoJsonOutline(
 	}
 }
 
+/**
+ * Updates region entries with VersaTiles existence status and GeoJSON outlines.
+ * Creates GeoJSON outline files for existing VersaTiles containers if they don't exist.
+ * @param regions - Array of regions to update
+ */
 export async function updateRegionEntries(regions: Region[]): Promise<void> {
 	const orthophotosPath = resolve(getDataDir(), 'orthophotos/');
 

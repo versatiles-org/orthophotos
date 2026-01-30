@@ -1,0 +1,22 @@
+# Git
+.git
+.gitignore
+
+# IDE/Editor
+.vscode
+.idea
+*.swp
+*.swo
+
+# Test data (not needed in production image)
+test-data/
+
+# Local environment
+config.env
+*.local
+
+# Documentation (reduces image size)
+*.md
+
+# macOS
+.DS_Store

@@ -37,5 +37,8 @@ async function rsync(srcDir: string, dstDir: string) {
 	];
 
 	const command = new Deno.Command('rsync', { args, stdout: 'inherit', stderr: 'inherit' });
-	await command.output();
+	const output = await command.output();
+	if (!output.success) {
+		throw new Error(`Failed to sync ${srcDir}: rsync exited with code ${output.code}`);
+	}
 }

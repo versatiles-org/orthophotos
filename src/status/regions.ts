@@ -104,7 +104,12 @@ export async function updateRegionEntries(regions: Region[]): Promise<void> {
 					stdout: 'inherit',
 					stderr: 'inherit',
 				});
-				await command.output();
+				const output = await command.output();
+				if (!output.success) {
+					throw new Error(
+						`Failed to create GeoJSON for ${versaTilesFilename}: versatiles exited with code ${output.code}`,
+					);
+				}
 			}
 
 			if (!existsSync(geoJsonFilename)) {

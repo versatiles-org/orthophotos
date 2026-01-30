@@ -23,7 +23,10 @@ export async function downloadFrontend() {
 		stdout: 'inherit',
 		stderr: 'inherit',
 	});
-	await command.output();
+	const output = await command.output();
+	if (!output.success) {
+		throw new Error(`Failed to download frontend archive: curl exited with code ${output.code}`);
+	}
 
 	if (existsSync(filename + '.tmp')) {
 		move(filename + '.tmp', filename, { overwrite: true });

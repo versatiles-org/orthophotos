@@ -1,23 +1,12 @@
-# Build stage for VersaTiles
-FROM rust:1.75-slim-bookworm AS versatiles-builder
+# Use VersaTiles with GDAL bindings as base image
+FROM ghcr.io/versatiles-org/versatiles-gdal:latest
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    pkg-config \
-    libssl-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN cargo install versatiles
-
-# Main image
-FROM debian:bookworm-slim
-
-# Install system dependencies
+# Install additional system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     unzip \
     rsync \
     openssh-client \
-    gdal-bin \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
@@ -25,9 +14,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV DENO_INSTALL=/deno
 RUN curl -fsSL https://deno.land/install.sh | sh
 ENV PATH="${DENO_INSTALL}/bin:${PATH}"
-
-# Copy VersaTiles from builder
-COPY --from=versatiles-builder /usr/local/cargo/bin/versatiles /usr/local/bin/versatiles
 
 # Set up working directory
 WORKDIR /app

@@ -1,12 +1,18 @@
-// deno-lint-ignore-file no-explicit-any
-
 import { resolve } from '@std/path/resolve';
 import { gunzipSync } from 'node:zlib';
 import type { Feature, FeatureCollection, Geometry, MultiPolygon, Polygon } from 'geojson';
 import * as topojson from 'topojson-client';
 import { string2ascii } from './ascii.ts';
 
-export type ValidRegion = Feature<Polygon | MultiPolygon, Record<string, any>>;
+/** Properties for NUTS regions from the TopoJSON data */
+interface NUTSProperties {
+	LEVL_CODE: number;
+	NUTS_ID: string;
+	CNTR_CODE: string;
+	NAME_LATN: string;
+}
+
+export type ValidRegion = Feature<Polygon | MultiPolygon, NUTSProperties>;
 export type KnownRegion = Feature<
 	Polygon | MultiPolygon,
 	{ id: string; name: string; fullname: string }
@@ -100,7 +106,7 @@ function loadData(filePath: string): ValidRegion[] {
 	return features as ValidRegion[];
 }
 
-function extractFeatures(geojson: any): Feature[] {
+function extractFeatures(geojson: FeatureCollection): Feature[] {
 	if (geojson.type !== 'FeatureCollection' || !Array.isArray(geojson.features)) {
 		throw new Error('Invalid GeoJSON format');
 	}

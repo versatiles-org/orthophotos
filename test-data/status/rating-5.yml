@@ -1,0 +1,10 @@
+status: success
+rating: 5
+notes:
+  - Highest rating
+entries:
+  - entry1
+license: CC0
+creator:
+  name: Test
+  url: https://example.com

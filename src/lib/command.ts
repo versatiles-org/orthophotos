@@ -2,7 +2,7 @@
  * Unified command execution utilities.
  */
 
-import { withRetry, type RetryOptions } from './retry.ts';
+import { type RetryOptions, withRetry } from './retry.ts';
 
 export interface CommandOptions {
 	cwd?: string;

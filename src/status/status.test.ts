@@ -54,3 +54,87 @@ Deno.test('readStatus - throws on invalid URL', () => {
 		'Invalid license URL',
 	);
 });
+
+Deno.test('readStatus - throws on missing license', () => {
+	assertThrows(
+		() => readStatus(resolve(TEST_DATA_DIR, 'missing-license.yml')),
+		Error,
+		'License must be an object',
+	);
+});
+
+Deno.test('readStatus - throws on missing creator', () => {
+	assertThrows(
+		() => readStatus(resolve(TEST_DATA_DIR, 'missing-creator.yml')),
+		Error,
+		'Creator must be an object',
+	);
+});
+
+Deno.test('readStatus - throws on invalid creator URL', () => {
+	assertThrows(
+		() => readStatus(resolve(TEST_DATA_DIR, 'invalid-creator-url.yml')),
+		Error,
+		'Invalid creator URL',
+	);
+});
+
+Deno.test('readStatus - accepts rating of 0', () => {
+	const status = readStatus(resolve(TEST_DATA_DIR, 'rating-0.yml'));
+	assertEquals(status.status, 'success');
+	if (status.status === 'success') {
+		assertEquals(status.rating, 0);
+	}
+});
+
+Deno.test('readStatus - accepts rating of 5', () => {
+	const status = readStatus(resolve(TEST_DATA_DIR, 'rating-5.yml'));
+	assertEquals(status.status, 'success');
+	if (status.status === 'success') {
+		assertEquals(status.rating, 5);
+	}
+});
+
+Deno.test('readStatus - throws on rating of 6', () => {
+	assertThrows(
+		() => readStatus(resolve(TEST_DATA_DIR, 'rating-6.yml')),
+		Error,
+		'Invalid rating',
+	);
+});
+
+Deno.test('readStatus - throws on negative rating', () => {
+	assertThrows(
+		() => readStatus(resolve(TEST_DATA_DIR, 'rating-negative.yml')),
+		Error,
+		'Invalid rating',
+	);
+});
+
+Deno.test('readStatus - throws on unknown license shortcut', () => {
+	assertThrows(
+		() => readStatus(resolve(TEST_DATA_DIR, 'unknown-license.yml')),
+		Error,
+		'Unknown license',
+	);
+});
+
+Deno.test('readStatus - handles DL-DE->BY-2.0 license shortcut', () => {
+	const status = readStatus(resolve(TEST_DATA_DIR, 'dl-de-by.yml'));
+	assertEquals(status.status, 'success');
+	if (status.status === 'success') {
+		assertEquals(status.license.name, 'DL-DE->BY-2.0');
+		assertEquals(status.license.url, 'https://www.govdata.de/dl-de/by-2-0');
+		assertEquals(status.license.requiresAttribution, true);
+	}
+});
+
+Deno.test('readStatus - handles DL-DE->Zero-2.0 license shortcut', () => {
+	const status = readStatus(resolve(TEST_DATA_DIR, 'dl-de-zero.yml'));
+	assertEquals(status.status, 'success');
+	if (status.status === 'success') {
+		assertEquals(status.license.name, 'DL-DE->Zero-2.0');
+		assertEquals(status.license.url, 'https://www.govdata.de/dl-de/zero-2-0');
+		assertEquals(status.license.requiresAttribution, false);
+	}
+});

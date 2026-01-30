@@ -1,0 +1,10 @@
+status: success
+rating: 3
+notes:
+  - Unknown license shortcut
+entries:
+  - entry1
+license: UNKNOWN-LICENSE
+creator:
+  name: Test
+  url: https://example.com

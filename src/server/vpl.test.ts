@@ -67,3 +67,71 @@ Deno.test({
 	sanitizeResources: false,
 	sanitizeOps: false,
 });
+
+Deno.test({
+	name: 'generateVPL - includes from_container for each versatiles file',
+	fn: () => {
+		Deno.env.set('dir_data', TEST_DIR);
+		ensureDirSync(resolve(TEST_DIR, 'orthophotos'));
+		ensureDirSync(resolve(TEST_DIR, 'satellite/s2gm'));
+		ensureDirSync(resolve(TEST_DIR, 'satellite/bluemarble'));
+
+		Deno.writeTextFileSync(resolve(TEST_DIR, 'orthophotos/region1.versatiles'), '');
+		Deno.writeTextFileSync(resolve(TEST_DIR, 'orthophotos/region2.versatiles'), '');
+		Deno.writeTextFileSync(resolve(TEST_DIR, 'satellite/s2gm/s2gm_overview.versatiles'), '');
+		Deno.writeTextFileSync(resolve(TEST_DIR, 'satellite/bluemarble/bluemarble.versatiles'), '');
+
+		generateVPL('multi.vpl');
+		const vpl = Deno.readTextFileSync(resolve(TEST_DIR, 'multi.vpl'));
+
+		assertStringIncludes(vpl, 'from_container');
+		assertStringIncludes(vpl, 'region1.versatiles');
+		assertStringIncludes(vpl, 'region2.versatiles');
+	},
+	sanitizeResources: false,
+	sanitizeOps: false,
+});
+
+Deno.test({
+	name: 'generateVPL - applies gamma/brightness/contrast to bluemarble',
+	fn: () => {
+		Deno.env.set('dir_data', TEST_DIR);
+		ensureDirSync(resolve(TEST_DIR, 'orthophotos'));
+		ensureDirSync(resolve(TEST_DIR, 'satellite/s2gm'));
+		ensureDirSync(resolve(TEST_DIR, 'satellite/bluemarble'));
+
+		Deno.writeTextFileSync(resolve(TEST_DIR, 'satellite/s2gm/s2gm_overview.versatiles'), '');
+		Deno.writeTextFileSync(resolve(TEST_DIR, 'satellite/bluemarble/bluemarble.versatiles'), '');
+
+		generateVPL('gamma.vpl');
+		const vpl = Deno.readTextFileSync(resolve(TEST_DIR, 'gamma.vpl'));
+
+		assertStringIncludes(vpl, 'gamma=0.8');
+		assertStringIncludes(vpl, 'brightness=0.2');
+		assertStringIncludes(vpl, 'contrast=0.8');
+		assertStringIncludes(vpl, 'raster_levels');
+	},
+	sanitizeResources: false,
+	sanitizeOps: false,
+});
+
+Deno.test({
+	name: 'generateVPL - includes meta_update with attribution',
+	fn: () => {
+		Deno.env.set('dir_data', TEST_DIR);
+		ensureDirSync(resolve(TEST_DIR, 'orthophotos'));
+		ensureDirSync(resolve(TEST_DIR, 'satellite/s2gm'));
+		ensureDirSync(resolve(TEST_DIR, 'satellite/bluemarble'));
+
+		Deno.writeTextFileSync(resolve(TEST_DIR, 'satellite/s2gm/s2gm_overview.versatiles'), '');
+		Deno.writeTextFileSync(resolve(TEST_DIR, 'satellite/bluemarble/bluemarble.versatiles'), '');
+
+		generateVPL('attribution.vpl');
+		const vpl = Deno.readTextFileSync(resolve(TEST_DIR, 'attribution.vpl'));
+
+		assertStringIncludes(vpl, 'meta_update');
+		assertStringIncludes(vpl, 'attribution');
+	},
+	sanitizeResources: false,
+	sanitizeOps: false,
+});

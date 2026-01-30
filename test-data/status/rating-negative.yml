@@ -1,0 +1,10 @@
+status: success
+rating: -1
+notes:
+  - Negative rating
+entries:
+  - entry1
+license: CC0
+creator:
+  name: Test
+  url: https://example.com

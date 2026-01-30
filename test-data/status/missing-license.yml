@@ -1,0 +1,9 @@
+status: success
+rating: 3
+notes:
+  - Test data
+entries:
+  - entry1
+creator:
+  name: Test Creator
+  url: https://example.com

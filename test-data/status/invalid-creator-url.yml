@@ -1,0 +1,10 @@
+status: success
+rating: 3
+notes:
+  - Test data
+entries:
+  - entry1
+license: CC0
+creator:
+  name: Test Creator
+  url: not-a-url

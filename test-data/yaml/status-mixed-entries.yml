@@ -1,0 +1,6 @@
+status: success
+entries:
+  - valid_entry
+  - 123
+  - another_entry
+  - null

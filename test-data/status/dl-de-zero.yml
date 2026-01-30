@@ -1,0 +1,10 @@
+status: success
+rating: 3
+notes:
+  - DL-DE-Zero license
+entries:
+  - entry1
+license: DL-DE->Zero-2.0
+creator:
+  name: Test
+  url: https://example.com

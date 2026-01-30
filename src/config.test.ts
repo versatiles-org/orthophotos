@@ -1,5 +1,5 @@
 import { assertEquals, assertThrows } from '@std/assert';
-import { getDataDir, loadConfig, requireRsyncConfig } from './config.ts';
+import { getDataDir, getTempDir, loadConfig, requireRsyncConfig } from './config.ts';
 
 Deno.test('getDataDir - returns env value when set', () => {
 	Deno.env.set('dir_data', '/test/path');
@@ -15,14 +15,30 @@ Deno.test('getDataDir - throws when not set', () => {
 	);
 });
 
+Deno.test('getTempDir - returns env value when set', () => {
+	Deno.env.set('dir_temp', '/test/temp');
+	assertEquals(getTempDir(), '/test/temp');
+});
+
+Deno.test('getTempDir - throws when not set', () => {
+	Deno.env.delete('dir_temp');
+	assertThrows(
+		() => getTempDir(),
+		Error,
+		'Required environment variable "dir_temp" is not set',
+	);
+});
+
 Deno.test('loadConfig - returns config with all values', () => {
 	Deno.env.set('dir_data', '/data');
+	Deno.env.set('dir_temp', '/temp');
 	Deno.env.set('rsync_host', 'host.example.com');
 	Deno.env.set('rsync_port', '22');
 	Deno.env.set('rsync_id', '/path/to/key');
 
 	const config = loadConfig();
 	assertEquals(config.dirData, '/data');
+	assertEquals(config.dirTemp, '/temp');
 	assertEquals(config.rsyncHost, 'host.example.com');
 	assertEquals(config.rsyncPort, '22');
 	assertEquals(config.rsyncId, '/path/to/key');
@@ -30,10 +46,21 @@ Deno.test('loadConfig - returns config with all values', () => {
 
 Deno.test('loadConfig - throws when dir_data missing', () => {
 	Deno.env.delete('dir_data');
+	Deno.env.set('dir_temp', '/temp');
 	assertThrows(
 		() => loadConfig(),
 		Error,
 		'Required environment variable "dir_data" is not set',
+	);
+});
+
+Deno.test('loadConfig - throws when dir_temp missing', () => {
+	Deno.env.set('dir_data', '/data');
+	Deno.env.delete('dir_temp');
+	assertThrows(
+		() => loadConfig(),
+		Error,
+		'Required environment variable "dir_temp" is not set',
 	);
 });
 

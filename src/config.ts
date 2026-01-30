@@ -5,6 +5,7 @@
 
 interface Config {
 	dirData: string;
+	dirTemp: string;
 	rsyncHost?: string;
 	rsyncPort?: string;
 	rsyncId?: string;
@@ -29,10 +30,18 @@ function getOptionalEnv(name: string): string | undefined {
 export function loadConfig(): Config {
 	return {
 		dirData: getRequiredEnv('dir_data'),
+		dirTemp: getRequiredEnv('dir_temp'),
 		rsyncHost: getOptionalEnv('rsync_host'),
 		rsyncPort: getOptionalEnv('rsync_port'),
 		rsyncId: getOptionalEnv('rsync_id'),
 	};
+}
+
+/**
+ * Returns the temp directory path.
+ */
+export function getTempDir(): string {
+	return getRequiredEnv('dir_temp');
 }
 
 /**

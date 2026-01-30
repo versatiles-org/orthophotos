@@ -6,7 +6,8 @@
     "server-prepare": "deno run -A --env-file=config.env src/server-prepare.ts",
     "server-start": "./server.sh",
     "server": "deno task server-prepare && deno task server-start",
-    "status-check": "deno run -A --env-file=config.env src/status-check.ts"
+    "status-check": "deno run -A --env-file=config.env src/status-check.ts",
+    "run": "deno run -A --env-file=config.env src/run.ts"
   },
   "imports": {
     "@std/assert": "jsr:@std/assert@^1.0.17",

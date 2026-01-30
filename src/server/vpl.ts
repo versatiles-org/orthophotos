@@ -1,8 +1,9 @@
 import { resolve } from '@std/path';
 import { walkSync } from '@std/fs';
+import { getDataDir } from '../config.ts';
 
 export function generateVPL(filename: string) {
-	const path = resolve(Deno.env.get('dir_data')!);
+	const path = resolve(getDataDir());
 	const srcOrthophotos = resolve(path, 'orthophotos/');
 	const srcSatellite = resolve(path, 'satellite/');
 

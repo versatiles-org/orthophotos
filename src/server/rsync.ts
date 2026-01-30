@@ -1,5 +1,7 @@
 import { resolve } from '@std/path';
 import { ensureDir } from '@std/fs';
+import { getDataDir, requireRsyncConfig } from '../config.ts';
+import { withRetry } from '../retry.ts';
 
 export async function downloadOrthophotos() {
 	await rsync('orthophoto', 'orthophotos');
@@ -10,17 +12,15 @@ export async function downloadSatellite() {
 }
 
 async function rsync(srcDir: string, dstDir: string) {
-	const rsync_host = Deno.env.get('rsync_host')!;
-	const rsync_port = Deno.env.get('rsync_port')!;
-	const rsync_id = Deno.env.get('rsync_id')!;
-	const src = `${rsync_host}:${srcDir}/`;
-	const dst = resolve(Deno.env.get('dir_data')!, dstDir + '/');
+	const { host, port, id } = requireRsyncConfig();
+	const src = `${host}:${srcDir}/`;
+	const dst = resolve(getDataDir(), dstDir + '/');
 	await ensureDir(dst);
 
 	const args = [
 		'-avhtW',
 		'-e',
-		`ssh -p ${rsync_port} -i ${rsync_id} -o StrictHostKeyChecking=no`,
+		`ssh -p ${port} -i ${id} -o StrictHostKeyChecking=no`,
 		'--info=progress',
 		//'--delete',
 		'--prune-empty-dirs',
@@ -36,9 +36,11 @@ async function rsync(srcDir: string, dstDir: string) {
 		dst,
 	];
 
-	const command = new Deno.Command('rsync', { args, stdout: 'inherit', stderr: 'inherit' });
-	const output = await command.output();
-	if (!output.success) {
-		throw new Error(`Failed to sync ${srcDir}: rsync exited with code ${output.code}`);
-	}
+	await withRetry(async () => {
+		const command = new Deno.Command('rsync', { args, stdout: 'inherit', stderr: 'inherit' });
+		const output = await command.output();
+		if (!output.success) {
+			throw new Error(`rsync exited with code ${output.code}`);
+		}
+	});
 }

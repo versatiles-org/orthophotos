@@ -1,0 +1,15 @@
+status: success
+rating: 4
+notes:
+  - High resolution imagery
+  - Updated in 2024
+entries:
+  - entry1
+  - entry2
+license:
+  name: CC BY 4.0
+  url: https://creativecommons.org/licenses/by/4.0/
+  requiresAttribution: true
+creator:
+  name: Test Creator
+  url: https://example.com

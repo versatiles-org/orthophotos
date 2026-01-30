@@ -1,0 +1,13 @@
+status: success
+rating: 3
+notes:
+  - Invalid URL
+entries:
+  - data
+license:
+  name: Custom License
+  url: not-a-valid-url
+  requiresAttribution: true
+creator:
+  name: Test
+  url: https://example.com

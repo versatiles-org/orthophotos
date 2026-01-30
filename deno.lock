@@ -1,6 +1,8 @@
 {
   "version": "5",
   "specifiers": {
+    "jsr:@std/assert@*": "1.0.17",
+    "jsr:@std/assert@^1.0.17": "1.0.17",
     "jsr:@std/fs@^1.0.22": "1.0.22",
     "jsr:@std/internal@^1.0.12": "1.0.12",
     "jsr:@std/path@^1.1.4": "1.1.4",
@@ -11,6 +13,12 @@
     "npm:topojson-client@^3.1.0": "3.1.0"
   },
   "jsr": {
+    "@std/assert@1.0.17": {
+      "integrity": "df5ebfffe77c03b3fa1401e11c762cc8f603d51021c56c4d15a8c7ab45e90dbe",
+      "dependencies": [
+        "jsr:@std/internal"
+      ]
+    },
     "@std/fs@1.0.22": {
       "integrity": "de0f277a58a867147a8a01bc1b181d0dfa80bfddba8c9cf2bacd6747bcec9308",
       "dependencies": [
@@ -60,6 +68,7 @@
   },
   "workspace": {
     "dependencies": [
+      "jsr:@std/assert@^1.0.17",
       "jsr:@std/fs@^1.0.22",
       "jsr:@std/path@^1.1.4",
       "jsr:@std/yaml@^1.0.11",

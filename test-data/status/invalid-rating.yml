@@ -1,0 +1,10 @@
+status: success
+rating: 10
+notes:
+  - Invalid rating value
+entries:
+  - data
+license: CC0
+creator:
+  name: Test
+  url: https://example.com

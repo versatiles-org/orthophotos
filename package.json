@@ -10,7 +10,8 @@
 		"server-start": "./server.sh",
 		"server": "npm run server-prepare && npm run server-start",
 		"status-check": "node --env-file=config.env --import tsx/esm src/status-check.ts",
-		"run": "node --env-file=config.env --import tsx/esm src/run.ts"
+		"run": "node --env-file=config.env --import tsx/esm src/run.ts",
+		"upgrade": "npm-check-updates -u && npm install"
 	},
 	"dependencies": {
 		"topojson-client": "^3.1.0",
@@ -23,6 +24,7 @@
 		"prettier": "^3.0.0",
 		"tsx": "^4.0.0",
 		"typescript": "^5.0.0",
+		"npm-check-updates": "^17.0.0",
 		"vitest": "^3.0.0"
 	}
 }

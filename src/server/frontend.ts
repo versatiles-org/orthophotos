@@ -1,6 +1,5 @@
-import { resolve } from '@std/path';
-import { move } from '@std/fs/move';
-import { existsSync } from '@std/fs/exists';
+import { resolve } from 'node:path';
+import { existsSync, renameSync } from 'node:fs';
 import { getDataDir } from '../config.ts';
 import { runCommandWithRetry } from '../lib/command.ts';
 
@@ -28,6 +27,6 @@ export async function downloadFrontend() {
 	]);
 
 	if (existsSync(filename + '.tmp')) {
-		move(filename + '.tmp', filename, { overwrite: true });
+		renameSync(filename + '.tmp', filename);
 	}
 }

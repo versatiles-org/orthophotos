@@ -1,18 +1,18 @@
-import { assertEquals, assertThrows } from '@std/assert';
+import { expect, test } from 'vitest';
 import { reducePrecision } from './geojson.ts';
 import type { Feature, FeatureCollection, Geometry, MultiPolygon, Point, Polygon } from 'geojson';
 
-Deno.test('reducePrecision - rounds Point coordinates to 6 decimals', () => {
+test('reducePrecision - rounds Point coordinates to 6 decimals', () => {
 	const point: Point = {
 		type: 'Point',
 		coordinates: [9.123456789, 47.987654321],
 	};
 	reducePrecision(point);
-	assertEquals(point.coordinates[0], 9.123457);
-	assertEquals(point.coordinates[1], 47.987654);
+	expect(point.coordinates[0]).toBe(9.123457);
+	expect(point.coordinates[1]).toBe(47.987654);
 });
 
-Deno.test('reducePrecision - handles Polygon geometry', () => {
+test('reducePrecision - handles Polygon geometry', () => {
 	const polygon: Polygon = {
 		type: 'Polygon',
 		coordinates: [
@@ -27,13 +27,13 @@ Deno.test('reducePrecision - handles Polygon geometry', () => {
 	};
 	reducePrecision(polygon);
 
-	assertEquals(polygon.coordinates[0][0][0], 9.123457);
-	assertEquals(polygon.coordinates[0][0][1], 47.987654);
-	assertEquals(polygon.coordinates[0][1][0], 15.111111);
-	assertEquals(polygon.coordinates[0][1][1], 47.222222);
+	expect(polygon.coordinates[0][0][0]).toBe(9.123457);
+	expect(polygon.coordinates[0][0][1]).toBe(47.987654);
+	expect(polygon.coordinates[0][1][0]).toBe(15.111111);
+	expect(polygon.coordinates[0][1][1]).toBe(47.222222);
 });
 
-Deno.test('reducePrecision - handles MultiPolygon geometry', () => {
+test('reducePrecision - handles MultiPolygon geometry', () => {
 	const multiPolygon: MultiPolygon = {
 		type: 'MultiPolygon',
 		coordinates: [
@@ -57,11 +57,11 @@ Deno.test('reducePrecision - handles MultiPolygon geometry', () => {
 	};
 	reducePrecision(multiPolygon);
 
-	assertEquals(multiPolygon.coordinates[0][0][0][0], 1.123457);
-	assertEquals(multiPolygon.coordinates[1][0][0][0], 10.987654);
+	expect(multiPolygon.coordinates[0][0][0][0]).toBe(1.123457);
+	expect(multiPolygon.coordinates[1][0][0][0]).toBe(10.987654);
 });
 
-Deno.test('reducePrecision - processes Feature geometry', () => {
+test('reducePrecision - processes Feature geometry', () => {
 	const feature: Feature = {
 		type: 'Feature',
 		properties: { name: 'test' },
@@ -73,11 +73,11 @@ Deno.test('reducePrecision - processes Feature geometry', () => {
 	reducePrecision(feature);
 
 	const point = feature.geometry as Point;
-	assertEquals(point.coordinates[0], 9.123457);
-	assertEquals(point.coordinates[1], 47.987654);
+	expect(point.coordinates[0]).toBe(9.123457);
+	expect(point.coordinates[1]).toBe(47.987654);
 });
 
-Deno.test('reducePrecision - processes FeatureCollection', () => {
+test('reducePrecision - processes FeatureCollection', () => {
 	const featureCollection: FeatureCollection = {
 		type: 'FeatureCollection',
 		features: [
@@ -104,24 +104,20 @@ Deno.test('reducePrecision - processes FeatureCollection', () => {
 	const firstPoint = featureCollection.features[0].geometry as Point;
 	const secondPoint = featureCollection.features[1].geometry as Point;
 
-	assertEquals(firstPoint.coordinates[0], 1.111111);
-	assertEquals(secondPoint.coordinates[0], 3.333333);
+	expect(firstPoint.coordinates[0]).toBe(1.111111);
+	expect(secondPoint.coordinates[0]).toBe(3.333333);
 });
 
-Deno.test('reducePrecision - throws on unknown geometry type', () => {
+test('reducePrecision - throws on unknown geometry type', () => {
 	const invalid = {
 		type: 'UnknownType',
 		coordinates: [1, 2],
 	} as unknown as Geometry;
 
-	assertThrows(
-		() => reducePrecision(invalid),
-		Error,
-		'Unknown geometry type',
-	);
+	expect(() => reducePrecision(invalid)).toThrow('Unknown geometry type');
 });
 
-Deno.test('reducePrecision - handles LineString geometry', () => {
+test('reducePrecision - handles LineString geometry', () => {
 	const lineString: Geometry = {
 		type: 'LineString',
 		coordinates: [
@@ -132,12 +128,12 @@ Deno.test('reducePrecision - handles LineString geometry', () => {
 	reducePrecision(lineString);
 
 	if (lineString.type === 'LineString') {
-		assertEquals(lineString.coordinates[0][0], 1.123457);
-		assertEquals(lineString.coordinates[1][0], 3.987654);
+		expect(lineString.coordinates[0][0]).toBe(1.123457);
+		expect(lineString.coordinates[1][0]).toBe(3.987654);
 	}
 });
 
-Deno.test('reducePrecision - handles MultiPoint geometry', () => {
+test('reducePrecision - handles MultiPoint geometry', () => {
 	const multiPoint: Geometry = {
 		type: 'MultiPoint',
 		coordinates: [
@@ -148,12 +144,12 @@ Deno.test('reducePrecision - handles MultiPoint geometry', () => {
 	reducePrecision(multiPoint);
 
 	if (multiPoint.type === 'MultiPoint') {
-		assertEquals(multiPoint.coordinates[0][0], 1.123457);
-		assertEquals(multiPoint.coordinates[1][0], 3.987654);
+		expect(multiPoint.coordinates[0][0]).toBe(1.123457);
+		expect(multiPoint.coordinates[1][0]).toBe(3.987654);
 	}
 });
 
-Deno.test('reducePrecision - handles MultiLineString geometry', () => {
+test('reducePrecision - handles MultiLineString geometry', () => {
 	const multiLineString: Geometry = {
 		type: 'MultiLineString',
 		coordinates: [
@@ -170,12 +166,12 @@ Deno.test('reducePrecision - handles MultiLineString geometry', () => {
 	reducePrecision(multiLineString);
 
 	if (multiLineString.type === 'MultiLineString') {
-		assertEquals(multiLineString.coordinates[0][0][0], 1.123457);
-		assertEquals(multiLineString.coordinates[1][0][0], 5.123457);
+		expect(multiLineString.coordinates[0][0][0]).toBe(1.123457);
+		expect(multiLineString.coordinates[1][0][0]).toBe(5.123457);
 	}
 });
 
-Deno.test('reducePrecision - handles GeometryCollection', () => {
+test('reducePrecision - handles GeometryCollection', () => {
 	const geometryCollection: Geometry = {
 		type: 'GeometryCollection',
 		geometries: [
@@ -194,18 +190,18 @@ Deno.test('reducePrecision - handles GeometryCollection', () => {
 	if (geometryCollection.type === 'GeometryCollection') {
 		const first = geometryCollection.geometries[0] as Point;
 		const second = geometryCollection.geometries[1] as Point;
-		assertEquals(first.coordinates[0], 1.123457);
-		assertEquals(second.coordinates[0], 3.987654);
+		expect(first.coordinates[0]).toBe(1.123457);
+		expect(second.coordinates[0]).toBe(3.987654);
 	}
 });
 
-Deno.test('reducePrecision - preserves exact 6 decimal precision', () => {
+test('reducePrecision - preserves exact 6 decimal precision', () => {
 	const point: Point = {
 		type: 'Point',
 		coordinates: [9.123456, 47.987654],
 	};
 	reducePrecision(point);
 	// Should remain unchanged
-	assertEquals(point.coordinates[0], 9.123456);
-	assertEquals(point.coordinates[1], 47.987654);
+	expect(point.coordinates[0]).toBe(9.123456);
+	expect(point.coordinates[1]).toBe(47.987654);
 });

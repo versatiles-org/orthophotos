@@ -1,32 +1,34 @@
-#!/usr/bin/env -S deno run -A
+#!/usr/bin/env node
 
 /**
  * Main entry point for the orthophoto processing pipeline.
- * Migrated from run.sh to TypeScript/Deno.
  *
  * Usage:
- *   deno task run <name> <task>
+ *   npm run run -- <name> <task>
  *
  * Example:
- *   deno task run de/bw 1        # run fetch
- *   deno task run de/bw 2-4      # run vrt, preview, convert
- *   deno task run de/bw all      # full pipeline
+ *   npm run run -- de/bw 1        # run fetch
+ *   npm run run -- de/bw 2-4      # run vrt, preview, convert
+ *   npm run run -- de/bw all      # full pipeline
  */
 
-import { resolve } from '@std/path';
-import { ensureDir } from '@std/fs';
+import { resolve, dirname } from 'node:path';
+import { mkdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { getDataDir, getTempDir } from './config.ts';
 import { getHelpText, parseArgs } from './run/args.ts';
 import { checkRequiredCommands } from './run/commands.ts';
 import { runTask, type TaskContext } from './run/tasks.ts';
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
 async function main(): Promise<void> {
 	// Parse command line arguments
-	const args = parseArgs(Deno.args);
+	const args = parseArgs(process.argv.slice(2));
 
 	if (args === null) {
 		console.log(getHelpText());
-		Deno.exit(0);
+		process.exit(0);
 	}
 
 	// Check required commands
@@ -34,13 +36,13 @@ async function main(): Promise<void> {
 	await checkRequiredCommands();
 
 	// Build paths
-	const rootDir = resolve(import.meta.dirname!, '..');
+	const rootDir = resolve(__dirname, '..');
 	const projDir = resolve(rootDir, 'regions', args.name);
 	const dataDir = resolve(getDataDir(), args.name);
 	const tempDir = resolve(getTempDir(), args.name);
 
 	// Ensure data directory exists
-	await ensureDir(dataDir);
+	mkdirSync(dataDir, { recursive: true });
 
 	// Create task context
 	const ctx: TaskContext = {
@@ -63,5 +65,5 @@ async function main(): Promise<void> {
 // Run main
 main().catch((error) => {
 	console.error(`Error: ${error.message}`);
-	Deno.exit(1);
+	process.exit(1);
 });

@@ -1,6 +1,7 @@
-import { resolve } from '@std/path';
-import { walkSync } from '@std/fs';
+import { resolve } from 'node:path';
+import { writeFileSync } from 'node:fs';
 import { getDataDir } from '../config.ts';
+import { walkSync } from '../lib/fs.ts';
 
 /**
  * Generates a VersaTiles Pipeline Language (VPL) configuration file.
@@ -33,5 +34,5 @@ export function generateVPL(filename: string) {
       | meta_update attribution="Various sources"
 	`;
 
-	Deno.writeTextFileSync(resolve(path, filename), vpl);
+	writeFileSync(resolve(path, filename), vpl);
 }

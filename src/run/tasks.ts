@@ -3,8 +3,9 @@
  * Tasks 0-6 matching the original run.sh functionality.
  */
 
-import { ensureDir } from '@std/fs';
-import { resolve } from '@std/path';
+import { mkdirSync } from 'node:fs';
+import { rename, writeFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
 import {
 	runBashScript,
 	runGdalwarp,
@@ -62,7 +63,7 @@ export async function runTask(taskNum: number, ctx: TaskContext): Promise<void> 
  */
 async function taskDownload(ctx: TaskContext): Promise<void> {
 	console.log('Downloading existing data from server...');
-	await ensureDir(ctx.dataDir);
+	mkdirSync(ctx.dataDir, { recursive: true });
 	await runRsyncDownload(ctx.name, ctx.dataDir);
 }
 
@@ -72,7 +73,7 @@ async function taskDownload(ctx: TaskContext): Promise<void> {
  */
 async function taskFetch(ctx: TaskContext): Promise<void> {
 	console.log('Fetching new data...');
-	await ensureDir(ctx.tempDir);
+	mkdirSync(ctx.tempDir, { recursive: true });
 
 	const scriptPath = resolve(ctx.projDir, '1_fetch.sh');
 	const env = {
@@ -93,7 +94,7 @@ async function taskFetch(ctx: TaskContext): Promise<void> {
  */
 async function taskVrt(ctx: TaskContext): Promise<void> {
 	console.log('Building VRT...');
-	await ensureDir(ctx.tempDir);
+	mkdirSync(ctx.tempDir, { recursive: true });
 
 	const scriptPath = resolve(ctx.projDir, '2_build_vrt.sh');
 	const env = {
@@ -120,7 +121,7 @@ async function taskPreview(ctx: TaskContext): Promise<void> {
 
 	for (const source of sources) {
 		console.log(`  Processing ${source}...`);
-		await ensureDir(ctx.tempDir);
+		mkdirSync(ctx.tempDir, { recursive: true });
 
 		const inputVrt = resolve(ctx.dataDir, `${source}.vrt`);
 		const tempTif = resolve(ctx.tempDir, `${source}.tif`);
@@ -129,7 +130,7 @@ async function taskPreview(ctx: TaskContext): Promise<void> {
 		await runGdalwarp(inputVrt, tempTif, ctx.dataDir);
 
 		// Move temp file to final location
-		await Deno.rename(tempTif, outputTif);
+		await rename(tempTif, outputTif);
 	}
 }
 
@@ -145,7 +146,7 @@ async function taskConvert(ctx: TaskContext): Promise<void> {
 
 	for (const source of sources) {
 		console.log(`  Converting ${source}...`);
-		await ensureDir(ctx.tempDir);
+		mkdirSync(ctx.tempDir, { recursive: true });
 
 		const inputVrt = resolve(ctx.dataDir, `${source}.vrt`);
 		const vplPath = resolve(ctx.tempDir, `${source}.vpl`);
@@ -155,13 +156,13 @@ async function taskConvert(ctx: TaskContext): Promise<void> {
 		// Create .vpl pipeline file
 		const vplContent =
 			`from_gdal_raster filename="${inputVrt}" level_max=17 max_reuse_gdal=8 | raster_overview | raster_format format=webp quality="70,16:50,17:30" speed=0`;
-		await Deno.writeTextFile(vplPath, vplContent);
+		await writeFile(vplPath, vplContent);
 
 		// Run versatiles convert
 		await runVersatiles(vplPath, tempVersatiles);
 
 		// Move to final location
-		await Deno.rename(tempVersatiles, outputVersatiles);
+		await rename(tempVersatiles, outputVersatiles);
 
 		// Clean up temp files
 		await safeRemoveFile(vplPath);

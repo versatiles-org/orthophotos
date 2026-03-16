@@ -1,70 +1,63 @@
-import { assertEquals, assertRejects, assertStringIncludes } from '@std/assert';
+import { expect, test } from 'vitest';
 import { runCommand, runCommandWithRetry } from './command.ts';
 
-Deno.test('runCommand - executes successful command', async () => {
+test('runCommand - executes successful command', async () => {
 	const result = await runCommand('echo', ['hello'], { stdout: 'piped' });
-	assertEquals(result.success, true);
-	assertEquals(result.code, 0);
+	expect(result.success).toBe(true);
+	expect(result.code).toBe(0);
 });
 
-Deno.test('runCommand - captures stdout when piped', async () => {
+test('runCommand - captures stdout when piped', async () => {
 	const result = await runCommand('echo', ['test output'], { stdout: 'piped' });
 	const output = new TextDecoder().decode(result.stdout);
-	assertStringIncludes(output, 'test output');
+	expect(output).toContain('test output');
 });
 
-Deno.test('runCommand - throws on non-zero exit code', async () => {
-	await assertRejects(
-		() => runCommand('false', []),
-		Error,
-		'exited with code',
-	);
+test('runCommand - throws on non-zero exit code', async () => {
+	await expect(runCommand('false', [])).rejects.toThrow('exited with code');
 });
 
-Deno.test('runCommand - respects cwd option', async () => {
+test('runCommand - respects cwd option', async () => {
 	const result = await runCommand('pwd', [], { cwd: '/tmp', stdout: 'piped' });
 	const output = new TextDecoder().decode(result.stdout).trim();
 	// On macOS /tmp is a symlink to /private/tmp
-	assertEquals(output === '/tmp' || output === '/private/tmp', true);
+	expect(output === '/tmp' || output === '/private/tmp').toBe(true);
 });
 
-Deno.test('runCommand - passes environment variables', async () => {
+test('runCommand - passes environment variables', async () => {
 	const result = await runCommand('sh', ['-c', 'echo $TEST_VAR'], {
 		env: { TEST_VAR: 'test_value' },
 		stdout: 'piped',
 	});
 	const output = new TextDecoder().decode(result.stdout).trim();
-	assertEquals(output, 'test_value');
+	expect(output).toBe('test_value');
 });
 
-Deno.test('runCommand - suppresses output with null options', async () => {
+test('runCommand - suppresses output with null options', async () => {
 	// This should complete without throwing
 	const result = await runCommand('echo', ['suppressed'], {
 		stdout: 'null',
 		stderr: 'null',
 	});
-	assertEquals(result.success, true);
+	expect(result.success).toBe(true);
 });
 
-Deno.test('runCommandWithRetry - succeeds on first attempt', async () => {
+test('runCommandWithRetry - succeeds on first attempt', async () => {
 	const result = await runCommandWithRetry(
 		'echo',
 		['success'],
 		{ maxAttempts: 3, initialDelayMs: 10 },
 		{ stdout: 'piped' },
 	);
-	assertEquals(result.success, true);
+	expect(result.success).toBe(true);
 });
 
-Deno.test('runCommandWithRetry - throws after max attempts on persistent failure', async () => {
-	await assertRejects(
-		() =>
-			runCommandWithRetry(
-				'false',
-				[],
-				{ maxAttempts: 2, initialDelayMs: 10 },
-			),
-		Error,
-		'exited with code',
-	);
+test('runCommandWithRetry - throws after max attempts on persistent failure', async () => {
+	await expect(
+		runCommandWithRetry(
+			'false',
+			[],
+			{ maxAttempts: 2, initialDelayMs: 10 },
+		),
+	).rejects.toThrow('exited with code');
 });

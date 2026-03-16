@@ -2,3 +2,4 @@
 config.env
 web/status.json
 web/sources.json
+node_modules/

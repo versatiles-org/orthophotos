@@ -1,5 +1,6 @@
-import { relative, resolve } from '@std/path';
-import { existsSync } from '@std/fs';
+import { relative, resolve } from 'node:path';
+import { existsSync, readdirSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { readStatus, Status } from './status.ts';
 import { KnownRegion, reducePrecision } from './geojson.ts';
 import type { Feature } from 'geojson';
@@ -58,10 +59,10 @@ function scanDirectory(
 			});
 		}
 	} else {
-		const directoryEntries = [...Deno.readDirSync(directory)];
-		directoryEntries.sort((a, b) => a.name.localeCompare(b.name));
-		for (const entry of directoryEntries) {
-			if (entry.isDirectory) {
+		const directoryEntries = readdirSync(directory, { withFileTypes: true });
+		const sorted = [...directoryEntries].sort((a, b) => a.name.localeCompare(b.name));
+		for (const entry of sorted) {
+			if (entry.isDirectory()) {
 				scanDirectory(
 					resolve(directory, entry.name),
 					baseDirectory,
@@ -136,7 +137,7 @@ export async function updateRegionEntries(regions: Region[]): Promise<void> {
 				throw new Error(`Failed to create ${geoJsonFilename}`);
 			}
 
-			const geoJSON = JSON.parse(await Deno.readTextFile(geoJsonFilename)) as Feature;
+			const geoJSON = JSON.parse(await readFile(geoJsonFilename, 'utf-8')) as Feature;
 			reducePrecision(geoJSON);
 			entry.geoJSON = {
 				type: 'Feature',

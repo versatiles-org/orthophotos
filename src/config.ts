@@ -12,7 +12,7 @@ interface Config {
 }
 
 function getRequiredEnv(name: string): string {
-	const value = Deno.env.get(name);
+	const value = process.env[name];
 	if (value === undefined || value === '') {
 		throw new Error(`Required environment variable "${name}" is not set`);
 	}
@@ -20,7 +20,7 @@ function getRequiredEnv(name: string): string {
 }
 
 function getOptionalEnv(name: string): string | undefined {
-	return Deno.env.get(name);
+	return process.env[name];
 }
 
 /**

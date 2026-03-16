@@ -112,7 +112,7 @@ export function parseArgs(args: string[]): ParsedArgs | null {
 	}
 
 	if (args.length < 2) {
-		throw new Error('Missing arguments. Usage: deno task run <name> <task>');
+		throw new Error('Missing arguments. Usage: npm run run -- <name> <task>');
 	}
 
 	const [name, taskSpec] = args;
@@ -131,7 +131,7 @@ export function parseArgs(args: string[]): ParsedArgs | null {
  * Returns the help text for the run script.
  */
 export function getHelpText(): string {
-	return `Usage: deno task run <name> <task>
+	return `Usage: npm run run -- <name> <task>
 
 <name>  Region identifier: cc or cc/ss (e.g., de/bw)
 <task>  One or more tasks: a single step (e.g., 3 or upload),
@@ -148,10 +148,10 @@ Tasks:
   all            run full pipeline: 0 1 5 2 5 3 5 4 5 6
 
 Examples:
-  deno task run de/bw 1
-  deno task run fr 2-4
-  deno task run de/bw 1,2,3
-  deno task run de/bw all
+  npm run run -- de/bw 1
+  npm run run -- fr 2-4
+  npm run run -- de/bw 1,2,3
+  npm run run -- de/bw all
 
 Note: Tasks 2, 3, and 4 may require increasing the file descriptor limit:
   ulimit -n 8192

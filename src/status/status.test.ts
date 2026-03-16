@@ -1,140 +1,124 @@
-import { assertEquals, assertThrows } from '@std/assert';
+import { expect, test } from 'vitest';
 import { readStatus } from './status.ts';
-import { resolve } from '@std/path';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const TEST_DATA_DIR = resolve(import.meta.dirname!, '../../test-data/status');
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const TEST_DATA_DIR = resolve(__dirname, '../../test-data/status');
 
-Deno.test('readStatus - parses success status correctly', () => {
+test('readStatus - parses success status correctly', () => {
 	const status = readStatus(resolve(TEST_DATA_DIR, 'success.yml'));
-	assertEquals(status.status, 'success');
+	expect(status.status).toBe('success');
 	if (status.status === 'success') {
-		assertEquals(status.rating, 4);
-		assertEquals(status.notes.length, 2);
-		assertEquals(status.notes[0], 'High resolution imagery');
-		assertEquals(status.entries.length, 2);
-		assertEquals(status.entries[0].name, 'entry1');
-		assertEquals(status.entries[0].versaTilesExists, false);
-		assertEquals(status.license.name, 'CC BY 4.0');
-		assertEquals(status.license.requiresAttribution, true);
-		assertEquals(status.creator.name, 'Test Creator');
+		expect(status.rating).toBe(4);
+		expect(status.notes.length).toBe(2);
+		expect(status.notes[0]).toBe('High resolution imagery');
+		expect(status.entries.length).toBe(2);
+		expect(status.entries[0].name).toBe('entry1');
+		expect(status.entries[0].versaTilesExists).toBe(false);
+		expect(status.license.name).toBe('CC BY 4.0');
+		expect(status.license.requiresAttribution).toBe(true);
+		expect(status.creator.name).toBe('Test Creator');
 	}
 });
 
-Deno.test('readStatus - parses error status correctly', () => {
+test('readStatus - parses error status correctly', () => {
 	const status = readStatus(resolve(TEST_DATA_DIR, 'error.yml'));
-	assertEquals(status.status, 'error');
+	expect(status.status).toBe('error');
 	if (status.status === 'error') {
-		assertEquals(status.notes.length, 1);
-		assertEquals(status.notes[0], 'Data not available');
+		expect(status.notes.length).toBe(1);
+		expect(status.notes[0]).toBe('Data not available');
 	}
 });
 
-Deno.test('readStatus - handles known license shortcuts', () => {
+test('readStatus - handles known license shortcuts', () => {
 	const status = readStatus(resolve(TEST_DATA_DIR, 'license-shortcut.yml'));
-	assertEquals(status.status, 'success');
+	expect(status.status).toBe('success');
 	if (status.status === 'success') {
-		assertEquals(status.license.name, 'CC0');
-		assertEquals(status.license.url, 'https://creativecommons.org/publicdomain/zero/1.0/');
-		assertEquals(status.license.requiresAttribution, false);
+		expect(status.license.name).toBe('CC0');
+		expect(status.license.url).toBe('https://creativecommons.org/publicdomain/zero/1.0/');
+		expect(status.license.requiresAttribution).toBe(false);
 	}
 });
 
-Deno.test('readStatus - throws on invalid rating', () => {
-	assertThrows(
-		() => readStatus(resolve(TEST_DATA_DIR, 'invalid-rating.yml')),
-		Error,
+test('readStatus - throws on invalid rating', () => {
+	expect(() => readStatus(resolve(TEST_DATA_DIR, 'invalid-rating.yml'))).toThrow(
 		'Invalid rating',
 	);
 });
 
-Deno.test('readStatus - throws on invalid URL', () => {
-	assertThrows(
-		() => readStatus(resolve(TEST_DATA_DIR, 'invalid-url.yml')),
-		Error,
+test('readStatus - throws on invalid URL', () => {
+	expect(() => readStatus(resolve(TEST_DATA_DIR, 'invalid-url.yml'))).toThrow(
 		'Invalid license URL',
 	);
 });
 
-Deno.test('readStatus - throws on missing license', () => {
-	assertThrows(
-		() => readStatus(resolve(TEST_DATA_DIR, 'missing-license.yml')),
-		Error,
+test('readStatus - throws on missing license', () => {
+	expect(() => readStatus(resolve(TEST_DATA_DIR, 'missing-license.yml'))).toThrow(
 		'License must be an object',
 	);
 });
 
-Deno.test('readStatus - throws on missing creator', () => {
-	assertThrows(
-		() => readStatus(resolve(TEST_DATA_DIR, 'missing-creator.yml')),
-		Error,
+test('readStatus - throws on missing creator', () => {
+	expect(() => readStatus(resolve(TEST_DATA_DIR, 'missing-creator.yml'))).toThrow(
 		'Creator must be an object',
 	);
 });
 
-Deno.test('readStatus - throws on invalid creator URL', () => {
-	assertThrows(
-		() => readStatus(resolve(TEST_DATA_DIR, 'invalid-creator-url.yml')),
-		Error,
+test('readStatus - throws on invalid creator URL', () => {
+	expect(() => readStatus(resolve(TEST_DATA_DIR, 'invalid-creator-url.yml'))).toThrow(
 		'Invalid creator URL',
 	);
 });
 
-Deno.test('readStatus - accepts rating of 0', () => {
+test('readStatus - accepts rating of 0', () => {
 	const status = readStatus(resolve(TEST_DATA_DIR, 'rating-0.yml'));
-	assertEquals(status.status, 'success');
+	expect(status.status).toBe('success');
 	if (status.status === 'success') {
-		assertEquals(status.rating, 0);
+		expect(status.rating).toBe(0);
 	}
 });
 
-Deno.test('readStatus - accepts rating of 5', () => {
+test('readStatus - accepts rating of 5', () => {
 	const status = readStatus(resolve(TEST_DATA_DIR, 'rating-5.yml'));
-	assertEquals(status.status, 'success');
+	expect(status.status).toBe('success');
 	if (status.status === 'success') {
-		assertEquals(status.rating, 5);
+		expect(status.rating).toBe(5);
 	}
 });
 
-Deno.test('readStatus - throws on rating of 6', () => {
-	assertThrows(
-		() => readStatus(resolve(TEST_DATA_DIR, 'rating-6.yml')),
-		Error,
+test('readStatus - throws on rating of 6', () => {
+	expect(() => readStatus(resolve(TEST_DATA_DIR, 'rating-6.yml'))).toThrow('Invalid rating');
+});
+
+test('readStatus - throws on negative rating', () => {
+	expect(() => readStatus(resolve(TEST_DATA_DIR, 'rating-negative.yml'))).toThrow(
 		'Invalid rating',
 	);
 });
 
-Deno.test('readStatus - throws on negative rating', () => {
-	assertThrows(
-		() => readStatus(resolve(TEST_DATA_DIR, 'rating-negative.yml')),
-		Error,
-		'Invalid rating',
-	);
-});
-
-Deno.test('readStatus - throws on unknown license shortcut', () => {
-	assertThrows(
-		() => readStatus(resolve(TEST_DATA_DIR, 'unknown-license.yml')),
-		Error,
+test('readStatus - throws on unknown license shortcut', () => {
+	expect(() => readStatus(resolve(TEST_DATA_DIR, 'unknown-license.yml'))).toThrow(
 		'Unknown license',
 	);
 });
 
-Deno.test('readStatus - handles DL-DE->BY-2.0 license shortcut', () => {
+test('readStatus - handles DL-DE->BY-2.0 license shortcut', () => {
 	const status = readStatus(resolve(TEST_DATA_DIR, 'dl-de-by.yml'));
-	assertEquals(status.status, 'success');
+	expect(status.status).toBe('success');
 	if (status.status === 'success') {
-		assertEquals(status.license.name, 'DL-DE->BY-2.0');
-		assertEquals(status.license.url, 'https://www.govdata.de/dl-de/by-2-0');
-		assertEquals(status.license.requiresAttribution, true);
+		expect(status.license.name).toBe('DL-DE->BY-2.0');
+		expect(status.license.url).toBe('https://www.govdata.de/dl-de/by-2-0');
+		expect(status.license.requiresAttribution).toBe(true);
 	}
 });
 
-Deno.test('readStatus - handles DL-DE->Zero-2.0 license shortcut', () => {
+test('readStatus - handles DL-DE->Zero-2.0 license shortcut', () => {
 	const status = readStatus(resolve(TEST_DATA_DIR, 'dl-de-zero.yml'));
-	assertEquals(status.status, 'success');
+	expect(status.status).toBe('success');
 	if (status.status === 'success') {
-		assertEquals(status.license.name, 'DL-DE->Zero-2.0');
-		assertEquals(status.license.url, 'https://www.govdata.de/dl-de/zero-2-0');
-		assertEquals(status.license.requiresAttribution, false);
+		expect(status.license.name).toBe('DL-DE->Zero-2.0');
+		expect(status.license.url).toBe('https://www.govdata.de/dl-de/zero-2-0');
+		expect(status.license.requiresAttribution).toBe(false);
 	}
 });

@@ -1,103 +1,93 @@
-import { assertEquals, assertRejects } from '@std/assert';
+import { expect, test } from 'vitest';
+import { mkdirSync, writeFileSync, existsSync, statSync } from 'node:fs';
+import { rmSync } from 'node:fs';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { safeRemoveDir, safeRemoveFile } from './fs.ts';
-import { resolve } from '@std/path';
 
-const TEST_DIR = resolve(import.meta.dirname!, '../../test-data/fs-temp');
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const TEST_DIR = resolve(__dirname, '../../test-data/fs-temp');
 
-async function setupTestDir(): Promise<void> {
-	await Deno.mkdir(TEST_DIR, { recursive: true });
+function setupTestDir(): void {
+	mkdirSync(TEST_DIR, { recursive: true });
 }
 
-async function cleanupTestDir(): Promise<void> {
+function cleanupTestDir(): void {
 	try {
-		await Deno.remove(TEST_DIR, { recursive: true });
+		rmSync(TEST_DIR, { recursive: true });
 	} catch {
 		// Ignore cleanup errors
 	}
 }
 
-Deno.test('safeRemoveDir - removes existing directory', async () => {
-	await setupTestDir();
+test('safeRemoveDir - removes existing directory', async () => {
+	setupTestDir();
 	const testPath = resolve(TEST_DIR, 'to-remove');
-	await Deno.mkdir(testPath);
+	mkdirSync(testPath);
 
 	// Verify it exists
-	const beforeStat = await Deno.stat(testPath);
-	assertEquals(beforeStat.isDirectory, true);
+	expect(statSync(testPath).isDirectory()).toBe(true);
 
 	// Remove it
 	await safeRemoveDir(testPath);
 
 	// Verify it's gone
-	await assertRejects(
-		() => Deno.stat(testPath),
-		Deno.errors.NotFound,
-	);
-	await cleanupTestDir();
+	expect(existsSync(testPath)).toBe(false);
+	cleanupTestDir();
 });
 
-Deno.test('safeRemoveDir - removes directory recursively', async () => {
-	await setupTestDir();
+test('safeRemoveDir - removes directory recursively', async () => {
+	setupTestDir();
 	const testPath = resolve(TEST_DIR, 'parent');
 	const childPath = resolve(testPath, 'child');
 	const filePath = resolve(childPath, 'file.txt');
 
-	await Deno.mkdir(childPath, { recursive: true });
-	await Deno.writeTextFile(filePath, 'content');
+	mkdirSync(childPath, { recursive: true });
+	writeFileSync(filePath, 'content');
 
 	// Remove recursively
 	await safeRemoveDir(testPath);
 
 	// Verify it's gone
-	await assertRejects(
-		() => Deno.stat(testPath),
-		Deno.errors.NotFound,
-	);
-	await cleanupTestDir();
+	expect(existsSync(testPath)).toBe(false);
+	cleanupTestDir();
 });
 
-Deno.test('safeRemoveDir - ignores non-existent path', async () => {
+test('safeRemoveDir - ignores non-existent path', async () => {
 	// This should not throw
 	await safeRemoveDir('/nonexistent/path/that/does/not/exist');
 });
 
-Deno.test('safeRemoveFile - removes existing file', async () => {
-	await setupTestDir();
+test('safeRemoveFile - removes existing file', async () => {
+	setupTestDir();
 	const testPath = resolve(TEST_DIR, 'file-to-remove.txt');
-	await Deno.writeTextFile(testPath, 'content');
+	writeFileSync(testPath, 'content');
 
 	// Verify it exists
-	const beforeStat = await Deno.stat(testPath);
-	assertEquals(beforeStat.isFile, true);
+	expect(statSync(testPath).isFile()).toBe(true);
 
 	// Remove it
 	await safeRemoveFile(testPath);
 
 	// Verify it's gone
-	await assertRejects(
-		() => Deno.stat(testPath),
-		Deno.errors.NotFound,
-	);
-	await cleanupTestDir();
+	expect(existsSync(testPath)).toBe(false);
+	cleanupTestDir();
 });
 
-Deno.test('safeRemoveFile - ignores non-existent file', async () => {
+test('safeRemoveFile - ignores non-existent file', async () => {
 	// This should not throw
 	await safeRemoveFile('/nonexistent/file.txt');
 });
 
-Deno.test('safeRemoveFile - throws when path is non-empty directory', async () => {
-	await setupTestDir();
+test('safeRemoveFile - throws when path is non-empty directory', async () => {
+	setupTestDir();
 	const testPath = resolve(TEST_DIR, 'is-a-directory');
 	const childPath = resolve(testPath, 'child.txt');
-	await Deno.mkdir(testPath);
-	await Deno.writeTextFile(childPath, 'content');
+	mkdirSync(testPath);
+	writeFileSync(childPath, 'content');
 
-	// safeRemoveFile uses Deno.remove without recursive flag
+	// safeRemoveFile uses rm without recursive flag
 	// so it should throw when trying to remove a non-empty directory
-	await assertRejects(
-		() => safeRemoveFile(testPath),
-		Error,
-	);
-	await cleanupTestDir();
+	await expect(safeRemoveFile(testPath)).rejects.toThrow();
+	cleanupTestDir();
 });

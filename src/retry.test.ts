@@ -1,17 +1,17 @@
-import { assertEquals, assertRejects } from '@std/assert';
+import { expect, test } from 'vitest';
 import { withRetry } from './lib/retry.ts';
 
-Deno.test('withRetry - succeeds on first attempt', async () => {
+test('withRetry - succeeds on first attempt', async () => {
 	let attempts = 0;
 	const result = await withRetry(() => {
 		attempts++;
 		return Promise.resolve('success');
 	});
-	assertEquals(result, 'success');
-	assertEquals(attempts, 1);
+	expect(result).toBe('success');
+	expect(attempts).toBe(1);
 });
 
-Deno.test('withRetry - retries on failure then succeeds', async () => {
+test('withRetry - retries on failure then succeeds', async () => {
 	let attempts = 0;
 	const result = await withRetry(
 		() => {
@@ -23,53 +23,45 @@ Deno.test('withRetry - retries on failure then succeeds', async () => {
 		},
 		{ initialDelayMs: 10, maxAttempts: 3 },
 	);
-	assertEquals(result, 'success');
-	assertEquals(attempts, 3);
+	expect(result).toBe('success');
+	expect(attempts).toBe(3);
 });
 
-Deno.test('withRetry - throws after max attempts', async () => {
+test('withRetry - throws after max attempts', async () => {
 	let attempts = 0;
-	await assertRejects(
-		() =>
-			withRetry(
-				() => {
-					attempts++;
-					return Promise.reject(new Error('Persistent failure'));
-				},
-				{ initialDelayMs: 10, maxAttempts: 3 },
-			),
-		Error,
-		'Persistent failure',
-	);
-	assertEquals(attempts, 3);
+	await expect(
+		withRetry(
+			() => {
+				attempts++;
+				return Promise.reject(new Error('Persistent failure'));
+			},
+			{ initialDelayMs: 10, maxAttempts: 3 },
+		),
+	).rejects.toThrow('Persistent failure');
+	expect(attempts).toBe(3);
 });
 
-Deno.test('withRetry - respects custom options', async () => {
+test('withRetry - respects custom options', async () => {
 	let attempts = 0;
-	await assertRejects(
-		() =>
-			withRetry(
-				() => {
-					attempts++;
-					return Promise.reject(new Error('Failure'));
-				},
-				{ initialDelayMs: 5, maxAttempts: 2 },
-			),
-		Error,
-	);
-	assertEquals(attempts, 2);
+	await expect(
+		withRetry(
+			() => {
+				attempts++;
+				return Promise.reject(new Error('Failure'));
+			},
+			{ initialDelayMs: 5, maxAttempts: 2 },
+		),
+	).rejects.toThrow();
+	expect(attempts).toBe(2);
 });
 
-Deno.test('withRetry - converts non-Error throws to Error', async () => {
-	await assertRejects(
-		() =>
-			withRetry(
-				() => {
-					return Promise.reject('string error');
-				},
-				{ initialDelayMs: 5, maxAttempts: 1 },
-			),
-		Error,
-		'string error',
-	);
+test('withRetry - converts non-Error throws to Error', async () => {
+	await expect(
+		withRetry(
+			() => {
+				return Promise.reject('string error');
+			},
+			{ initialDelayMs: 5, maxAttempts: 1 },
+		),
+	).rejects.toThrow('string error');
 });

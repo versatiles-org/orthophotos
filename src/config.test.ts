@@ -1,100 +1,80 @@
-import { assertEquals, assertThrows } from '@std/assert';
+import { expect, test } from 'vitest';
 import { getDataDir, getTempDir, loadConfig, requireRsyncConfig } from './config.ts';
 
-Deno.test('getDataDir - returns env value when set', () => {
-	Deno.env.set('dir_data', '/test/path');
-	assertEquals(getDataDir(), '/test/path');
+test('getDataDir - returns env value when set', () => {
+	process.env['dir_data'] = '/test/path';
+	expect(getDataDir()).toBe('/test/path');
 });
 
-Deno.test('getDataDir - throws when not set', () => {
-	Deno.env.delete('dir_data');
-	assertThrows(
-		() => getDataDir(),
-		Error,
-		'Required environment variable "dir_data" is not set',
-	);
+test('getDataDir - throws when not set', () => {
+	delete process.env['dir_data'];
+	expect(() => getDataDir()).toThrow('Required environment variable "dir_data" is not set');
 });
 
-Deno.test('getTempDir - returns env value when set', () => {
-	Deno.env.set('dir_temp', '/test/temp');
-	assertEquals(getTempDir(), '/test/temp');
+test('getTempDir - returns env value when set', () => {
+	process.env['dir_temp'] = '/test/temp';
+	expect(getTempDir()).toBe('/test/temp');
 });
 
-Deno.test('getTempDir - throws when not set', () => {
-	Deno.env.delete('dir_temp');
-	assertThrows(
-		() => getTempDir(),
-		Error,
-		'Required environment variable "dir_temp" is not set',
-	);
+test('getTempDir - throws when not set', () => {
+	delete process.env['dir_temp'];
+	expect(() => getTempDir()).toThrow('Required environment variable "dir_temp" is not set');
 });
 
-Deno.test('loadConfig - returns config with all values', () => {
-	Deno.env.set('dir_data', '/data');
-	Deno.env.set('dir_temp', '/temp');
-	Deno.env.set('rsync_host', 'host.example.com');
-	Deno.env.set('rsync_port', '22');
-	Deno.env.set('rsync_id', '/path/to/key');
+test('loadConfig - returns config with all values', () => {
+	process.env['dir_data'] = '/data';
+	process.env['dir_temp'] = '/temp';
+	process.env['rsync_host'] = 'host.example.com';
+	process.env['rsync_port'] = '22';
+	process.env['rsync_id'] = '/path/to/key';
 
 	const config = loadConfig();
-	assertEquals(config.dirData, '/data');
-	assertEquals(config.dirTemp, '/temp');
-	assertEquals(config.rsyncHost, 'host.example.com');
-	assertEquals(config.rsyncPort, '22');
-	assertEquals(config.rsyncId, '/path/to/key');
+	expect(config.dirData).toBe('/data');
+	expect(config.dirTemp).toBe('/temp');
+	expect(config.rsyncHost).toBe('host.example.com');
+	expect(config.rsyncPort).toBe('22');
+	expect(config.rsyncId).toBe('/path/to/key');
 });
 
-Deno.test('loadConfig - throws when dir_data missing', () => {
-	Deno.env.delete('dir_data');
-	Deno.env.set('dir_temp', '/temp');
-	assertThrows(
-		() => loadConfig(),
-		Error,
-		'Required environment variable "dir_data" is not set',
-	);
+test('loadConfig - throws when dir_data missing', () => {
+	delete process.env['dir_data'];
+	process.env['dir_temp'] = '/temp';
+	expect(() => loadConfig()).toThrow('Required environment variable "dir_data" is not set');
 });
 
-Deno.test('loadConfig - throws when dir_temp missing', () => {
-	Deno.env.set('dir_data', '/data');
-	Deno.env.delete('dir_temp');
-	assertThrows(
-		() => loadConfig(),
-		Error,
-		'Required environment variable "dir_temp" is not set',
-	);
+test('loadConfig - throws when dir_temp missing', () => {
+	process.env['dir_data'] = '/data';
+	delete process.env['dir_temp'];
+	expect(() => loadConfig()).toThrow('Required environment variable "dir_temp" is not set');
 });
 
-Deno.test('requireRsyncConfig - returns rsync config when all set', () => {
-	Deno.env.set('rsync_host', 'host.example.com');
-	Deno.env.set('rsync_port', '22');
-	Deno.env.set('rsync_id', '/path/to/key');
+test('requireRsyncConfig - returns rsync config when all set', () => {
+	process.env['rsync_host'] = 'host.example.com';
+	process.env['rsync_port'] = '22';
+	process.env['rsync_id'] = '/path/to/key';
 
 	const config = requireRsyncConfig();
-	assertEquals(config.host, 'host.example.com');
-	assertEquals(config.port, '22');
-	assertEquals(config.id, '/path/to/key');
+	expect(config.host).toBe('host.example.com');
+	expect(config.port).toBe('22');
+	expect(config.id).toBe('/path/to/key');
 });
 
-Deno.test('requireRsyncConfig - throws when host missing', () => {
-	Deno.env.delete('rsync_host');
-	Deno.env.set('rsync_port', '22');
-	Deno.env.set('rsync_id', '/path/to/key');
+test('requireRsyncConfig - throws when host missing', () => {
+	delete process.env['rsync_host'];
+	process.env['rsync_port'] = '22';
+	process.env['rsync_id'] = '/path/to/key';
 
-	assertThrows(
-		() => requireRsyncConfig(),
-		Error,
+	expect(() => requireRsyncConfig()).toThrow(
 		'Required environment variable "rsync_host" is not set',
 	);
 });
 
-Deno.test('requireRsyncConfig - throws when port missing', () => {
-	Deno.env.set('rsync_host', 'host.example.com');
-	Deno.env.delete('rsync_port');
-	Deno.env.set('rsync_id', '/path/to/key');
+test('requireRsyncConfig - throws when port missing', () => {
+	process.env['rsync_host'] = 'host.example.com';
+	delete process.env['rsync_port'];
+	process.env['rsync_id'] = '/path/to/key';
 
-	assertThrows(
-		() => requireRsyncConfig(),
-		Error,
+	expect(() => requireRsyncConfig()).toThrow(
 		'Required environment variable "rsync_port" is not set',
 	);
 });

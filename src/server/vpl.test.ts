@@ -1,137 +1,114 @@
-import { assertStringIncludes } from '@std/assert';
+import { expect, test } from 'vitest';
+import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { generateVPL } from './vpl.ts';
-import { resolve } from '@std/path';
-import { ensureDirSync } from '@std/fs';
 
-const TEST_DIR = resolve(import.meta.dirname!, '../../test-data/vpl');
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const TEST_DIR = resolve(__dirname, '../../test-data/vpl');
 
-Deno.test({
-	name: 'generateVPL - creates valid VPL file',
-	fn: () => {
-		// Set up test environment
-		Deno.env.set('dir_data', TEST_DIR);
-		ensureDirSync(resolve(TEST_DIR, 'orthophotos'));
-		ensureDirSync(resolve(TEST_DIR, 'satellite/s2gm'));
-		ensureDirSync(resolve(TEST_DIR, 'satellite/bluemarble'));
+test('generateVPL - creates valid VPL file', () => {
+	// Set up test environment
+	process.env['dir_data'] = TEST_DIR;
+	mkdirSync(resolve(TEST_DIR, 'orthophotos'), { recursive: true });
+	mkdirSync(resolve(TEST_DIR, 'satellite/s2gm'), { recursive: true });
+	mkdirSync(resolve(TEST_DIR, 'satellite/bluemarble'), { recursive: true });
 
-		// Create test versatiles files
-		Deno.writeTextFileSync(resolve(TEST_DIR, 'orthophotos/test.versatiles'), '');
-		Deno.writeTextFileSync(resolve(TEST_DIR, 'satellite/s2gm/s2gm_overview.versatiles'), '');
-		Deno.writeTextFileSync(resolve(TEST_DIR, 'satellite/bluemarble/bluemarble.versatiles'), '');
+	// Create test versatiles files
+	writeFileSync(resolve(TEST_DIR, 'orthophotos/test.versatiles'), '');
+	writeFileSync(resolve(TEST_DIR, 'satellite/s2gm/s2gm_overview.versatiles'), '');
+	writeFileSync(resolve(TEST_DIR, 'satellite/bluemarble/bluemarble.versatiles'), '');
 
-		// Generate VPL
-		generateVPL('test.vpl');
+	// Generate VPL
+	generateVPL('test.vpl');
 
-		// Read and verify the generated file
-		const vpl = Deno.readTextFileSync(resolve(TEST_DIR, 'test.vpl'));
+	// Read and verify the generated file
+	const vpl = readFileSync(resolve(TEST_DIR, 'test.vpl'), 'utf-8');
 
-		assertStringIncludes(vpl, 'from_stacked_raster');
-		assertStringIncludes(vpl, 'test.versatiles');
-		assertStringIncludes(vpl, 's2gm_overview.versatiles');
-		assertStringIncludes(vpl, 'bluemarble.versatiles');
-		assertStringIncludes(vpl, 'raster_overscale');
-		assertStringIncludes(vpl, 'filter level_max=19');
-	},
-	sanitizeResources: false,
-	sanitizeOps: false,
+	expect(vpl).toContain('from_stacked_raster');
+	expect(vpl).toContain('test.versatiles');
+	expect(vpl).toContain('s2gm_overview.versatiles');
+	expect(vpl).toContain('bluemarble.versatiles');
+	expect(vpl).toContain('raster_overscale');
+	expect(vpl).toContain('filter level_max=19');
 });
 
-Deno.test({
-	name: 'generateVPL - handles empty orthophotos directory',
-	fn: () => {
-		// Set up test environment with empty orthophotos
-		const emptyTestDir = resolve(TEST_DIR, 'empty');
-		Deno.env.set('dir_data', emptyTestDir);
-		ensureDirSync(resolve(emptyTestDir, 'orthophotos'));
-		ensureDirSync(resolve(emptyTestDir, 'satellite/s2gm'));
-		ensureDirSync(resolve(emptyTestDir, 'satellite/bluemarble'));
-		Deno.writeTextFileSync(
-			resolve(emptyTestDir, 'satellite/s2gm/s2gm_overview.versatiles'),
-			'',
-		);
-		Deno.writeTextFileSync(
-			resolve(emptyTestDir, 'satellite/bluemarble/bluemarble.versatiles'),
-			'',
-		);
+test('generateVPL - handles empty orthophotos directory', () => {
+	// Set up test environment with empty orthophotos
+	const emptyTestDir = resolve(TEST_DIR, 'empty');
+	process.env['dir_data'] = emptyTestDir;
+	mkdirSync(resolve(emptyTestDir, 'orthophotos'), { recursive: true });
+	mkdirSync(resolve(emptyTestDir, 'satellite/s2gm'), { recursive: true });
+	mkdirSync(resolve(emptyTestDir, 'satellite/bluemarble'), { recursive: true });
+	writeFileSync(
+		resolve(emptyTestDir, 'satellite/s2gm/s2gm_overview.versatiles'),
+		'',
+	);
+	writeFileSync(
+		resolve(emptyTestDir, 'satellite/bluemarble/bluemarble.versatiles'),
+		'',
+	);
 
-		// Generate VPL
-		generateVPL('empty.vpl');
+	// Generate VPL
+	generateVPL('empty.vpl');
 
-		// Read and verify the generated file
-		const vpl = Deno.readTextFileSync(resolve(emptyTestDir, 'empty.vpl'));
+	// Read and verify the generated file
+	const vpl = readFileSync(resolve(emptyTestDir, 'empty.vpl'), 'utf-8');
 
-		assertStringIncludes(vpl, 'from_stacked_raster');
-		assertStringIncludes(vpl, 's2gm_overview.versatiles');
-		assertStringIncludes(vpl, 'bluemarble.versatiles');
-	},
-	sanitizeResources: false,
-	sanitizeOps: false,
+	expect(vpl).toContain('from_stacked_raster');
+	expect(vpl).toContain('s2gm_overview.versatiles');
+	expect(vpl).toContain('bluemarble.versatiles');
 });
 
-Deno.test({
-	name: 'generateVPL - includes from_container for each versatiles file',
-	fn: () => {
-		Deno.env.set('dir_data', TEST_DIR);
-		ensureDirSync(resolve(TEST_DIR, 'orthophotos'));
-		ensureDirSync(resolve(TEST_DIR, 'satellite/s2gm'));
-		ensureDirSync(resolve(TEST_DIR, 'satellite/bluemarble'));
+test('generateVPL - includes from_container for each versatiles file', () => {
+	process.env['dir_data'] = TEST_DIR;
+	mkdirSync(resolve(TEST_DIR, 'orthophotos'), { recursive: true });
+	mkdirSync(resolve(TEST_DIR, 'satellite/s2gm'), { recursive: true });
+	mkdirSync(resolve(TEST_DIR, 'satellite/bluemarble'), { recursive: true });
 
-		Deno.writeTextFileSync(resolve(TEST_DIR, 'orthophotos/region1.versatiles'), '');
-		Deno.writeTextFileSync(resolve(TEST_DIR, 'orthophotos/region2.versatiles'), '');
-		Deno.writeTextFileSync(resolve(TEST_DIR, 'satellite/s2gm/s2gm_overview.versatiles'), '');
-		Deno.writeTextFileSync(resolve(TEST_DIR, 'satellite/bluemarble/bluemarble.versatiles'), '');
+	writeFileSync(resolve(TEST_DIR, 'orthophotos/region1.versatiles'), '');
+	writeFileSync(resolve(TEST_DIR, 'orthophotos/region2.versatiles'), '');
+	writeFileSync(resolve(TEST_DIR, 'satellite/s2gm/s2gm_overview.versatiles'), '');
+	writeFileSync(resolve(TEST_DIR, 'satellite/bluemarble/bluemarble.versatiles'), '');
 
-		generateVPL('multi.vpl');
-		const vpl = Deno.readTextFileSync(resolve(TEST_DIR, 'multi.vpl'));
+	generateVPL('multi.vpl');
+	const vpl = readFileSync(resolve(TEST_DIR, 'multi.vpl'), 'utf-8');
 
-		assertStringIncludes(vpl, 'from_container');
-		assertStringIncludes(vpl, 'region1.versatiles');
-		assertStringIncludes(vpl, 'region2.versatiles');
-	},
-	sanitizeResources: false,
-	sanitizeOps: false,
+	expect(vpl).toContain('from_container');
+	expect(vpl).toContain('region1.versatiles');
+	expect(vpl).toContain('region2.versatiles');
 });
 
-Deno.test({
-	name: 'generateVPL - applies gamma/brightness/contrast to bluemarble',
-	fn: () => {
-		Deno.env.set('dir_data', TEST_DIR);
-		ensureDirSync(resolve(TEST_DIR, 'orthophotos'));
-		ensureDirSync(resolve(TEST_DIR, 'satellite/s2gm'));
-		ensureDirSync(resolve(TEST_DIR, 'satellite/bluemarble'));
+test('generateVPL - applies gamma/brightness/contrast to bluemarble', () => {
+	process.env['dir_data'] = TEST_DIR;
+	mkdirSync(resolve(TEST_DIR, 'orthophotos'), { recursive: true });
+	mkdirSync(resolve(TEST_DIR, 'satellite/s2gm'), { recursive: true });
+	mkdirSync(resolve(TEST_DIR, 'satellite/bluemarble'), { recursive: true });
 
-		Deno.writeTextFileSync(resolve(TEST_DIR, 'satellite/s2gm/s2gm_overview.versatiles'), '');
-		Deno.writeTextFileSync(resolve(TEST_DIR, 'satellite/bluemarble/bluemarble.versatiles'), '');
+	writeFileSync(resolve(TEST_DIR, 'satellite/s2gm/s2gm_overview.versatiles'), '');
+	writeFileSync(resolve(TEST_DIR, 'satellite/bluemarble/bluemarble.versatiles'), '');
 
-		generateVPL('gamma.vpl');
-		const vpl = Deno.readTextFileSync(resolve(TEST_DIR, 'gamma.vpl'));
+	generateVPL('gamma.vpl');
+	const vpl = readFileSync(resolve(TEST_DIR, 'gamma.vpl'), 'utf-8');
 
-		assertStringIncludes(vpl, 'gamma=0.8');
-		assertStringIncludes(vpl, 'brightness=0.2');
-		assertStringIncludes(vpl, 'contrast=0.8');
-		assertStringIncludes(vpl, 'raster_levels');
-	},
-	sanitizeResources: false,
-	sanitizeOps: false,
+	expect(vpl).toContain('gamma=0.8');
+	expect(vpl).toContain('brightness=0.2');
+	expect(vpl).toContain('contrast=0.8');
+	expect(vpl).toContain('raster_levels');
 });
 
-Deno.test({
-	name: 'generateVPL - includes meta_update with attribution',
-	fn: () => {
-		Deno.env.set('dir_data', TEST_DIR);
-		ensureDirSync(resolve(TEST_DIR, 'orthophotos'));
-		ensureDirSync(resolve(TEST_DIR, 'satellite/s2gm'));
-		ensureDirSync(resolve(TEST_DIR, 'satellite/bluemarble'));
+test('generateVPL - includes meta_update with attribution', () => {
+	process.env['dir_data'] = TEST_DIR;
+	mkdirSync(resolve(TEST_DIR, 'orthophotos'), { recursive: true });
+	mkdirSync(resolve(TEST_DIR, 'satellite/s2gm'), { recursive: true });
+	mkdirSync(resolve(TEST_DIR, 'satellite/bluemarble'), { recursive: true });
 
-		Deno.writeTextFileSync(resolve(TEST_DIR, 'satellite/s2gm/s2gm_overview.versatiles'), '');
-		Deno.writeTextFileSync(resolve(TEST_DIR, 'satellite/bluemarble/bluemarble.versatiles'), '');
+	writeFileSync(resolve(TEST_DIR, 'satellite/s2gm/s2gm_overview.versatiles'), '');
+	writeFileSync(resolve(TEST_DIR, 'satellite/bluemarble/bluemarble.versatiles'), '');
 
-		generateVPL('attribution.vpl');
-		const vpl = Deno.readTextFileSync(resolve(TEST_DIR, 'attribution.vpl'));
+	generateVPL('attribution.vpl');
+	const vpl = readFileSync(resolve(TEST_DIR, 'attribution.vpl'), 'utf-8');
 
-		assertStringIncludes(vpl, 'meta_update');
-		assertStringIncludes(vpl, 'attribution');
-	},
-	sanitizeResources: false,
-	sanitizeOps: false,
+	expect(vpl).toContain('meta_update');
+	expect(vpl).toContain('attribution');
 });

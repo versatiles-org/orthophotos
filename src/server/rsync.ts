@@ -1,5 +1,5 @@
-import { resolve } from '@std/path';
-import { ensureDir } from '@std/fs';
+import { resolve } from 'node:path';
+import { mkdirSync } from 'node:fs';
 import { getDataDir, requireRsyncConfig } from '../config.ts';
 import { runCommandWithRetry } from '../lib/command.ts';
 
@@ -23,7 +23,7 @@ async function rsync(srcDir: string, dstDir: string) {
 	const { host, port, id } = requireRsyncConfig();
 	const src = `${host}:${srcDir}/`;
 	const dst = resolve(getDataDir(), dstDir + '/');
-	await ensureDir(dst);
+	mkdirSync(dst, { recursive: true });
 
 	const args = [
 		'-avhtW',

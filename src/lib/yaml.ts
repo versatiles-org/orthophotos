@@ -2,7 +2,8 @@
  * Unified YAML parsing utilities.
  */
 
-import { parse } from '@std/yaml';
+import { readFileSync } from 'node:fs';
+import { parse } from 'yaml';
 
 export { parse };
 
@@ -12,7 +13,7 @@ export { parse };
  * @returns Parsed YAML content
  */
 export function parseYamlFile<T>(path: string): T {
-	const text = Deno.readTextFileSync(path);
+	const text = readFileSync(path, 'utf-8');
 	return parse(text) as T;
 }
 

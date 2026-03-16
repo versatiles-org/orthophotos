@@ -1,4 +1,5 @@
-import { resolve } from '@std/path/resolve';
+import { resolve } from 'node:path';
+import { readFileSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
 import type { Feature, FeatureCollection, Geometry, MultiPolygon, Polygon } from 'geojson';
 import * as topojson from 'topojson-client';
@@ -79,7 +80,7 @@ function parseNUTS(validRegions: ValidRegion[]): KnownRegion[] {
 }
 
 function loadData(filePath: string): ValidRegion[] {
-	let buffer: Uint8Array = Deno.readFileSync(filePath);
+	let buffer: Uint8Array = readFileSync(filePath);
 
 	const extensions = filePath.split('.').slice(1).reverse();
 	if (extensions[0] === 'gz') {
@@ -130,7 +131,7 @@ function loadTopoJSON(buffer: Uint8Array): Feature[] {
 	}
 	const objectKey = Object.keys(topojsonData.objects)[0];
 	const geojson = topojson.feature(topojsonData, topojsonData.objects[objectKey]);
-	return extractFeatures(geojson);
+	return extractFeatures(geojson as unknown as FeatureCollection);
 }
 
 /**

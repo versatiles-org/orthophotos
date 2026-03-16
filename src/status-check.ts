@@ -1,14 +1,18 @@
-import { resolve } from '@std/path/resolve';
+import { resolve, dirname } from 'node:path';
+import { writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { scanRegions, updateRegionEntries } from './status/regions.ts';
 import { loadKnownRegions } from './status/geojson.ts';
 
-const knownRegions = loadKnownRegions(resolve(import.meta.dirname!, '../data'));
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const regions = scanRegions(resolve(import.meta.dirname!, '../regions'), knownRegions);
+const knownRegions = loadKnownRegions(resolve(__dirname, '../data'));
+
+const regions = scanRegions(resolve(__dirname, '../regions'), knownRegions);
 await updateRegionEntries(regions);
 
-Deno.writeTextFileSync(
-	resolve(import.meta.dirname!, '../web/status.json'),
+writeFileSync(
+	resolve(__dirname, '../web/status.json'),
 	JSON.stringify(regions),
 );
 console.log(`Wrote ${regions.length} regions to web/status.json`);
@@ -18,7 +22,7 @@ const sources = regions.map((region) => ({
 	status: region.status,
 	name: region.region.properties,
 }));
-Deno.writeTextFileSync(
-	resolve(import.meta.dirname!, '../web/sources.json'),
+writeFileSync(
+	resolve(__dirname, '../web/sources.json'),
 	JSON.stringify(sources, null, 2),
 );

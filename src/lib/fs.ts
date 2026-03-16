@@ -46,10 +46,7 @@ export interface WalkEntry {
  * @param dir Directory to walk
  * @param options Options for filtering (exts, includeDirs)
  */
-export function* walkSync(
-	dir: string,
-	options?: { exts?: string[]; includeDirs?: boolean },
-): Generator<WalkEntry> {
+export function* walkSync(dir: string, options?: { exts?: string[]; includeDirs?: boolean }): Generator<WalkEntry> {
 	let entries: Dirent[];
 	try {
 		entries = readdirSync(dir, { withFileTypes: true });
@@ -60,7 +57,12 @@ export function* walkSync(
 		const fullPath = join(dir, entry.name);
 		if (entry.isDirectory()) {
 			if (options?.includeDirs !== false && options?.includeDirs) {
-				yield { path: fullPath, name: entry.name, isFile: false, isDirectory: true };
+				yield {
+					path: fullPath,
+					name: entry.name,
+					isFile: false,
+					isDirectory: true,
+				};
 			}
 			yield* walkSync(fullPath, options);
 		} else if (entry.isFile()) {
@@ -68,7 +70,12 @@ export function* walkSync(
 				const ext = extname(entry.name);
 				if (!options.exts.includes(ext)) continue;
 			}
-			yield { path: fullPath, name: entry.name, isFile: true, isDirectory: false };
+			yield {
+				path: fullPath,
+				name: entry.name,
+				isFile: true,
+				isDirectory: false,
+			};
 		}
 	}
 }

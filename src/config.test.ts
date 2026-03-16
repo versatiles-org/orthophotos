@@ -64,9 +64,7 @@ test('requireRsyncConfig - throws when host missing', () => {
 	process.env['rsync_port'] = '22';
 	process.env['rsync_id'] = '/path/to/key';
 
-	expect(() => requireRsyncConfig()).toThrow(
-		'Required environment variable "rsync_host" is not set',
-	);
+	expect(() => requireRsyncConfig()).toThrow('Required environment variable "rsync_host" is not set');
 });
 
 test('requireRsyncConfig - throws when port missing', () => {
@@ -74,7 +72,5 @@ test('requireRsyncConfig - throws when port missing', () => {
 	delete process.env['rsync_port'];
 	process.env['rsync_id'] = '/path/to/key';
 
-	expect(() => requireRsyncConfig()).toThrow(
-		'Required environment variable "rsync_port" is not set',
-	);
+	expect(() => requireRsyncConfig()).toThrow('Required environment variable "rsync_port" is not set');
 });

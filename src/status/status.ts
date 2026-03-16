@@ -49,9 +49,7 @@ export function readStatus(filename: string): Status {
 }
 
 function cleanupKeys<T>(obj: T, allowedKeys: (keyof T)[]): T {
-	return Object.fromEntries(
-		allowedKeys.map((key) => [key, obj[key]]).filter(([_, value]) => value !== undefined),
-	);
+	return Object.fromEntries(allowedKeys.map((key) => [key, obj[key]]).filter(([_, value]) => value !== undefined));
 }
 
 function checkUrl(url: string): void {

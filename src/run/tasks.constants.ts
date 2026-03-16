@@ -21,10 +21,7 @@ export const TASKS: TaskDefinition[] = [
 
 /** Map from task name/alias to task number */
 export const TASK_NAME_TO_NUMBER: Record<string, number> = Object.fromEntries(
-	TASKS.flatMap((task) => [
-		[task.name, task.number],
-		...task.aliases.map((alias) => [alias, task.number]),
-	]),
+	TASKS.flatMap((task) => [[task.name, task.number], ...task.aliases.map((alias) => [alias, task.number])]),
 );
 
 /** Map from task number to task name */

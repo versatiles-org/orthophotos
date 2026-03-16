@@ -42,33 +42,23 @@ test('readStatus - handles known license shortcuts', () => {
 });
 
 test('readStatus - throws on invalid rating', () => {
-	expect(() => readStatus(resolve(TEST_DATA_DIR, 'invalid-rating.yml'))).toThrow(
-		'Invalid rating',
-	);
+	expect(() => readStatus(resolve(TEST_DATA_DIR, 'invalid-rating.yml'))).toThrow('Invalid rating');
 });
 
 test('readStatus - throws on invalid URL', () => {
-	expect(() => readStatus(resolve(TEST_DATA_DIR, 'invalid-url.yml'))).toThrow(
-		'Invalid license URL',
-	);
+	expect(() => readStatus(resolve(TEST_DATA_DIR, 'invalid-url.yml'))).toThrow('Invalid license URL');
 });
 
 test('readStatus - throws on missing license', () => {
-	expect(() => readStatus(resolve(TEST_DATA_DIR, 'missing-license.yml'))).toThrow(
-		'License must be an object',
-	);
+	expect(() => readStatus(resolve(TEST_DATA_DIR, 'missing-license.yml'))).toThrow('License must be an object');
 });
 
 test('readStatus - throws on missing creator', () => {
-	expect(() => readStatus(resolve(TEST_DATA_DIR, 'missing-creator.yml'))).toThrow(
-		'Creator must be an object',
-	);
+	expect(() => readStatus(resolve(TEST_DATA_DIR, 'missing-creator.yml'))).toThrow('Creator must be an object');
 });
 
 test('readStatus - throws on invalid creator URL', () => {
-	expect(() => readStatus(resolve(TEST_DATA_DIR, 'invalid-creator-url.yml'))).toThrow(
-		'Invalid creator URL',
-	);
+	expect(() => readStatus(resolve(TEST_DATA_DIR, 'invalid-creator-url.yml'))).toThrow('Invalid creator URL');
 });
 
 test('readStatus - accepts rating of 0', () => {
@@ -92,15 +82,11 @@ test('readStatus - throws on rating of 6', () => {
 });
 
 test('readStatus - throws on negative rating', () => {
-	expect(() => readStatus(resolve(TEST_DATA_DIR, 'rating-negative.yml'))).toThrow(
-		'Invalid rating',
-	);
+	expect(() => readStatus(resolve(TEST_DATA_DIR, 'rating-negative.yml'))).toThrow('Invalid rating');
 });
 
 test('readStatus - throws on unknown license shortcut', () => {
-	expect(() => readStatus(resolve(TEST_DATA_DIR, 'unknown-license.yml'))).toThrow(
-		'Unknown license',
-	);
+	expect(() => readStatus(resolve(TEST_DATA_DIR, 'unknown-license.yml'))).toThrow('Unknown license');
 });
 
 test('readStatus - handles DL-DE->BY-2.0 license shortcut', () => {

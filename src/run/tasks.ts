@@ -6,13 +6,7 @@
 import { mkdirSync } from 'node:fs';
 import { rename, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import {
-	runBashScript,
-	runGdalwarp,
-	runRsyncDownload,
-	runRsyncUpload,
-	runVersatiles,
-} from './commands.ts';
+import { runBashScript, runGdalwarp, runRsyncDownload, runRsyncUpload, runVersatiles } from './commands.ts';
 import { TASK_NUMBER_TO_NAME } from './tasks.constants.ts';
 import { readStatusEntries } from '../lib/yaml.ts';
 import { safeRemoveDir, safeRemoveFile } from '../lib/fs.ts';
@@ -154,8 +148,7 @@ async function taskConvert(ctx: TaskContext): Promise<void> {
 		const outputVersatiles = resolve(ctx.dataDir, `${source}.versatiles`);
 
 		// Create .vpl pipeline file
-		const vplContent =
-			`from_gdal_raster filename="${inputVrt}" level_max=17 max_reuse_gdal=8 | raster_overview | raster_format format=webp quality="70,16:50,17:30" speed=0`;
+		const vplContent = `from_gdal_raster filename="${inputVrt}" level_max=17 max_reuse_gdal=8 | raster_overview | raster_format format=webp quality="70,16:50,17:30" speed=0`;
 		await writeFile(vplPath, vplContent);
 
 		// Run versatiles convert

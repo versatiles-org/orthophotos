@@ -1,11 +1,5 @@
 import { expect, test } from 'vitest';
-import {
-	ALL_TASKS,
-	TASK_NAME_TO_NUMBER,
-	TASK_NUMBER_TO_NAME,
-	TASKS,
-	VALID_TASK_NUMBERS,
-} from './tasks.constants.ts';
+import { ALL_TASKS, TASK_NAME_TO_NUMBER, TASK_NUMBER_TO_NAME, TASKS, VALID_TASK_NUMBERS } from './tasks.constants.ts';
 
 test('TASKS - contains all 7 task definitions', () => {
 	expect(TASKS.length).toBe(7);

@@ -83,7 +83,10 @@ test('parseArgs - returns null for help flag', () => {
 test('parseArgs - parses valid arguments', () => {
 	expect(parseArgs(['de/bw', '1'])).toEqual({ name: 'de/bw', tasks: [1] });
 	expect(parseArgs(['fr', '2-4'])).toEqual({ name: 'fr', tasks: [2, 3, 4] });
-	expect(parseArgs(['de', 'all'])).toEqual({ name: 'de', tasks: [0, 1, 5, 2, 5, 3, 5, 4, 5, 6] });
+	expect(parseArgs(['de', 'all'])).toEqual({
+		name: 'de',
+		tasks: [0, 1, 5, 2, 5, 3, 5, 4, 5, 6],
+	});
 });
 
 test('parseArgs - throws on missing task', () => {

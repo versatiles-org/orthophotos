@@ -40,14 +40,8 @@ test('generateVPL - handles empty orthophotos directory', () => {
 	mkdirSync(resolve(emptyTestDir, 'orthophotos'), { recursive: true });
 	mkdirSync(resolve(emptyTestDir, 'satellite/s2gm'), { recursive: true });
 	mkdirSync(resolve(emptyTestDir, 'satellite/bluemarble'), { recursive: true });
-	writeFileSync(
-		resolve(emptyTestDir, 'satellite/s2gm/s2gm_overview.versatiles'),
-		'',
-	);
-	writeFileSync(
-		resolve(emptyTestDir, 'satellite/bluemarble/bluemarble.versatiles'),
-		'',
-	);
+	writeFileSync(resolve(emptyTestDir, 'satellite/s2gm/s2gm_overview.versatiles'), '');
+	writeFileSync(resolve(emptyTestDir, 'satellite/bluemarble/bluemarble.versatiles'), '');
 
 	// Generate VPL
 	generateVPL('empty.vpl');

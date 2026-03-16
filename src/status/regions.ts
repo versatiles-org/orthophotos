@@ -63,13 +63,7 @@ function scanDirectory(
 		const sorted = [...directoryEntries].sort((a, b) => a.name.localeCompare(b.name));
 		for (const entry of sorted) {
 			if (entry.isDirectory()) {
-				scanDirectory(
-					resolve(directory, entry.name),
-					baseDirectory,
-					knownRegionIds,
-					knownRegions,
-					entries,
-				);
+				scanDirectory(resolve(directory, entry.name), baseDirectory, knownRegionIds, knownRegions, entries);
 			}
 		}
 	}
@@ -83,9 +77,7 @@ function scanDirectory(
  * @throws Error if a region ID doesn't match any known region
  */
 export function scanRegions(baseDirectory: string, knownRegions: KnownRegion[]): Region[] {
-	const knownRegionIds = new Map<string, KnownRegion>(
-		knownRegions.map((r) => [r.properties.id, r]),
-	);
+	const knownRegionIds = new Map<string, KnownRegion>(knownRegions.map((r) => [r.properties.id, r]));
 	const entries: Region[] = [];
 
 	scanDirectory(baseDirectory, baseDirectory, knownRegionIds, knownRegions, entries);
@@ -94,10 +86,7 @@ export function scanRegions(baseDirectory: string, knownRegions: KnownRegion[]):
 }
 
 /** Creates a GeoJSON outline file for a VersaTiles container */
-async function createGeoJsonOutline(
-	versaTilesFilename: string,
-	geoJsonFilename: string,
-): Promise<void> {
+async function createGeoJsonOutline(versaTilesFilename: string, geoJsonFilename: string): Promise<void> {
 	console.log(`Creating GeoJSON for ${versaTilesFilename}`);
 	await runCommand('versatiles', ['dev', 'export-outline', versaTilesFilename, geoJsonFilename]);
 }
@@ -114,11 +103,7 @@ export async function updateRegionEntries(regions: Region[]): Promise<void> {
 		if (region.status.status !== 'success') continue;
 
 		for (const entry of region.status.entries) {
-			const versaTilesFilename = resolve(
-				orthophotosPath,
-				region.id,
-				`${entry.name}.versatiles`,
-			);
+			const versaTilesFilename = resolve(orthophotosPath, region.id, `${entry.name}.versatiles`);
 
 			entry.versaTilesExists = existsSync(versaTilesFilename);
 

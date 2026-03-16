@@ -17,9 +17,7 @@ export interface ParsedArgs {
 export function validateRegionName(name: string): void {
 	const pattern = /^[a-z][a-z](\/[a-z][a-z])?$/;
 	if (!pattern.test(name)) {
-		throw new Error(
-			`Invalid region name "${name}". Must be "cc" or "cc/ss" (e.g., "de" or "de/bw")`,
-		);
+		throw new Error(`Invalid region name "${name}". Must be "cc" or "cc/ss" (e.g., "de" or "de/bw")`);
 	}
 }
 
@@ -105,9 +103,7 @@ export function expandTasks(taskSpec: string): number[] {
  */
 export function parseArgs(args: string[]): ParsedArgs | null {
 	// Check for help flag
-	if (
-		args.length === 0 || args.includes('-h') || args.includes('--help') || args.includes('help')
-	) {
+	if (args.length === 0 || args.includes('-h') || args.includes('--help') || args.includes('help')) {
 		return null;
 	}
 

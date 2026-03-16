@@ -37,20 +37,12 @@ function mapStdio(mode: 'inherit' | 'piped' | 'null' | undefined): 'inherit' | '
  * @param options Command options (cwd, env, stdout, stderr)
  * @throws Error if the command fails
  */
-export async function runCommand(
-	cmd: string,
-	args: string[],
-	options?: CommandOptions,
-): Promise<CommandOutput> {
+export async function runCommand(cmd: string, args: string[], options?: CommandOptions): Promise<CommandOutput> {
 	return new Promise((resolve, reject) => {
 		const child = spawn(cmd, args, {
 			cwd: options?.cwd,
 			env: options?.env ? { ...process.env, ...options.env } : undefined,
-			stdio: [
-				'inherit',
-				mapStdio(options?.stdout ?? 'inherit'),
-				mapStdio(options?.stderr ?? 'inherit'),
-			],
+			stdio: ['inherit', mapStdio(options?.stdout ?? 'inherit'), mapStdio(options?.stderr ?? 'inherit')],
 		});
 
 		const stdoutChunks: Buffer[] = [];

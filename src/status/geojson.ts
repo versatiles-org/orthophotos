@@ -14,10 +14,7 @@ interface NUTSProperties {
 }
 
 export type ValidRegion = Feature<Polygon | MultiPolygon, NUTSProperties>;
-export type KnownRegion = Feature<
-	Polygon | MultiPolygon,
-	{ id: string; name: string; fullname: string }
->;
+export type KnownRegion = Feature<Polygon | MultiPolygon, { id: string; name: string; fullname: string }>;
 
 /**
  * Loads known NUTS regions from TopoJSON files in the given folder.
@@ -37,7 +34,10 @@ function parseNUTS(validRegions: ValidRegion[]): KnownRegion[] {
 	const list: KnownRegion[] = [];
 
 	function add(region: ValidRegion, id: string, name: string, fullname: string) {
-		id = id.split('#').map((s) => string2ascii(s)).join('/');
+		id = id
+			.split('#')
+			.map((s) => string2ascii(s))
+			.join('/');
 
 		const knownRegion: KnownRegion = {
 			type: 'Feature',
@@ -50,9 +50,9 @@ function parseNUTS(validRegions: ValidRegion[]): KnownRegion[] {
 		}
 	}
 
-	validRegions.sort((a, b) =>
-		(a.properties.LEVL_CODE - b.properties.LEVL_CODE) ||
-		(a.properties.NUTS_ID.localeCompare(b.properties.NUTS_ID))
+	validRegions.sort(
+		(a, b) =>
+			a.properties.LEVL_CODE - b.properties.LEVL_CODE || a.properties.NUTS_ID.localeCompare(b.properties.NUTS_ID),
 	);
 
 	// add level 0 regions (countries)

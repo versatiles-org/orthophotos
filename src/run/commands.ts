@@ -101,11 +101,7 @@ export async function runBashScript(
 /**
  * Runs gdalwarp to create a preview image.
  */
-export async function runGdalwarp(
-	inputPath: string,
-	outputPath: string,
-	tempDir: string,
-): Promise<void> {
+export async function runGdalwarp(inputPath: string, outputPath: string, tempDir: string): Promise<void> {
 	const args = [
 		'-tr',
 		'200',
@@ -129,11 +125,7 @@ export async function runGdalwarp(
 /**
  * Runs versatiles convert with a .vpl pipeline file.
  */
-export async function runVersatiles(
-	vplPath: string,
-	outputPath: string,
-	cwd?: string,
-): Promise<void> {
+export async function runVersatiles(vplPath: string, outputPath: string, cwd?: string): Promise<void> {
 	const args = ['convert', vplPath, outputPath];
 	await runCommand('versatiles', args, { cwd });
 }

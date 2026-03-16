@@ -14,15 +14,14 @@ export function generateVPL(filename: string) {
 	const srcSatellite = resolve(path, 'satellite/');
 
 	const containers: string[] = [];
-	for (
-		const container of walkSync(srcOrthophotos, { exts: ['.versatiles'], includeDirs: false })
-	) {
+	for (const container of walkSync(srcOrthophotos, {
+		exts: ['.versatiles'],
+		includeDirs: false,
+	})) {
 		containers.push(`from_container filename="${container.path}" | raster_overscale`);
 	}
 
-	containers.push(
-		`from_container filename="${srcSatellite}/s2gm/s2gm_overview.versatiles" | raster_overscale`,
-	);
+	containers.push(`from_container filename="${srcSatellite}/s2gm/s2gm_overview.versatiles" | raster_overscale`);
 	containers.push(
 		`from_container filename="${srcSatellite}/bluemarble/bluemarble.versatiles" | raster_levels gamma=0.8 brightness=0.2 contrast=0.8 | raster_overscale`,
 	);

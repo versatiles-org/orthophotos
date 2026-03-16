@@ -53,11 +53,7 @@ test('runCommandWithRetry - succeeds on first attempt', async () => {
 });
 
 test('runCommandWithRetry - throws after max attempts on persistent failure', async () => {
-	await expect(
-		runCommandWithRetry(
-			'false',
-			[],
-			{ maxAttempts: 2, initialDelayMs: 10 },
-		),
-	).rejects.toThrow('exited with code');
+	await expect(runCommandWithRetry('false', [], { maxAttempts: 2, initialDelayMs: 10 })).rejects.toThrow(
+		'exited with code',
+	);
 });

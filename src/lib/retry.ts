@@ -27,10 +27,7 @@ function sleep(ms: number): Promise<void> {
  * @returns The result of the function
  * @throws The last error if all attempts fail
  */
-export async function withRetry<T>(
-	fn: () => Promise<T>,
-	options: RetryOptions = {},
-): Promise<T> {
+export async function withRetry<T>(fn: () => Promise<T>, options: RetryOptions = {}): Promise<T> {
 	const opts = { ...DEFAULT_OPTIONS, ...options };
 	let lastError: Error | undefined;
 	let delay = opts.initialDelayMs;
@@ -45,9 +42,7 @@ export async function withRetry<T>(
 				break;
 			}
 
-			console.warn(
-				`Attempt ${attempt}/${opts.maxAttempts} failed: ${lastError.message}. Retrying in ${delay}ms...`,
-			);
+			console.warn(`Attempt ${attempt}/${opts.maxAttempts} failed: ${lastError.message}. Retrying in ${delay}ms...`);
 
 			await sleep(delay);
 			delay = Math.min(delay * opts.backoffMultiplier, opts.maxDelayMs);

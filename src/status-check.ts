@@ -11,10 +11,7 @@ const knownRegions = loadKnownRegions(resolve(__dirname, '../data'));
 const regions = scanRegions(resolve(__dirname, '../regions'), knownRegions);
 await updateRegionEntries(regions);
 
-writeFileSync(
-	resolve(__dirname, '../web/status.json'),
-	JSON.stringify(regions),
-);
+writeFileSync(resolve(__dirname, '../web/status.json'), JSON.stringify(regions));
 console.log(`Wrote ${regions.length} regions to web/status.json`);
 
 const sources = regions.map((region) => ({
@@ -22,7 +19,4 @@ const sources = regions.map((region) => ({
 	status: region.status,
 	name: region.region.properties,
 }));
-writeFileSync(
-	resolve(__dirname, '../web/sources.json'),
-	JSON.stringify(sources, null, 2),
-);
+writeFileSync(resolve(__dirname, '../web/sources.json'), JSON.stringify(sources, null, 2));

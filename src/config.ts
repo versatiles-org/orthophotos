@@ -48,7 +48,11 @@ export function getTempDir(): string {
  * Validates that rsync-specific environment variables are set.
  * Call this before using rsync operations.
  */
-export function requireRsyncConfig(): { host: string; port: string; id: string } {
+export function requireRsyncConfig(): {
+	host: string;
+	port: string;
+	id: string;
+} {
 	const host = getRequiredEnv('rsync_host');
 	const port = getRequiredEnv('rsync_port');
 	const id = getRequiredEnv('rsync_id');

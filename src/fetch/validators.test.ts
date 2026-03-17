@@ -56,9 +56,7 @@ test('expectMinFileSize - passes when files are large enough', async () => {
 });
 
 test('expectMinFileSize - fails when file is too small', async () => {
-	await expect(expectMinFileSize(resolve(testDir, 'tiles'), '*.jp2', 99999)).rejects.toThrow(
-		'expected at least 99999',
-	);
+	await expect(expectMinFileSize(resolve(testDir, 'tiles'), '*.jp2', 99999)).rejects.toThrow('expected at least 99999');
 });
 
 test('expectMinFileSize - fails when no files match', async () => {

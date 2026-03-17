@@ -59,8 +59,7 @@ export function bashStep(name: string, options: BashStepOptions): Step {
 				} catch (err) {
 					const message = err instanceof Error ? err.message : String(err);
 					throw new Error(
-						`Postcondition failed for step "${name}": ${message}` +
-							(stderr ? `\n\nCaptured stderr:\n${stderr}` : ''),
+						`Postcondition failed for step "${name}": ${message}` + (stderr ? `\n\nCaptured stderr:\n${stderr}` : ''),
 					);
 				}
 			}

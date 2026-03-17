@@ -11,9 +11,14 @@
 function formatDuration(seconds: number): string {
 	if (seconds < 60) return `${Math.round(seconds)}s`;
 	if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${Math.round(seconds % 60)}s`;
-	const h = Math.floor(seconds / 3600);
-	const m = Math.round((seconds % 3600) / 60);
-	return `${h}h ${m}m`;
+	if (seconds < 86400) {
+		const h = Math.floor(seconds / 3600);
+		const m = Math.round((seconds % 3600) / 60);
+		return `${h}h ${m}m`;
+	}
+	const d = Math.floor(seconds / 86400);
+	const h = Math.round((seconds % 86400) / 3600);
+	return `${d}d ${h}h`;
 }
 
 function renderBar(done: number, total: number, width: number): string {

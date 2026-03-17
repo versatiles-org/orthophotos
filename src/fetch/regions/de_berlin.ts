@@ -32,7 +32,24 @@ export function parseTileUrls(xml: string): string[] {
 	return urls;
 }
 
-export default defineRegion('de/berlin', [
+export default defineRegion('de/berlin', {
+	status: 'success',
+	notes: [
+		'Atom feed with direct .jp2 download links.',
+		'It is not possible to overlay images because a mask or alpha channel is missing.',
+	],
+	entries: ['tiles'],
+	license: {
+		name: 'DL-DE/ZERO-2.0',
+		url: 'https://www.govdata.de/dl-de/zero-2-0',
+		requiresAttribution: false,
+	},
+	creator: {
+		name: 'Geoportal Berlin',
+		url: 'https://gdi.berlin.de/geonetwork/srv/api/records/01e2749e-7dca-3492-8f95-29d360c3f1aa',
+	},
+	date: '2025',
+}, [
 	step('fetch-feed', async (ctx) => {
 		const feedPath = join(ctx.tempDir, 'feed.xml');
 		if (!existsSync(feedPath)) {

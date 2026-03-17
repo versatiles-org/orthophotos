@@ -10,7 +10,7 @@ import { withRetry } from '../../lib/retry.ts';
 
 const ATOM_URL = 'https://service.gdi-sh.de/SH_OpenGBD/feeds/DOP20/DOP20.xml';
 const TILE_XML_BASE = 'https://service.gdi-sh.de/SH_OpenGBD/feeds/DOP20/DOP20_';
-const CONCURRENCY = 4;
+const CONCURRENCY = 16;
 
 const xmlParser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
 

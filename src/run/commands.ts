@@ -89,13 +89,24 @@ export async function runRsyncUpload(localPath: string, remotePath: string): Pro
 
 /**
  * Runs a bash script with the specified environment variables.
+ * When capture is true, stdout/stderr are piped and returned instead of inherited.
  */
 export async function runBashScript(
 	scriptPath: string,
 	env: { DATA: string; TEMP: string; PROJ: string },
 	cwd: string,
-): Promise<void> {
-	await runCommand('bash', ['-c', scriptPath], { cwd, env });
+	options?: { capture?: boolean },
+): Promise<{ stdout: string; stderr: string }> {
+	const result = await runCommand('bash', ['-c', scriptPath], {
+		cwd,
+		env,
+		stdout: options?.capture ? 'piped' : undefined,
+		stderr: options?.capture ? 'piped' : undefined,
+	});
+	return {
+		stdout: new TextDecoder().decode(result.stdout),
+		stderr: new TextDecoder().decode(result.stderr),
+	};
 }
 
 /**

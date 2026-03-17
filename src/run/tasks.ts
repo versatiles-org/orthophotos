@@ -4,12 +4,12 @@
  */
 
 import { mkdirSync } from 'node:fs';
-import { rename, writeFile } from 'node:fs/promises';
+import { rename } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { runBashScript, runGdalwarp, runRsyncDownload, runRsyncUpload, runVersatiles } from './commands.ts';
 import { TASK_NUMBER_TO_NAME } from './tasks.constants.ts';
 import { readStatusEntries } from '../lib/yaml.ts';
-import { safeRemoveDir, safeRemoveFile } from '../lib/fs.ts';
+import { safeRemoveDir } from '../lib/fs.ts';
 import { getRegionPipeline } from '../regions/index.ts';
 import { runPipeline } from '../lib/framework.ts';
 
@@ -141,7 +141,6 @@ async function taskPreview(ctx: TaskContext): Promise<void> {
 
 /**
  * Task 4: Convert to .versatiles format.
- * Creates .vpl pipeline files and runs versatiles convert.
  */
 async function taskConvert(ctx: TaskContext): Promise<void> {
 	console.log('Converting data...');
@@ -154,22 +153,14 @@ async function taskConvert(ctx: TaskContext): Promise<void> {
 		mkdirSync(ctx.tempDir, { recursive: true });
 
 		const inputVrt = resolve(ctx.dataDir, `${source}.vrt`);
-		const vplPath = resolve(ctx.tempDir, `${source}.vpl`);
 		const tempVersatiles = resolve(ctx.tempDir, `${source}.versatiles`);
 		const outputVersatiles = resolve(ctx.dataDir, `${source}.versatiles`);
 
-		// Create .vpl pipeline file
-		const vplContent = `from_gdal_raster filename="${inputVrt}" level_max=17 max_reuse_gdal=8 | raster_overview | raster_format format=webp quality="70,16:50,17:30" speed=0`;
-		await writeFile(vplPath, vplContent);
-
-		// Run versatiles convert
-		await runVersatiles(vplPath, tempVersatiles);
+		const vpl = `from_gdal_raster filename="${inputVrt}" level_max=17 max_reuse_gdal=8 | raster_overview | raster_format format=webp quality="70,16:50,17:30" speed=0`;
+		await runVersatiles(`[,vpl](${vpl})`, tempVersatiles);
 
 		// Move to final location
 		await rename(tempVersatiles, outputVersatiles);
-
-		// Clean up temp files
-		await safeRemoveFile(vplPath);
 	}
 }
 

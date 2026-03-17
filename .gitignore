@@ -1,5 +1,6 @@
 .DS_Store
 config.env
-web/status.json
-web/sources.json
 node_modules/
+test-data/vpl
+web/sources.json
+web/status.json

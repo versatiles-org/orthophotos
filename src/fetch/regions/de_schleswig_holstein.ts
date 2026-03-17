@@ -1,12 +1,136 @@
-import { bashStep, defineRegion } from '../framework.ts';
-import { expectMinFiles } from '../validators.ts';
+import { mkdirSync, existsSync, statSync, renameSync, rmSync } from 'node:fs';
+import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { defineRegion, step } from '../framework.ts';
+import { expectMinFiles } from '../validators.ts';
+import { runCommand } from '../../lib/command.ts';
+import { withRetry } from '../../lib/retry.ts';
+
+const ATOM_URL = 'https://service.gdi-sh.de/SH_OpenGBD/feeds/DOP20/DOP20.xml';
+const TILE_XML_BASE = 'https://service.gdi-sh.de/SH_OpenGBD/feeds/DOP20/DOP20_';
+const CONCURRENCY = 1;
+
+async function downloadFile(url: string, dest: string): Promise<void> {
+	await runCommand('curl', ['-so', dest, url]);
+}
+
+function parseTileIds(xml: string): string[] {
+	const pattern = /href="https:\/\/service\.gdi-sh\.de\/SH_OpenGBD\/feeds\/DOP20\/DOP20_(dop20rgbi[^.]*)\.xml"/g;
+	const ids: string[] = [];
+	let match;
+	while ((match = pattern.exec(xml)) !== null) {
+		ids.push(match[1]);
+	}
+	return ids;
+}
+
+function parseTileUrl(xml: string): string | undefined {
+	const match = xml.match(/https:\/\/udp\.gdi-sh\.de\/fmedatastreaming.*?INTERPOLATION=cubic/);
+	if (!match) return undefined;
+	return match[0].replace(/amp;/g, '');
+}
+
+function shuffle<T>(array: T[]): T[] {
+	const result = [...array];
+	for (let i = result.length - 1; i > 0; i--) {
+		const j = Math.floor(Math.random() * (i + 1));
+		[result[i], result[j]] = [result[j], result[i]];
+	}
+	return result;
+}
+
+async function processTile(id: string, tilesDir: string, tempDir: string): Promise<'skipped' | 'converted' | 'empty'> {
+	const destJp2 = join(tilesDir, `${id}.jp2`);
+	if (existsSync(destJp2)) return 'skipped';
+
+	const tileXmlPath = join(tempDir, `${id}.xml`);
+	const tifPath = join(tempDir, `${id}.tif`);
+	const jp2Path = join(tempDir, `${id}.jp2`);
+
+	try {
+		await withRetry(() => downloadFile(`${TILE_XML_BASE}${id}.xml`, tileXmlPath), { maxAttempts: 3 });
+
+		const tileXml = await readFile(tileXmlPath, 'utf-8');
+		const url = parseTileUrl(tileXml);
+		if (!url) {
+			console.warn(`  No image URL found for ${id}, skipping`);
+			return 'empty';
+		}
+
+		await withRetry(() => downloadFile(url, tifPath), { maxAttempts: 3 });
+
+		const size = statSync(tifPath).size;
+		if (size === 46) {
+			return 'empty';
+		}
+
+		await runCommand('gdal_translate', ['-q', tifPath, jp2Path, '-co', 'QUALITY=100']);
+		renameSync(jp2Path, destJp2);
+		return 'converted';
+	} finally {
+		for (const ext of ['.xml', '.tif', '.jp2']) {
+			const p = join(tempDir, `${id}${ext}`);
+			try {
+				rmSync(p, { force: true });
+			} catch {}
+		}
+	}
+}
 
 export default defineRegion('de/schleswig_holstein', [
-	bashStep('fetch', {
-		scriptFile: '1_fetch.sh',
-		validate: async (ctx) => {
-			await expectMinFiles(join(ctx.dataDir, 'tiles'), '*.jp2', 50);
-		},
+	step('fetch-index', async (ctx) => {
+		const atomPath = join(ctx.tempDir, 'atom.xml');
+		if (!existsSync(atomPath)) {
+			console.log('  Fetching atom.xml...');
+			await withRetry(() => downloadFile(ATOM_URL, atomPath), { maxAttempts: 3 });
+		}
+	}),
+
+	step('parse-ids', async (ctx) => {
+		const atomPath = join(ctx.tempDir, 'atom.xml');
+		const xml = await readFile(atomPath, 'utf-8');
+		const ids = parseTileIds(xml);
+		await writeFile(join(ctx.tempDir, 'ids.json'), JSON.stringify(ids));
+		console.log(`  Found ${ids.length} tile IDs`);
+	}),
+
+	step('download-tiles', async (ctx) => {
+		const tilesDir = join(ctx.dataDir, 'tiles');
+		mkdirSync(tilesDir, { recursive: true });
+
+		const ids: string[] = JSON.parse(await readFile(join(ctx.tempDir, 'ids.json'), 'utf-8'));
+		const shuffled = shuffle(ids);
+
+		let converted = 0;
+		let skipped = 0;
+		let empty = 0;
+
+		// Process tiles with limited concurrency
+		const queue = [...shuffled];
+		const workers = Array.from({ length: CONCURRENCY }, async () => {
+			while (queue.length > 0) {
+				const id = queue.shift()!;
+				const result = await processTile(id, tilesDir, ctx.tempDir);
+				switch (result) {
+					case 'converted':
+						converted++;
+						break;
+					case 'skipped':
+						skipped++;
+						break;
+					case 'empty':
+						empty++;
+						break;
+				}
+				if ((converted + skipped + empty) % 100 === 0) {
+					console.log(`  Progress: ${converted} converted, ${skipped} skipped, ${empty} empty`);
+				}
+			}
+		});
+
+		await Promise.all(workers);
+		console.log(`  Done: ${converted} converted, ${skipped} skipped, ${empty} empty`);
+
+		await expectMinFiles(tilesDir, '*.jp2', 50);
 	}),
 ]);

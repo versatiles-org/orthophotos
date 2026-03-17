@@ -24,8 +24,29 @@ export interface Step {
 	run: (ctx: StepContext) => Promise<void>;
 }
 
+export interface RegionLicense {
+	name: string;
+	url: string;
+	requiresAttribution: boolean;
+}
+
+export interface RegionCreator {
+	name: string;
+	url: string;
+}
+
+export interface RegionMetadata {
+	status: 'success' | 'error';
+	notes: string[];
+	entries: string[];
+	license: RegionLicense;
+	creator: RegionCreator;
+	date?: string;
+}
+
 export interface RegionPipeline {
 	id: string;
+	metadata: RegionMetadata;
 	steps: Step[];
 }
 
@@ -75,10 +96,10 @@ export function step(name: string, fn: (ctx: StepContext) => Promise<void>): Ste
 }
 
 /**
- * Defines a region's fetch pipeline as a sequence of steps.
+ * Defines a region's fetch pipeline as a sequence of steps with metadata.
  */
-export function defineRegion(id: string, steps: Step[]): RegionPipeline {
-	return { id, steps };
+export function defineRegion(id: string, metadata: RegionMetadata, steps: Step[]): RegionPipeline {
+	return { id, metadata, steps };
 }
 
 /**

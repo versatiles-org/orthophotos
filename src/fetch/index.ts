@@ -3,7 +3,7 @@
  * Regions without a definition here fall back to the existing runBashScript path.
  */
 
-import type { RegionPipeline } from './framework.ts';
+import type { RegionMetadata, RegionPipeline } from './framework.ts';
 import al from './regions/al.ts';
 import at from './regions/at.ts';
 import ch from './regions/ch.ts';
@@ -76,4 +76,11 @@ for (const p of pipelines) {
  */
 export function getRegionPipeline(regionId: string): RegionPipeline | undefined {
 	return registry.get(regionId);
+}
+
+/**
+ * Returns the metadata for a region, or undefined if no framework definition exists.
+ */
+export function getRegionMetadata(regionId: string): RegionMetadata | undefined {
+	return registry.get(regionId)?.metadata;
 }

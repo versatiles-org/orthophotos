@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { defineRegion, runPipeline, step, type StepContext } from './framework.ts';
+import { defineRegion, runPipeline, step, type RegionMetadata, type StepContext } from './framework.ts';
 
 const dummyCtx: StepContext = {
 	name: 'test/region',
@@ -8,10 +8,18 @@ const dummyCtx: StepContext = {
 	tempDir: '/tmp/temp',
 };
 
+const dummyMeta: RegionMetadata = {
+	status: 'success',
+	notes: [],
+	entries: ['tiles'],
+	license: { name: 'CC0', url: 'https://creativecommons.org/publicdomain/zero/1.0/', requiresAttribution: false },
+	creator: { name: 'Test', url: 'https://example.com' },
+};
+
 test('runPipeline - runs steps sequentially and completes', async () => {
 	const order: string[] = [];
 
-	const pipeline = defineRegion('test', [
+	const pipeline = defineRegion('test', dummyMeta, [
 		step('first', async () => {
 			order.push('first');
 		}),
@@ -25,7 +33,7 @@ test('runPipeline - runs steps sequentially and completes', async () => {
 });
 
 test('runPipeline - error message includes step name and timing', async () => {
-	const pipeline = defineRegion('test', [
+	const pipeline = defineRegion('test', dummyMeta, [
 		step('setup', async () => {}),
 		step('download', async () => {
 			throw new Error('connection refused');
@@ -36,7 +44,7 @@ test('runPipeline - error message includes step name and timing', async () => {
 });
 
 test('runPipeline - error message includes original error', async () => {
-	const pipeline = defineRegion('test', [
+	const pipeline = defineRegion('test', dummyMeta, [
 		step('broken', async () => {
 			throw new Error('disk full');
 		}),
@@ -48,7 +56,7 @@ test('runPipeline - error message includes original error', async () => {
 test('runPipeline - stops at first failure', async () => {
 	const order: string[] = [];
 
-	const pipeline = defineRegion('test', [
+	const pipeline = defineRegion('test', dummyMeta, [
 		step('first', async () => {
 			order.push('first');
 		}),
@@ -66,13 +74,14 @@ test('runPipeline - stops at first failure', async () => {
 });
 
 test('runPipeline - empty pipeline completes', async () => {
-	const pipeline = defineRegion('test', []);
+	const pipeline = defineRegion('test', dummyMeta, []);
 	await runPipeline(pipeline, dummyCtx);
 });
 
-test('defineRegion - stores id and steps', () => {
+test('defineRegion - stores id, metadata, and steps', () => {
 	const steps = [step('a', async () => {})];
-	const pipeline = defineRegion('de/berlin', steps);
+	const pipeline = defineRegion('de/berlin', dummyMeta, steps);
 	expect(pipeline.id).toBe('de/berlin');
+	expect(pipeline.metadata).toBe(dummyMeta);
 	expect(pipeline.steps).toBe(steps);
 });

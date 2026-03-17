@@ -10,6 +10,8 @@ import { runBashScript, runGdalwarp, runRsyncDownload, runRsyncUpload, runVersat
 import { TASK_NUMBER_TO_NAME } from './tasks.constants.ts';
 import { readStatusEntries } from '../lib/yaml.ts';
 import { safeRemoveDir, safeRemoveFile } from '../lib/fs.ts';
+import { getRegionPipeline } from '../fetch/index.ts';
+import { runPipeline } from '../fetch/framework.ts';
 
 export interface TaskContext {
 	name: string; // Region identifier (e.g., "de/bw")
@@ -69,14 +71,23 @@ async function taskFetch(ctx: TaskContext): Promise<void> {
 	console.log('Fetching new data...');
 	mkdirSync(ctx.tempDir, { recursive: true });
 
-	const scriptPath = resolve(ctx.projDir, '1_fetch.sh');
-	const env = {
-		DATA: ctx.dataDir,
-		TEMP: ctx.tempDir,
-		PROJ: ctx.projDir,
-	};
-
-	await runBashScript(scriptPath, env, ctx.tempDir);
+	const pipeline = getRegionPipeline(ctx.name);
+	if (pipeline) {
+		await runPipeline(pipeline, {
+			name: ctx.name,
+			projDir: ctx.projDir,
+			dataDir: ctx.dataDir,
+			tempDir: ctx.tempDir,
+		});
+	} else {
+		const scriptPath = resolve(ctx.projDir, '1_fetch.sh');
+		const env = {
+			DATA: ctx.dataDir,
+			TEMP: ctx.tempDir,
+			PROJ: ctx.projDir,
+		};
+		await runBashScript(scriptPath, env, ctx.tempDir);
+	}
 
 	// Clean up temp directory after successful completion
 	await safeRemoveDir(ctx.tempDir);

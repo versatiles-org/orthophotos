@@ -13,7 +13,7 @@
  *   }, { etaLabel: 'converted', labels: ['converted', 'skipped'] });
  */
 
-import { createProgress, type ProgressOptions } from '../fetch/progress.ts';
+import { createProgress, type ProgressOptions } from './progress.ts';
 
 export async function concurrent<T>(
 	items: T[],

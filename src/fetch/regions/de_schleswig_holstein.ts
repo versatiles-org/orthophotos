@@ -87,7 +87,25 @@ async function processTile(id: string, tilesDir: string, tempDir: string): Promi
 	}
 }
 
-export default defineRegion('de/schleswig_holstein', [
+export default defineRegion('de/schleswig_holstein', {
+	status: 'success',
+	notes: [
+		'Server is slow.',
+		'License requires attribution.',
+		'Rather than a national mosaic, inconsistent regional mosaics with different access and formats are available instead.',
+	],
+	entries: ['tiles'],
+	license: {
+		name: 'CC BY 4.0',
+		url: 'https://creativecommons.org/licenses/by/4.0/',
+		requiresAttribution: true,
+	},
+	creator: {
+		name: 'GeoBasis-DE/LVermGeo SH',
+		url: 'https://opendata.schleswig-holstein.de/dataset/digitale-orthophotos-dop20',
+	},
+	date: '2017-2024',
+}, [
 	step('fetch-index', async (ctx) => {
 		const atomPath = join(ctx.tempDir, 'atom.xml');
 		if (!existsSync(atomPath)) {

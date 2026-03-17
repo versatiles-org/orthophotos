@@ -1,5 +1,5 @@
-import { bashStep, defineRegion } from '../framework.ts';
-import { expectMinFiles } from '../validators.ts';
+import { bashStep, defineRegion } from '../lib/framework.ts';
+import { expectMinFiles } from '../lib/validators.ts';
 import { join } from 'node:path';
 
 export default defineRegion(

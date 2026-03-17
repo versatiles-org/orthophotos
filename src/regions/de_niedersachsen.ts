@@ -1,14 +1,12 @@
-import { bashStep, defineRegion } from '../framework.ts';
-import { expectMinFiles } from '../validators.ts';
+import { bashStep, defineRegion } from '../lib/framework.ts';
+import { expectMinFiles } from '../lib/validators.ts';
 import { join } from 'node:path';
 
 export default defineRegion(
-	'de/bayern',
+	'de/niedersachsen',
 	{
 		status: 'success',
 		notes: [
-			'No API, such as an ATOM feed, available.',
-			'A hacky solution is required: Parse gemeinde.kml in the hope that it is up to date and references all images.',
 			'License requires attribution.',
 			'Rather than a national mosaic, inconsistent regional mosaics with different access and formats are available instead.',
 		],
@@ -19,15 +17,15 @@ export default defineRegion(
 			requiresAttribution: true,
 		},
 		creator: {
-			name: 'Bayerische Vermessungsverwaltung - www.geodaten.bayern.de',
-			url: 'https://geodaten.bayern.de/opengeodata/OpenDataDetail.html?pn=dop20rgb',
+			name: 'GeoBasis-DE/LGLN, 2025',
+			url: 'https://ni-lgln-opengeodata.hub.arcgis.com/apps/lgln-opengeodata::digitales-orthophoto-dop/about',
 		},
 	},
 	[
 		bashStep('fetch', {
 			scriptFile: '1_fetch.sh',
 			validate: async (ctx) => {
-				await expectMinFiles(join(ctx.dataDir, 'tiles'), '*.jp2', 50);
+				await expectMinFiles(join(ctx.dataDir, 'tiles'), '*', 50);
 			},
 		}),
 	],

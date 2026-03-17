@@ -10,8 +10,8 @@ import { runBashScript, runGdalwarp, runRsyncDownload, runRsyncUpload, runVersat
 import { TASK_NUMBER_TO_NAME } from './tasks.constants.ts';
 import { readStatusEntries } from '../lib/yaml.ts';
 import { safeRemoveDir, safeRemoveFile } from '../lib/fs.ts';
-import { getRegionPipeline } from '../fetch/index.ts';
-import { runPipeline } from '../fetch/framework.ts';
+import { getRegionPipeline } from '../regions/index.ts';
+import { runPipeline } from '../lib/framework.ts';
 
 export interface TaskContext {
 	name: string; // Region identifier (e.g., "de/bw")

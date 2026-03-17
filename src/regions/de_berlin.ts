@@ -2,11 +2,11 @@ import { existsSync, mkdirSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { XMLParser } from 'fast-xml-parser';
-import { defineRegion, step } from '../framework.ts';
-import { expectMinFiles } from '../validators.ts';
-import { downloadFile } from '../../lib/command.ts';
-import { concurrent } from '../../lib/concurrent.ts';
-import { withRetry } from '../../lib/retry.ts';
+import { defineRegion, step } from '../lib/framework.ts';
+import { expectMinFiles } from '../lib/validators.ts';
+import { downloadFile } from '../lib/command.ts';
+import { concurrent } from '../lib/concurrent.ts';
+import { withRetry } from '../lib/retry.ts';
 
 const ATOM_URL = 'https://gdi.berlin.de/data/oi_dop2025_sommer/atom/';
 const xmlParser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });

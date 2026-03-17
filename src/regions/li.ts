@@ -1,12 +1,12 @@
-import { bashStep, defineRegion } from '../framework.ts';
-import { expectMinFiles } from '../validators.ts';
+import { bashStep, defineRegion } from '../lib/framework.ts';
+import { expectFile } from '../lib/validators.ts';
 import { join } from 'node:path';
 
 export default defineRegion(
-	'dk',
+	'li',
 	{
 		status: 'success',
-		notes: ['License requires attribution', 'Only WMS available', 'Access requires token'],
+		notes: ['License requires attribution.'],
 		entries: ['tiles'],
 		license: {
 			name: 'CC BY 4.0',
@@ -14,15 +14,15 @@ export default defineRegion(
 			requiresAttribution: true,
 		},
 		creator: {
-			name: 'GeoDanmark',
-			url: 'https://dataforsyningen.dk/data/981',
+			name: 'Amt für Tiefbau und Geoinformation',
+			url: 'https://www.opendata.li/de/daten#esc_entry=159&esc_context=24',
 		},
 	},
 	[
 		bashStep('fetch', {
 			scriptFile: '1_fetch.sh',
 			validate: async (ctx) => {
-				await expectMinFiles(join(ctx.dataDir, 'tiles'), '*.jp2', 10);
+				await expectFile(join(ctx.dataDir, 'tiles', 'image.tif'));
 			},
 		}),
 	],

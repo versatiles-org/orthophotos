@@ -1,11 +1,11 @@
-import { bashStep, defineRegion } from '../framework.ts';
-import { expectMinFiles } from '../validators.ts';
+import { bashStep, defineRegion } from '../lib/framework.ts';
+import { expectMinFiles } from '../lib/validators.ts';
 import { join } from 'node:path';
 
 export default defineRegion(
-	'ro',
+	'sk',
 	{
-		status: 'success',
+		status: 'error',
 		notes: ['Images are unnecessarily packed into container files, such as ZIP.', 'License requires attribution.'],
 		entries: ['tiles'],
 		license: {
@@ -14,15 +14,15 @@ export default defineRegion(
 			requiresAttribution: true,
 		},
 		creator: {
-			name: 'Agenția de Informații Geospațiale a Apărării',
-			url: 'https://data.gov.ro/en/dataset/ortofotoplan-scara-1-5000-pentru-teritoriul-romaniei',
+			name: 'GKÚ',
+			url: 'https://rpi.gov.sk/metadata/3b046df1-7867-4377-b15b-6ae6bac999da',
 		},
 	},
 	[
 		bashStep('fetch', {
 			scriptFile: '1_fetch.sh',
 			validate: async (ctx) => {
-				await expectMinFiles(join(ctx.dataDir, 'tiles'), '*.jp2', 50);
+				await expectMinFiles(join(ctx.dataDir, 'tiles'), '*.tif', 50);
 			},
 		}),
 	],

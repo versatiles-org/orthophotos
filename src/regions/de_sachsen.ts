@@ -1,16 +1,14 @@
-import { bashStep, defineRegion } from '../framework.ts';
-import { expectMinFiles } from '../validators.ts';
+import { bashStep, defineRegion } from '../lib/framework.ts';
+import { expectMinFiles } from '../lib/validators.ts';
 import { join } from 'node:path';
 
 export default defineRegion(
-	'de/baden_wuerttemberg',
+	'de/sachsen',
 	{
 		status: 'success',
 		notes: [
-			'No API, such as an ATOM feed, available.',
-			'Hacky solution is required: Guessing filenames since there is no official index.',
+			'The URLs in the Atom feed point to old files that no longer exist.',
 			'Images are unnecessarily packed into container files, such as ZIP.',
-			'Why are 1x1km tiles grouped into 2x2km containers? And why are the offsets not a multiple of 2?',
 			'License requires attribution.',
 			'National license instead of an international standard.',
 			'Rather than a national mosaic, inconsistent regional mosaics with different access and formats are available instead.',
@@ -22,8 +20,8 @@ export default defineRegion(
 			requiresAttribution: true,
 		},
 		creator: {
-			name: 'LGL, www.lgl-bw.de',
-			url: 'https://www.lgl-bw.de/Produkte/Luftbildprodukte/DOP20/',
+			name: 'GeoSN',
+			url: 'https://www.geodaten.sachsen.de/luftbild-produkte-3995.html',
 		},
 	},
 	[

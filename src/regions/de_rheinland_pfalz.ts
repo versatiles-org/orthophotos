@@ -1,24 +1,27 @@
-import { bashStep, defineRegion } from '../framework.ts';
-import { expectMinFiles } from '../validators.ts';
+import { bashStep, defineRegion } from '../lib/framework.ts';
+import { expectMinFiles } from '../lib/validators.ts';
 import { join } from 'node:path';
 
 export default defineRegion(
-	'de/niedersachsen',
+	'de/rheinland_pfalz',
 	{
 		status: 'success',
 		notes: [
+			'No API, such as an ATOM feed, available.',
+			'Parsing HTML is required.',
 			'License requires attribution.',
+			'National license instead of an international standard.',
 			'Rather than a national mosaic, inconsistent regional mosaics with different access and formats are available instead.',
 		],
 		entries: ['tiles'],
 		license: {
-			name: 'CC BY 4.0',
-			url: 'https://creativecommons.org/licenses/by/4.0/',
+			name: 'DL-DE->BY-2.0',
+			url: 'https://www.govdata.de/dl-de/by-2-0',
 			requiresAttribution: true,
 		},
 		creator: {
-			name: 'GeoBasis-DE/LGLN, 2025',
-			url: 'https://ni-lgln-opengeodata.hub.arcgis.com/apps/lgln-opengeodata::digitales-orthophoto-dop/about',
+			name: 'GeoBasis-DE / LVermGeoRP 2025, www.lvermgeo.rlp.de',
+			url: 'https://geoshop.rlp.de/opendata-dop20.html',
 		},
 	},
 	[

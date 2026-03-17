@@ -1,16 +1,13 @@
-import { bashStep, defineRegion } from '../framework.ts';
-import { expectMinFiles } from '../validators.ts';
+import { bashStep, defineRegion } from '../lib/framework.ts';
+import { expectMinFiles } from '../lib/validators.ts';
 import { join } from 'node:path';
 
 export default defineRegion(
-	'de/brandenburg',
+	'de/saarland',
 	{
 		status: 'success',
 		notes: [
-			'No API, such as an ATOM feed, available.',
-			'Parsing HTML is required.',
-			'Images are unnecessarily packed into container files, such as ZIP.',
-			'Server is very slow.',
+			'Server is slow.',
 			'License requires attribution.',
 			'National license instead of an international standard.',
 			'Rather than a national mosaic, inconsistent regional mosaics with different access and formats are available instead.',
@@ -22,15 +19,15 @@ export default defineRegion(
 			requiresAttribution: true,
 		},
 		creator: {
-			name: 'GeoBasis-DE/LGB; Geoportal Berlin',
-			url: 'https://data.geobasis-bb.de/geobasis/daten/dop/rgb_jpg/',
+			name: 'GeoBasis DE/LVGL-SL (2025)',
+			url: 'https://geoportal.saarland.de/app-article/geobasisdatenuebersicht/',
 		},
 	},
 	[
 		bashStep('fetch', {
 			scriptFile: '1_fetch.sh',
 			validate: async (ctx) => {
-				await expectMinFiles(join(ctx.dataDir, 'tiles'), '*.jpg', 50);
+				await expectMinFiles(join(ctx.dataDir, 'tiles'), '*.jp2', 10);
 			},
 		}),
 	],

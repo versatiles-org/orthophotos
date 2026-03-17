@@ -1,9 +1,9 @@
-import { bashStep, defineRegion } from '../framework.ts';
-import { expectMinFiles } from '../validators.ts';
+import { bashStep, defineRegion } from '../lib/framework.ts';
+import { expectMinFiles } from '../lib/validators.ts';
 import { join } from 'node:path';
 
 export default defineRegion(
-	'cz',
+	'nl',
 	{
 		status: 'success',
 		notes: ['License requires attribution.'],
@@ -14,15 +14,15 @@ export default defineRegion(
 			requiresAttribution: true,
 		},
 		creator: {
-			name: 'ČÚZK',
-			url: 'https://geoportal.cuzk.gov.cz/(S(zggl1k35qp1wg4q33q1a5gov))/Default.aspx?mode=TextMeta&text=ortofoto_info&side=ortofoto',
+			name: 'beeldmateriaal.nl',
+			url: 'https://www.beeldmateriaal.nl/dataroom',
 		},
 	},
 	[
 		bashStep('fetch', {
 			scriptFile: '1_fetch.sh',
 			validate: async (ctx) => {
-				await expectMinFiles(join(ctx.dataDir, 'tiles_rgb'), '*.jp2', 50);
+				await expectMinFiles(join(ctx.dataDir, 'tiles'), '*.jp2', 50);
 			},
 		}),
 	],

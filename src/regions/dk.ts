@@ -1,12 +1,12 @@
-import { bashStep, defineRegion } from '../framework.ts';
-import { expectMinFiles } from '../validators.ts';
+import { bashStep, defineRegion } from '../lib/framework.ts';
+import { expectMinFiles } from '../lib/validators.ts';
 import { join } from 'node:path';
 
 export default defineRegion(
-	'nl',
+	'dk',
 	{
 		status: 'success',
-		notes: ['License requires attribution.'],
+		notes: ['License requires attribution', 'Only WMS available', 'Access requires token'],
 		entries: ['tiles'],
 		license: {
 			name: 'CC BY 4.0',
@@ -14,15 +14,15 @@ export default defineRegion(
 			requiresAttribution: true,
 		},
 		creator: {
-			name: 'beeldmateriaal.nl',
-			url: 'https://www.beeldmateriaal.nl/dataroom',
+			name: 'GeoDanmark',
+			url: 'https://dataforsyningen.dk/data/981',
 		},
 	},
 	[
 		bashStep('fetch', {
 			scriptFile: '1_fetch.sh',
 			validate: async (ctx) => {
-				await expectMinFiles(join(ctx.dataDir, 'tiles'), '*.jp2', 50);
+				await expectMinFiles(join(ctx.dataDir, 'tiles'), '*.jp2', 10);
 			},
 		}),
 	],

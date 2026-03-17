@@ -1,12 +1,12 @@
-import { bashStep, defineRegion } from '../framework.ts';
-import { expectMinFiles } from '../validators.ts';
+import { bashStep, defineRegion } from '../lib/framework.ts';
+import { expectMinFiles } from '../lib/validators.ts';
 import { join } from 'node:path';
 
 export default defineRegion(
-	'lv',
+	'ro',
 	{
 		status: 'success',
-		notes: ['License requires attribution.'],
+		notes: ['Images are unnecessarily packed into container files, such as ZIP.', 'License requires attribution.'],
 		entries: ['tiles'],
 		license: {
 			name: 'CC BY 4.0',
@@ -14,8 +14,8 @@ export default defineRegion(
 			requiresAttribution: true,
 		},
 		creator: {
-			name: 'Latvijas Ģeotelpiskās informācijas aģentūra',
-			url: 'https://www.lgia.gov.lv/lv/aerofotografesanas-6-cikls-2016-2018-g',
+			name: 'Agenția de Informații Geospațiale a Apărării',
+			url: 'https://data.gov.ro/en/dataset/ortofotoplan-scara-1-5000-pentru-teritoriul-romaniei',
 		},
 	},
 	[

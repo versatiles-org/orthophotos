@@ -1,27 +1,25 @@
-import { bashStep, defineRegion } from '../framework.ts';
-import { expectMinFiles } from '../validators.ts';
+import { bashStep, defineRegion } from '../lib/framework.ts';
+import { expectMinFiles } from '../lib/validators.ts';
 import { join } from 'node:path';
 
 export default defineRegion(
-	'de/sachsen',
+	'de/mecklenburg_vorpommern',
 	{
 		status: 'success',
 		notes: [
-			'The URLs in the Atom feed point to old files that no longer exist.',
-			'Images are unnecessarily packed into container files, such as ZIP.',
+			'Server is slow.',
 			'License requires attribution.',
-			'National license instead of an international standard.',
 			'Rather than a national mosaic, inconsistent regional mosaics with different access and formats are available instead.',
 		],
 		entries: ['tiles'],
 		license: {
-			name: 'DL-DE->BY-2.0',
-			url: 'https://www.govdata.de/dl-de/by-2-0',
+			name: 'CC BY 4.0',
+			url: 'https://creativecommons.org/licenses/by/4.0/',
 			requiresAttribution: true,
 		},
 		creator: {
-			name: 'GeoSN',
-			url: 'https://www.geodaten.sachsen.de/luftbild-produkte-3995.html',
+			name: 'GeoBasis-DE/M-V',
+			url: 'https://www.geoportal-mv.de/portal/Suche/Metadatenuebersicht/Details/Downloaddienst%20Digitale%20Orthophotos%2020cm%20MV%20(ATOM_MV_DOP)/0dea084c-5d2f-4aa0-a974-481dcd85a0ab',
 		},
 	},
 	[

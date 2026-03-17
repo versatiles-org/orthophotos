@@ -1,13 +1,12 @@
-import { bashStep, defineRegion } from '../framework.ts';
-import { expectMinFiles } from '../validators.ts';
+import { bashStep, defineRegion } from '../lib/framework.ts';
+import { expectMinFiles } from '../lib/validators.ts';
 import { join } from 'node:path';
 
 export default defineRegion(
-	'de/saarland',
+	'de/sachsen_anhalt',
 	{
 		status: 'success',
 		notes: [
-			'Server is slow.',
 			'License requires attribution.',
 			'National license instead of an international standard.',
 			'Rather than a national mosaic, inconsistent regional mosaics with different access and formats are available instead.',
@@ -19,15 +18,15 @@ export default defineRegion(
 			requiresAttribution: true,
 		},
 		creator: {
-			name: 'GeoBasis DE/LVGL-SL (2025)',
-			url: 'https://geoportal.saarland.de/app-article/geobasisdatenuebersicht/',
+			name: 'GeoBasis-DE / LVermGeo ST',
+			url: 'https://www.lvermgeo.sachsen-anhalt.de/de/gdp-open-data.html',
 		},
 	},
 	[
 		bashStep('fetch', {
 			scriptFile: '1_fetch.sh',
 			validate: async (ctx) => {
-				await expectMinFiles(join(ctx.dataDir, 'tiles'), '*.jp2', 10);
+				await expectMinFiles(join(ctx.dataDir, 'tiles'), '*.jp2', 50);
 			},
 		}),
 	],

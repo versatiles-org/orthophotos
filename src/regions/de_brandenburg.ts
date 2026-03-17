@@ -1,34 +1,36 @@
-import { bashStep, defineRegion } from '../framework.ts';
-import { expectMinFiles } from '../validators.ts';
+import { bashStep, defineRegion } from '../lib/framework.ts';
+import { expectMinFiles } from '../lib/validators.ts';
 import { join } from 'node:path';
 
 export default defineRegion(
-	'de/bremen',
+	'de/brandenburg',
 	{
 		status: 'success',
 		notes: [
 			'No API, such as an ATOM feed, available.',
+			'Parsing HTML is required.',
 			'Images are unnecessarily packed into container files, such as ZIP.',
+			'Server is very slow.',
 			'License requires attribution.',
-			'JPEGs with World files are provided, but not more convenient GeoTIFFs/JPEG2000.',
+			'National license instead of an international standard.',
 			'Rather than a national mosaic, inconsistent regional mosaics with different access and formats are available instead.',
 		],
-		entries: ['tiles_hb', 'tiles_bhv'],
+		entries: ['tiles'],
 		license: {
-			name: 'CC BY 4.0',
-			url: 'https://creativecommons.org/licenses/by/4.0/',
+			name: 'DL-DE->BY-2.0',
+			url: 'https://www.govdata.de/dl-de/by-2-0',
 			requiresAttribution: true,
 		},
 		creator: {
-			name: 'Landesamt GeoInformation Bremen',
-			url: 'https://metaver.de/trefferanzeige?cmd=doShowDocument&docuuid=910260F7-AC66-40F3-8BA2-E7108C3C71C9',
+			name: 'GeoBasis-DE/LGB; Geoportal Berlin',
+			url: 'https://data.geobasis-bb.de/geobasis/daten/dop/rgb_jpg/',
 		},
 	},
 	[
 		bashStep('fetch', {
 			scriptFile: '1_fetch.sh',
 			validate: async (ctx) => {
-				await expectMinFiles(join(ctx.dataDir, 'tiles_hb'), '*.jpg', 10);
+				await expectMinFiles(join(ctx.dataDir, 'tiles'), '*.jpg', 50);
 			},
 		}),
 	],

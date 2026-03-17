@@ -1,14 +1,16 @@
-import { bashStep, defineRegion } from '../framework.ts';
-import { expectMinFiles } from '../validators.ts';
+import { bashStep, defineRegion } from '../lib/framework.ts';
+import { expectMinFiles } from '../lib/validators.ts';
 import { join } from 'node:path';
 
 export default defineRegion(
-	'de/rheinland_pfalz',
+	'de/baden_wuerttemberg',
 	{
 		status: 'success',
 		notes: [
 			'No API, such as an ATOM feed, available.',
-			'Parsing HTML is required.',
+			'Hacky solution is required: Guessing filenames since there is no official index.',
+			'Images are unnecessarily packed into container files, such as ZIP.',
+			'Why are 1x1km tiles grouped into 2x2km containers? And why are the offsets not a multiple of 2?',
 			'License requires attribution.',
 			'National license instead of an international standard.',
 			'Rather than a national mosaic, inconsistent regional mosaics with different access and formats are available instead.',
@@ -20,15 +22,15 @@ export default defineRegion(
 			requiresAttribution: true,
 		},
 		creator: {
-			name: 'GeoBasis-DE / LVermGeoRP 2025, www.lvermgeo.rlp.de',
-			url: 'https://geoshop.rlp.de/opendata-dop20.html',
+			name: 'LGL, www.lgl-bw.de',
+			url: 'https://www.lgl-bw.de/Produkte/Luftbildprodukte/DOP20/',
 		},
 	},
 	[
 		bashStep('fetch', {
 			scriptFile: '1_fetch.sh',
 			validate: async (ctx) => {
-				await expectMinFiles(join(ctx.dataDir, 'tiles'), '*', 50);
+				await expectMinFiles(join(ctx.dataDir, 'tiles'), '*.jp2', 50);
 			},
 		}),
 	],

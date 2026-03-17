@@ -2,12 +2,12 @@ import { mkdirSync, existsSync, statSync, renameSync, rmSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { XMLParser } from 'fast-xml-parser';
-import { defineRegion, step } from '../framework.ts';
-import { expectMinFiles } from '../validators.ts';
-import { shuffle } from '../../lib/array.ts';
-import { downloadFile, runCommand } from '../../lib/command.ts';
-import { concurrent } from '../../lib/concurrent.ts';
-import { withRetry } from '../../lib/retry.ts';
+import { defineRegion, step } from '../lib/framework.ts';
+import { expectMinFiles } from '../lib/validators.ts';
+import { shuffle } from '../lib/array.ts';
+import { downloadFile, runCommand } from '../lib/command.ts';
+import { concurrent } from '../lib/concurrent.ts';
+import { withRetry } from '../lib/retry.ts';
 
 const ATOM_URL = 'https://service.gdi-sh.de/SH_OpenGBD/feeds/DOP20/DOP20.xml';
 const TILE_XML_BASE = 'https://service.gdi-sh.de/SH_OpenGBD/feeds/DOP20/DOP20_';

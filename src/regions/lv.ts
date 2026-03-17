@@ -1,15 +1,12 @@
-import { bashStep, defineRegion } from '../framework.ts';
-import { expectMinFiles } from '../validators.ts';
+import { bashStep, defineRegion } from '../lib/framework.ts';
+import { expectMinFiles } from '../lib/validators.ts';
 import { join } from 'node:path';
 
 export default defineRegion(
-	'at',
+	'lv',
 	{
-		status: 'error',
-		notes: [
-			"Images are upside down, and 'gdalbuildvrt' does not support positive NS resolution.",
-			'License requires attribution.',
-		],
+		status: 'success',
+		notes: ['License requires attribution.'],
 		entries: ['tiles'],
 		license: {
 			name: 'CC BY 4.0',
@@ -17,8 +14,8 @@ export default defineRegion(
 			requiresAttribution: true,
 		},
 		creator: {
-			name: 'BEV',
-			url: 'https://data.bev.gv.at/geonetwork/srv/api/records/3c3803b3-1b53-4fb5-9595-9217b9891862',
+			name: 'Latvijas Ģeotelpiskās informācijas aģentūra',
+			url: 'https://www.lgia.gov.lv/lv/aerofotografesanas-6-cikls-2016-2018-g',
 		},
 	},
 	[

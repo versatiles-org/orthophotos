@@ -1,12 +1,17 @@
-import { bashStep, defineRegion } from '../framework.ts';
-import { expectMinFiles } from '../validators.ts';
+import { bashStep, defineRegion } from '../lib/framework.ts';
+import { expectMinFiles } from '../lib/validators.ts';
 import { join } from 'node:path';
 
 export default defineRegion(
-	'al',
+	'lt',
 	{
 		status: 'success',
-		notes: ['Only WMS found.', 'Server is very slow.', 'Full coverage only for 2015.'],
+		notes: [
+			'Atom feed provides only proprietary data formats.',
+			'Only WMS is usable.',
+			'Server is very, very slow.',
+			'No license information found.',
+		],
 		entries: ['tiles'],
 		license: {
 			name: 'CC0',
@@ -14,10 +19,9 @@ export default defineRegion(
 			requiresAttribution: false,
 		},
 		creator: {
-			name: 'ASIG',
-			url: 'https://geoportal.asig.gov.al/geonetwork/srv/alb/catalog.search#/metadata/b50abc17-b932-4a96-b97a-ae6cba52c2fb',
+			name: 'Nacionalinė žemės tarnyba prie Aplinkos ministerijos',
+			url: 'https://www.geoportal.lt/geoportal/paieska',
 		},
-		date: '2015',
 	},
 	[
 		bashStep('fetch', {

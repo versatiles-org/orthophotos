@@ -1,9 +1,9 @@
-import { bashStep, defineRegion } from '../framework.ts';
-import { expectFile } from '../validators.ts';
+import { bashStep, defineRegion } from '../lib/framework.ts';
+import { expectMinFiles } from '../lib/validators.ts';
 import { join } from 'node:path';
 
 export default defineRegion(
-	'li',
+	'cz',
 	{
 		status: 'success',
 		notes: ['License requires attribution.'],
@@ -14,15 +14,15 @@ export default defineRegion(
 			requiresAttribution: true,
 		},
 		creator: {
-			name: 'Amt für Tiefbau und Geoinformation',
-			url: 'https://www.opendata.li/de/daten#esc_entry=159&esc_context=24',
+			name: 'ČÚZK',
+			url: 'https://geoportal.cuzk.gov.cz/(S(zggl1k35qp1wg4q33q1a5gov))/Default.aspx?mode=TextMeta&text=ortofoto_info&side=ortofoto',
 		},
 	},
 	[
 		bashStep('fetch', {
 			scriptFile: '1_fetch.sh',
 			validate: async (ctx) => {
-				await expectFile(join(ctx.dataDir, 'tiles', 'image.tif'));
+				await expectMinFiles(join(ctx.dataDir, 'tiles_rgb'), '*.jp2', 50);
 			},
 		}),
 	],

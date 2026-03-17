@@ -4,7 +4,8 @@ import { join } from 'node:path';
 import { XMLParser } from 'fast-xml-parser';
 import { defineRegion, step } from '../framework.ts';
 import { expectMinFiles } from '../validators.ts';
-import { runCommand } from '../../lib/command.ts';
+import { shuffle } from '../../lib/array.ts';
+import { downloadFile, runCommand } from '../../lib/command.ts';
 import { concurrent } from '../../lib/concurrent.ts';
 import { withRetry } from '../../lib/retry.ts';
 
@@ -13,10 +14,6 @@ const TILE_XML_BASE = 'https://service.gdi-sh.de/SH_OpenGBD/feeds/DOP20/DOP20_';
 const CONCURRENCY = 16;
 
 const xmlParser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
-
-async function downloadFile(url: string, dest: string): Promise<void> {
-	await runCommand('curl', ['-so', dest, url]);
-}
 
 export function parseTileIds(xml: string): string[] {
 	const parsed = xmlParser.parse(xml);
@@ -50,15 +47,6 @@ export function parseTileUrl(xml: string): string | undefined {
 		}
 	}
 	return undefined;
-}
-
-function shuffle<T>(array: T[]): T[] {
-	const result = [...array];
-	for (let i = result.length - 1; i > 0; i--) {
-		const j = Math.floor(Math.random() * (i + 1));
-		[result[i], result[j]] = [result[j], result[i]];
-	}
-	return result;
 }
 
 async function processTile(id: string, tilesDir: string, tempDir: string): Promise<'skipped' | 'converted' | 'empty'> {

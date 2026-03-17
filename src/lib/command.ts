@@ -87,3 +87,10 @@ export function runCommandWithRetry(
 ): Promise<CommandOutput> {
 	return withRetry(() => runCommand(cmd, args, cmdOptions), retryOptions);
 }
+
+/**
+ * Downloads a file from a URL using curl.
+ */
+export async function downloadFile(url: string, dest: string): Promise<void> {
+	await runCommand('curl', ['-so', dest, url]);
+}

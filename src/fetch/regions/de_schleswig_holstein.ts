@@ -1,6 +1,7 @@
 import { mkdirSync, existsSync, statSync, renameSync, rmSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { XMLParser } from 'fast-xml-parser';
 import { defineRegion, step } from '../framework.ts';
 import { expectMinFiles } from '../validators.ts';
 import { runCommand } from '../../lib/command.ts';
@@ -10,24 +11,44 @@ const ATOM_URL = 'https://service.gdi-sh.de/SH_OpenGBD/feeds/DOP20/DOP20.xml';
 const TILE_XML_BASE = 'https://service.gdi-sh.de/SH_OpenGBD/feeds/DOP20/DOP20_';
 const CONCURRENCY = 1;
 
+const xmlParser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
+
 async function downloadFile(url: string, dest: string): Promise<void> {
 	await runCommand('curl', ['-so', dest, url]);
 }
 
-function parseTileIds(xml: string): string[] {
-	const pattern = /href="https:\/\/service\.gdi-sh\.de\/SH_OpenGBD\/feeds\/DOP20\/DOP20_(dop20rgbi[^.]*)\.xml"/g;
+export function parseTileIds(xml: string): string[] {
+	const parsed = xmlParser.parse(xml);
+	const entries: unknown[] = [parsed.feed?.entry ?? []].flat();
 	const ids: string[] = [];
-	let match;
-	while ((match = pattern.exec(xml)) !== null) {
-		ids.push(match[1]);
+	for (const entry of entries) {
+		const links: unknown[] = [(entry as Record<string, unknown>).link ?? []].flat();
+		for (const link of links) {
+			const attrs = link as Record<string, string>;
+			if (attrs['@_rel'] !== 'alternate') continue;
+			const href = attrs['@_href'] ?? '';
+			const match = href.match(/DOP20_(dop20rgbi[^.]+)\.xml$/);
+			if (match) ids.push(match[1]);
+		}
 	}
 	return ids;
 }
 
-function parseTileUrl(xml: string): string | undefined {
-	const match = xml.match(/https:\/\/udp\.gdi-sh\.de\/fmedatastreaming.*?INTERPOLATION=cubic/);
-	if (!match) return undefined;
-	return match[0].replace(/amp;/g, '');
+export function parseTileUrl(xml: string): string | undefined {
+	const parsed = xmlParser.parse(xml);
+	const entries: unknown[] = [parsed.feed?.entry ?? []].flat();
+	for (const entry of entries) {
+		const links: unknown[] = [(entry as Record<string, unknown>).link ?? []].flat();
+		for (const link of links) {
+			const attrs = link as Record<string, string>;
+			if (attrs['@_rel'] !== 'alternate') continue;
+			const href = attrs['@_href'] ?? '';
+			if (href.includes('INTERPOLATION=cubic')) {
+				return href.replace(/amp;/g, '');
+			}
+		}
+	}
+	return undefined;
 }
 
 function shuffle<T>(array: T[]): T[] {

@@ -51,6 +51,20 @@ export function parseTileUrl(xml: string): string | undefined {
 	return undefined;
 }
 
+function formatDuration(seconds: number): string {
+	if (seconds < 60) return `${Math.round(seconds)}s`;
+	if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${Math.round(seconds % 60)}s`;
+	const h = Math.floor(seconds / 3600);
+	const m = Math.round((seconds % 3600) / 60);
+	return `${h}h ${m}m`;
+}
+
+function progressBar(done: number, total: number, width: number): string {
+	const fraction = total > 0 ? done / total : 0;
+	const filled = Math.round(fraction * width);
+	return '[' + '='.repeat(filled) + (filled < width ? '>' : '') + ' '.repeat(Math.max(0, width - filled - 1)) + ']';
+}
+
 function shuffle<T>(array: T[]): T[] {
 	const result = [...array];
 	for (let i = result.length - 1; i > 0; i--) {
@@ -121,20 +135,24 @@ export default defineRegion('de/schleswig_holstein', [
 
 		const ids: string[] = JSON.parse(await readFile(join(ctx.tempDir, 'ids.json'), 'utf-8'));
 		const shuffled = shuffle(ids);
+		const total = shuffled.length;
 
 		let converted = 0;
 		let skipped = 0;
 		let empty = 0;
+		let convertedTimeMs = 0;
+		const isTTY = process.stderr.isTTY ?? false;
 
-		// Process tiles with limited concurrency
 		const queue = [...shuffled];
 		const workers = Array.from({ length: CONCURRENCY }, async () => {
 			while (queue.length > 0) {
 				const id = queue.shift()!;
+				const tileStart = performance.now();
 				const result = await processTile(id, tilesDir, ctx.tempDir);
 				switch (result) {
 					case 'converted':
 						converted++;
+						convertedTimeMs += performance.now() - tileStart;
 						break;
 					case 'skipped':
 						skipped++;
@@ -143,13 +161,24 @@ export default defineRegion('de/schleswig_holstein', [
 						empty++;
 						break;
 				}
-				if ((converted + skipped + empty) % 100 === 0) {
-					console.log(`  Progress: ${converted} converted, ${skipped} skipped, ${empty} empty`);
+
+				const done = converted + skipped + empty;
+				const remaining = total - done;
+				const avgConvertMs = converted > 0 ? convertedTimeMs / converted : 0;
+				const etaSec = (avgConvertMs * remaining) / 1000;
+				const eta = converted > 0 ? ` | ETA: ${formatDuration(etaSec)}` : '';
+				const bar = `  ${progressBar(done, total, 30)} ${done}/${total} | ${converted} conv, ${skipped} skip, ${empty} empty${eta}`;
+
+				if (isTTY) {
+					process.stderr.write(`\r${bar}`);
+				} else if (done % 100 === 0) {
+					console.log(bar);
 				}
 			}
 		});
 
 		await Promise.all(workers);
+		if (isTTY) process.stderr.write('\n');
 		console.log(`  Done: ${converted} converted, ${skipped} skipped, ${empty} empty`);
 
 		await expectMinFiles(tilesDir, '*.jp2', 50);

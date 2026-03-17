@@ -10,6 +10,8 @@ test('validateRegionName - accepts two-letter country code', () => {
 test('validateRegionName - accepts country/subdivision format', () => {
 	validateRegionName('de/bw');
 	validateRegionName('fr/ne');
+	validateRegionName('de/b');
+	validateRegionName('de/berling');
 });
 
 test('validateRegionName - rejects invalid formats', () => {
@@ -17,8 +19,6 @@ test('validateRegionName - rejects invalid formats', () => {
 	expect(() => validateRegionName('deu')).toThrow('Invalid region name');
 	expect(() => validateRegionName('DE')).toThrow('Invalid region name');
 	expect(() => validateRegionName('de/')).toThrow('Invalid region name');
-	expect(() => validateRegionName('de/b')).toThrow('Invalid region name');
-	expect(() => validateRegionName('de/bwx')).toThrow('Invalid region name');
 	expect(() => validateRegionName('de/bw/extra')).toThrow('Invalid region name');
 });
 

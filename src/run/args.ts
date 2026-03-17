@@ -15,9 +15,9 @@ export interface ParsedArgs {
  * Format: "cc" or "cc/ss" where c and s are lowercase letters.
  */
 export function validateRegionName(name: string): void {
-	const pattern = /^[a-z][a-z](\/[a-z][a-z])?$/;
+	const pattern = /^[a-z][a-z](\/[a-z_]+)?$/;
 	if (!pattern.test(name)) {
-		throw new Error(`Invalid region name "${name}". Must be "cc" or "cc/ss" (e.g., "de" or "de/bw")`);
+		throw new Error(`Invalid region name "${name}". Must be "cc" or "cc/ss" (e.g., "de" or "de/berlin")`);
 	}
 }
 

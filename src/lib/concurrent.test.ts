@@ -63,13 +63,13 @@ test('works with progress options', async () => {
 			results.push(item);
 			return item === 'b' ? 'skipped' : 'converted';
 		},
-		{ etaLabel: 'converted', labels: ['converted', 'skipped'] },
+		{ labels: ['converted', 'skipped'] },
 	);
 	expect(results.sort()).toEqual(['a', 'b', 'c']);
 });
 
 test('progress with empty array does not error', async () => {
 	await concurrent([], 4, async () => 'done', {
-		etaLabel: 'done',
+		labels: ['done'],
 	});
 });

@@ -10,7 +10,7 @@
  *     if (exists(item)) return 'skipped';
  *     await download(item);
  *     return 'converted';
- *   }, { etaLabel: 'converted', labels: ['converted', 'skipped'] });
+ *   }, { labels: ['converted', 'skipped'] });
  */
 
 import { createProgress, type ProgressOptions } from './progress.ts';

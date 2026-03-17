@@ -129,7 +129,7 @@ export default defineRegion('de/schleswig_holstein', [
 			async (id) => {
 				return await processTile(id, tilesDir, ctx.tempDir);
 			},
-			{ etaLabel: 'converted', labels: ['converted', 'skipped', 'empty'] },
+			{ labels: ['converted', 'skipped', 'empty'] },
 		);
 
 		await expectMinFiles(tilesDir, '*.jp2', 50);

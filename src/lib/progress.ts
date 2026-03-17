@@ -2,9 +2,9 @@
  * Progress tracker with bar display and ETA calculation.
  *
  * Usage:
- *   const progress = createProgress(total);
- *   progress.tick('converted');   // count towards ETA
- *   progress.tick('skipped');     // don't count towards ETA
+ *   const progress = createProgress(total, { labels: ['converted', 'skipped'] });
+ *   progress.tick('converted');
+ *   progress.tick('skipped');
  *   progress.done();
  */
 
@@ -28,7 +28,7 @@ function renderBar(done: number, total: number, width: number): string {
 }
 
 export interface Progress {
-	/** Record one completed item. Only `etaLabel` items contribute to ETA calculation. */
+	/** Record one completed item. */
 	tick(label: string): void;
 	/** Get the current count for a label. */
 	count(label: string): number;
@@ -37,10 +37,8 @@ export interface Progress {
 }
 
 export interface ProgressOptions {
-	/** The label whose items are used for ETA calculation. */
-	etaLabel: string;
-	/** All labels to display, in order. Defaults to just the etaLabel. */
-	labels?: string[];
+	/** Labels to display, in order. */
+	labels: string[];
 	/** Bar width in characters. Default: 30. */
 	barWidth?: number;
 	/** Non-TTY log interval (every N items). Default: 100. */
@@ -48,13 +46,11 @@ export interface ProgressOptions {
 }
 
 export function createProgress(total: number, options: ProgressOptions): Progress {
-	const { etaLabel, barWidth = 30, logInterval = 100 } = options;
-	const labels = options.labels ?? [etaLabel];
+	const { labels, barWidth = 30, logInterval = 100 } = options;
 	const counts = new Map<string, number>();
 	for (const l of labels) counts.set(l, 0);
 
-	let etaTimeMs = 0;
-	let lastTickStart = performance.now();
+	const startTime = performance.now();
 	const isTTY = process.stderr.isTTY ?? false;
 
 	function totalDone(): number {
@@ -66,20 +62,16 @@ export function createProgress(total: number, options: ProgressOptions): Progres
 	function render(): string {
 		const done = totalDone();
 		const remaining = total - done;
-		const etaCount = counts.get(etaLabel) ?? 0;
-		const avgMs = etaCount > 0 ? etaTimeMs / etaCount : 0;
+		const elapsedMs = performance.now() - startTime;
+		const avgMs = done > 0 ? elapsedMs / done : 0;
 		const etaSec = (avgMs * remaining) / 1000;
-		const eta = etaCount > 0 ? ` | ETA: ${formatDuration(etaSec)}` : '';
+		const eta = done > 0 ? ` | ETA: ${formatDuration(etaSec)}` : '';
 		const stats = labels.map((l) => `${counts.get(l) ?? 0} ${l}`).join(', ');
 		return `  ${renderBar(done, total, barWidth)} ${done}/${total} | ${stats}${eta}`;
 	}
 
 	return {
 		tick(label: string) {
-			const now = performance.now();
-			if (label === etaLabel) {
-				etaTimeMs += now - lastTickStart;
-			}
 			counts.set(label, (counts.get(label) ?? 0) + 1);
 
 			const line = render();
@@ -88,8 +80,6 @@ export function createProgress(total: number, options: ProgressOptions): Progres
 			} else if (totalDone() % logInterval === 0) {
 				console.log(line);
 			}
-
-			lastTickStart = performance.now();
 		},
 
 		count(label: string): number {

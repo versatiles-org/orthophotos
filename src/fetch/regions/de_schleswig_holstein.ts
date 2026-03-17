@@ -6,6 +6,7 @@ import { defineRegion, step } from '../framework.ts';
 import { expectMinFiles } from '../validators.ts';
 import { createProgress } from '../progress.ts';
 import { runCommand } from '../../lib/command.ts';
+import { concurrent } from '../../lib/concurrent.ts';
 import { withRetry } from '../../lib/retry.ts';
 
 const ATOM_URL = 'https://service.gdi-sh.de/SH_OpenGBD/feeds/DOP20/DOP20.xml';
@@ -128,16 +129,11 @@ export default defineRegion('de/schleswig_holstein', [
 			labels: ['converted', 'skipped', 'empty'],
 		});
 
-		const queue = [...shuffled];
-		const workers = Array.from({ length: CONCURRENCY }, async () => {
-			while (queue.length > 0) {
-				const id = queue.shift()!;
-				const result = await processTile(id, tilesDir, ctx.tempDir);
-				progress.tick(result);
-			}
+		await concurrent(shuffled, CONCURRENCY, async (id) => {
+			const result = await processTile(id, tilesDir, ctx.tempDir);
+			progress.tick(result);
 		});
 
-		await Promise.all(workers);
 		progress.done();
 
 		await expectMinFiles(tilesDir, '*.jp2', 50);

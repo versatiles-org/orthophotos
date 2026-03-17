@@ -47,7 +47,7 @@ cat coords.txt | shuf | parallel --eta --bar -j 4 '
     echo "more or less than 1 TIFs in $ID found"
     exit 1
   fi
-  gdal_translate --quiet -b 1 -b 2 -b 3 -b mask -colorinterp_4 alpha "$TIF" "$ID.jp2"
+  gdal_translate -q -b 1 -b 2 -b 3 -b mask -colorinterp_4 alpha "$TIF" "$ID.jp2"
 
   mv "$ID.jp2" "$DATA/tiles/"
   rm -rf $ID

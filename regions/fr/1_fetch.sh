@@ -66,7 +66,7 @@ while IFS= read -r group; do
   echo "$files" | shuf | parallel --eta --bar -j 67% '
     set -e
     [ -f "$tiles_dir/{/}" ] && exit 0
-    gdal_translate --quiet {} "$folder/tmp/{/}"
+    gdal_translate -q {} "$folder/tmp/{/}"
     mv "$folder/tmp/{/}" "$tiles_dir/{/}" 2> >(grep -v "failed to preserve ownership" >&2)
     rm {}
   '

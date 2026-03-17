@@ -13,7 +13,7 @@ jq -r '.features[] | .properties.file' features.geojson | parallel --eta --bar -
   ID=$(basename "$URL" .tif)
   [ -f "$DATA/tiles/$ID.jp2" ] && exit 0
   curl -so "$ID.tif" "$URL"
-  gdal_translate --quiet "$ID.tif" "$ID.jp2"
+  gdal_translate -q "$ID.tif" "$ID.jp2"
   mv "$ID.jp2" "$DATA/tiles/"
   rm -f $ID*
 '

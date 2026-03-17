@@ -43,7 +43,7 @@ cat ids.txt | shuf | parallel --eta --bar -I '###' '
 
   gdalbuildvrt -q -addalpha -allow_projection_difference -a_srs "EPSG:25832" $ID.vrt $ID/dop20rgb_32_${ID}_2_bw/*.tif
 
-  gdal_translate --quiet "$ID.vrt" "$ID.jp2"
+  gdal_translate -q "$ID.vrt" "$ID.jp2"
 
   mv "$ID.jp2" "$DATA/tiles/"
   rm -rf $ID

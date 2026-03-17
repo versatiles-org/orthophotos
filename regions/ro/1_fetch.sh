@@ -23,7 +23,7 @@ cat index.txt | parallel --eta --bar -j 1 '
   gdalbuildvrt -q "$ID.vrt" "$ID"/*.tif
 
   gdal raster edit --nodata 0 "$ID.vrt"
-  gdal_translate --quiet -b 1 -b 2 -b 3 -b mask -colorinterp_4 alpha -co QUALITY=100 -co REVERSIBLE=YES "$ID.vrt" "$ID.jp2"
+  gdal_translate -q -b 1 -b 2 -b 3 -b mask -colorinterp_4 alpha -co QUALITY=100 -co REVERSIBLE=YES "$ID.vrt" "$ID.jp2"
 
   mv "$ID.jp2" "$DATA/tiles/" 2> >(grep -v "failed to preserve ownership" >&2)
   rm -r $ID

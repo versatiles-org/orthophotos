@@ -23,7 +23,7 @@ cat tile_urls.txt | shuf | parallel --eta --bar -j 16 '
   ID=$(basename $URL .tif)
   [ -f "$DATA/tiles/$ID.jp2" ] && exit 0
   curl -so $ID.tif $URL
-  gdal_translate --quiet $ID.tif $ID.jp2
+  gdal_translate -q $ID.tif $ID.jp2
   mv $ID.jp2 $DATA/tiles/
   rm $ID.*
 '

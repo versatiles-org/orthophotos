@@ -17,7 +17,7 @@ cat index.txt | grep -E "\.tif$" | shuf | parallel --eta --bar -j 4 '
   curl -s {} -o "$ID.tif"
   curl -s {.}.tfw -o "$ID.tfw"
 
-  gdal_translate --quiet "$ID.tif" "$ID.jp2"
+  gdal_translate -q "$ID.tif" "$ID.jp2"
 
   mv "$ID.jp2" "$DATA/tiles/" 2> >(grep -v "failed to preserve ownership" >&2)
   rm $ID.*

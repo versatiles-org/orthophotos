@@ -240,7 +240,7 @@ wms_scrape() {
 
     [[ -f "$DATA/tiles/$id.jp2" ]] && exit 0
 
-    gdal_translate --quiet "$WMS_XML" "$id.tif" \
+    gdal_translate -q "$WMS_XML" "$id.tif" \
       -projwin "$x0" "$y1" "$x1" "$y0" \
       -projwin_srs EPSG:3857 \
       -outsize "$w" "$h" \
@@ -256,9 +256,9 @@ wms_scrape() {
         echo "Internal error: invalid MASK_COLOR '$MASK_COLOR'" >&2
         exit 1
       fi
-      gdal_translate --quiet -b 1 -b 2 -b 3 -b mask -colorinterp_4 alpha "$id.tif" "$id.jp2"
+      gdal_translate -q -b 1 -b 2 -b 3 -b mask -colorinterp_4 alpha "$id.tif" "$id.jp2"
     else
-      gdal_translate --quiet "$id.tif" "$id.jp2"
+      gdal_translate -q "$id.tif" "$id.jp2"
     fi
 
     mv "$id.jp2" "$DATA/tiles/" 2> >(grep -v "failed to preserve ownership" >&2)

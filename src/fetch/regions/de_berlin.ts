@@ -32,72 +32,76 @@ export function parseTileUrls(xml: string): string[] {
 	return urls;
 }
 
-export default defineRegion('de/berlin', {
-	status: 'success',
-	notes: [
-		'Atom feed with direct .jp2 download links.',
-		'It is not possible to overlay images because a mask or alpha channel is missing.',
-	],
-	entries: ['tiles'],
-	license: {
-		name: 'DL-DE/ZERO-2.0',
-		url: 'https://www.govdata.de/dl-de/zero-2-0',
-		requiresAttribution: false,
+export default defineRegion(
+	'de/berlin',
+	{
+		status: 'success',
+		notes: [
+			'Atom feed with direct .jp2 download links.',
+			'It is not possible to overlay images because a mask or alpha channel is missing.',
+		],
+		entries: ['tiles'],
+		license: {
+			name: 'DL-DE/ZERO-2.0',
+			url: 'https://www.govdata.de/dl-de/zero-2-0',
+			requiresAttribution: false,
+		},
+		creator: {
+			name: 'Geoportal Berlin',
+			url: 'https://daten.berlin.de/datensaetze/orthofotografie-im-inspire-datenmodell-truedop20rgbi-2025-sommer-f9369d23',
+		},
+		date: '2025',
 	},
-	creator: {
-		name: 'Geoportal Berlin',
-		url: 'https://gdi.berlin.de/geonetwork/srv/api/records/01e2749e-7dca-3492-8f95-29d360c3f1aa',
-	},
-	date: '2025',
-}, [
-	step('fetch-feed', async (ctx) => {
-		const feedPath = join(ctx.tempDir, 'feed.xml');
-		if (!existsSync(feedPath)) {
-			console.log('  Fetching atom feed...');
-			await withRetry(() => downloadFile(ATOM_URL, join(ctx.tempDir, 'index.xml')), { maxAttempts: 3 });
+	[
+		step('fetch-feed', async (ctx) => {
+			const feedPath = join(ctx.tempDir, 'feed.xml');
+			if (!existsSync(feedPath)) {
+				console.log('  Fetching atom feed...');
+				await withRetry(() => downloadFile(ATOM_URL, join(ctx.tempDir, 'index.xml')), { maxAttempts: 3 });
 
-			// Parse index to find the dataset feed URL
-			const indexXml = await readFile(join(ctx.tempDir, 'index.xml'), 'utf-8');
-			const parsed = xmlParser.parse(indexXml);
-			const entries: unknown[] = [parsed.feed?.entry ?? []].flat();
-			let datasetFeedUrl: string | undefined;
-			for (const entry of entries) {
-				const links: unknown[] = [(entry as Record<string, unknown>).link ?? []].flat();
-				for (const link of links) {
-					const attrs = link as Record<string, string>;
-					if (attrs['@_rel'] === 'alternate' && attrs['@_type'] === 'application/atom+xml') {
-						datasetFeedUrl = attrs['@_href'];
+				// Parse index to find the dataset feed URL
+				const indexXml = await readFile(join(ctx.tempDir, 'index.xml'), 'utf-8');
+				const parsed = xmlParser.parse(indexXml);
+				const entries: unknown[] = [parsed.feed?.entry ?? []].flat();
+				let datasetFeedUrl: string | undefined;
+				for (const entry of entries) {
+					const links: unknown[] = [(entry as Record<string, unknown>).link ?? []].flat();
+					for (const link of links) {
+						const attrs = link as Record<string, string>;
+						if (attrs['@_rel'] === 'alternate' && attrs['@_type'] === 'application/atom+xml') {
+							datasetFeedUrl = attrs['@_href'];
+						}
 					}
 				}
+				if (!datasetFeedUrl) throw new Error('No dataset feed URL found in atom index');
+
+				console.log(`  Fetching dataset feed: ${datasetFeedUrl}`);
+				await withRetry(() => downloadFile(datasetFeedUrl!, feedPath), { maxAttempts: 3 });
 			}
-			if (!datasetFeedUrl) throw new Error('No dataset feed URL found in atom index');
+		}),
 
-			console.log(`  Fetching dataset feed: ${datasetFeedUrl}`);
-			await withRetry(() => downloadFile(datasetFeedUrl!, feedPath), { maxAttempts: 3 });
-		}
-	}),
+		step('download-tiles', async (ctx) => {
+			const tilesDir = join(ctx.dataDir, 'tiles');
+			mkdirSync(tilesDir, { recursive: true });
 
-	step('download-tiles', async (ctx) => {
-		const tilesDir = join(ctx.dataDir, 'tiles');
-		mkdirSync(tilesDir, { recursive: true });
+			const feedXml = await readFile(join(ctx.tempDir, 'feed.xml'), 'utf-8');
+			const urls = parseTileUrls(feedXml);
+			console.log(`  Found ${urls.length} tiles`);
 
-		const feedXml = await readFile(join(ctx.tempDir, 'feed.xml'), 'utf-8');
-		const urls = parseTileUrls(feedXml);
-		console.log(`  Found ${urls.length} tiles`);
+			await concurrent(
+				urls,
+				8,
+				async (url) => {
+					const filename = basename(url);
+					const dest = join(tilesDir, filename);
+					if (existsSync(dest)) return 'skipped';
+					await withRetry(() => downloadFile(url, dest), { maxAttempts: 3 });
+					return 'downloaded';
+				},
+				{ labels: ['downloaded', 'skipped'] },
+			);
 
-		await concurrent(
-			urls,
-			8,
-			async (url) => {
-				const filename = basename(url);
-				const dest = join(tilesDir, filename);
-				if (existsSync(dest)) return 'skipped';
-				await withRetry(() => downloadFile(url, dest), { maxAttempts: 3 });
-				return 'downloaded';
-			},
-			{ labels: ['downloaded', 'skipped'] },
-		);
-
-		await expectMinFiles(tilesDir, '*.jp2', 50);
-	}),
-]);
+			await expectMinFiles(tilesDir, '*.jp2', 50);
+		}),
+	],
+);

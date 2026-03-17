@@ -87,57 +87,61 @@ async function processTile(id: string, tilesDir: string, tempDir: string): Promi
 	}
 }
 
-export default defineRegion('de/schleswig_holstein', {
-	status: 'success',
-	notes: [
-		'Server is slow.',
-		'License requires attribution.',
-		'Rather than a national mosaic, inconsistent regional mosaics with different access and formats are available instead.',
+export default defineRegion(
+	'de/schleswig_holstein',
+	{
+		status: 'success',
+		notes: [
+			'Server is slow.',
+			'License requires attribution.',
+			'Rather than a national mosaic, inconsistent regional mosaics with different access and formats are available instead.',
+		],
+		entries: ['tiles'],
+		license: {
+			name: 'CC BY 4.0',
+			url: 'https://creativecommons.org/licenses/by/4.0/',
+			requiresAttribution: true,
+		},
+		creator: {
+			name: 'GeoBasis-DE/LVermGeo SH',
+			url: 'https://opendata.schleswig-holstein.de/dataset/digitale-orthophotos-dop20',
+		},
+		date: '2017-2024',
+	},
+	[
+		step('fetch-index', async (ctx) => {
+			const atomPath = join(ctx.tempDir, 'atom.xml');
+			if (!existsSync(atomPath)) {
+				console.log('  Fetching atom.xml...');
+				await withRetry(() => downloadFile(ATOM_URL, atomPath), { maxAttempts: 3 });
+			}
+		}),
+
+		step('parse-ids', async (ctx) => {
+			const atomPath = join(ctx.tempDir, 'atom.xml');
+			const xml = await readFile(atomPath, 'utf-8');
+			const ids = parseTileIds(xml);
+			await writeFile(join(ctx.tempDir, 'ids.json'), JSON.stringify(ids));
+			console.log(`  Found ${ids.length} tile IDs`);
+		}),
+
+		step('download-tiles', async (ctx) => {
+			const tilesDir = join(ctx.dataDir, 'tiles');
+			mkdirSync(tilesDir, { recursive: true });
+
+			const ids: string[] = JSON.parse(await readFile(join(ctx.tempDir, 'ids.json'), 'utf-8'));
+			const shuffled = shuffle(ids);
+
+			await concurrent(
+				shuffled,
+				CONCURRENCY,
+				async (id) => {
+					return await processTile(id, tilesDir, ctx.tempDir);
+				},
+				{ labels: ['converted', 'skipped', 'empty'] },
+			);
+
+			await expectMinFiles(tilesDir, '*.jp2', 50);
+		}),
 	],
-	entries: ['tiles'],
-	license: {
-		name: 'CC BY 4.0',
-		url: 'https://creativecommons.org/licenses/by/4.0/',
-		requiresAttribution: true,
-	},
-	creator: {
-		name: 'GeoBasis-DE/LVermGeo SH',
-		url: 'https://opendata.schleswig-holstein.de/dataset/digitale-orthophotos-dop20',
-	},
-	date: '2017-2024',
-}, [
-	step('fetch-index', async (ctx) => {
-		const atomPath = join(ctx.tempDir, 'atom.xml');
-		if (!existsSync(atomPath)) {
-			console.log('  Fetching atom.xml...');
-			await withRetry(() => downloadFile(ATOM_URL, atomPath), { maxAttempts: 3 });
-		}
-	}),
-
-	step('parse-ids', async (ctx) => {
-		const atomPath = join(ctx.tempDir, 'atom.xml');
-		const xml = await readFile(atomPath, 'utf-8');
-		const ids = parseTileIds(xml);
-		await writeFile(join(ctx.tempDir, 'ids.json'), JSON.stringify(ids));
-		console.log(`  Found ${ids.length} tile IDs`);
-	}),
-
-	step('download-tiles', async (ctx) => {
-		const tilesDir = join(ctx.dataDir, 'tiles');
-		mkdirSync(tilesDir, { recursive: true });
-
-		const ids: string[] = JSON.parse(await readFile(join(ctx.tempDir, 'ids.json'), 'utf-8'));
-		const shuffled = shuffle(ids);
-
-		await concurrent(
-			shuffled,
-			CONCURRENCY,
-			async (id) => {
-				return await processTile(id, tilesDir, ctx.tempDir);
-			},
-			{ labels: ['converted', 'skipped', 'empty'] },
-		);
-
-		await expectMinFiles(tilesDir, '*.jp2', 50);
-	}),
-]);
+);

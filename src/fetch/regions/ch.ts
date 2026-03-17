@@ -2,11 +2,32 @@ import { bashStep, defineRegion } from '../framework.ts';
 import { expectMinFiles } from '../validators.ts';
 import { join } from 'node:path';
 
-export default defineRegion('ch', [
-	bashStep('fetch', {
-		scriptFile: '1_fetch.sh',
-		validate: async (ctx) => {
-			await expectMinFiles(join(ctx.dataDir, 'tiles'), '*.tif', 50);
+export default defineRegion(
+	'ch',
+	{
+		status: 'success',
+		notes: [
+			'You have to use an undocumented API to get a constantly changing URL for a CSV file that contains the URLs for the actual tiles.',
+			'License requires attribution.',
+			'National license instead of an international standard.',
+		],
+		entries: ['tiles'],
+		license: {
+			name: 'Open Government Data (OGD)',
+			url: 'https://www.swisstopo.admin.ch/de/nutzungsbedingungen-kostenlose-geodaten-und-geodienste',
+			requiresAttribution: true,
 		},
-	}),
-]);
+		creator: {
+			name: 'Bundesamt für Landestopografie swisstopo',
+			url: 'https://www.swisstopo.admin.ch/de/orthobilder-swissimage-10-cm',
+		},
+	},
+	[
+		bashStep('fetch', {
+			scriptFile: '1_fetch.sh',
+			validate: async (ctx) => {
+				await expectMinFiles(join(ctx.dataDir, 'tiles'), '*.tif', 50);
+			},
+		}),
+	],
+);

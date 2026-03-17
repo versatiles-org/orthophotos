@@ -2,11 +2,42 @@ import { bashStep, defineRegion } from '../framework.ts';
 import { expectMinFiles } from '../validators.ts';
 import { join } from 'node:path';
 
-export default defineRegion('fr', [
-	bashStep('fetch', {
-		scriptFile: '1_fetch.sh',
-		validate: async (ctx) => {
-			await expectMinFiles(join(ctx.dataDir, 'tiles_lcc'), '*.jp2', 50);
+export default defineRegion(
+	'fr',
+	{
+		status: 'success',
+		notes: [
+			'No API, such as an ATOM feed, available.',
+			'Parsing HTML is required.',
+			'Images are unnecessarily packed into container files, such as 7ZIP.',
+			'The images have a high resolution, but they are not stored in tiled mode, which makes them extremely slow to read.',
+			'National license instead of an international standard.',
+		],
+		entries: [
+			'tiles_UTM01SW84',
+			'tiles_RGSPM06U21',
+			'tiles_RGR92UTM40S',
+			'tiles_RGM04UTM38S',
+			'tiles_RGFG95UTM22',
+			'tiles_RGAF09UTM20',
+			'tiles_LAMB93',
+		],
+		license: {
+			name: 'LO 2.0',
+			url: 'https://www.data.gouv.fr/datasets/licence-ouverte-2-0',
+			requiresAttribution: true,
 		},
-	}),
-]);
+		creator: {
+			name: "Institut national de l'information géographique et forestière (IGN-F)",
+			url: 'https://geoservices.ign.fr/documentation/donnees/ortho/bdortho',
+		},
+	},
+	[
+		bashStep('fetch', {
+			scriptFile: '1_fetch.sh',
+			validate: async (ctx) => {
+				await expectMinFiles(join(ctx.dataDir, 'tiles_lcc'), '*.jp2', 50);
+			},
+		}),
+	],
+);

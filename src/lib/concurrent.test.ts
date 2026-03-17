@@ -53,3 +53,23 @@ test('concurrency higher than items works', async () => {
 	});
 	expect(results.sort()).toEqual([1, 2]);
 });
+
+test('works with progress options', async () => {
+	const results: string[] = [];
+	await concurrent(
+		['a', 'b', 'c'],
+		2,
+		async (item) => {
+			results.push(item);
+			return item === 'b' ? 'skipped' : 'converted';
+		},
+		{ etaLabel: 'converted', labels: ['converted', 'skipped'] },
+	);
+	expect(results.sort()).toEqual(['a', 'b', 'c']);
+});
+
+test('progress with empty array does not error', async () => {
+	await concurrent([], 4, async () => 'done', {
+		etaLabel: 'done',
+	});
+});

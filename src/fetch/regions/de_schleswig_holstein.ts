@@ -4,7 +4,6 @@ import { join } from 'node:path';
 import { XMLParser } from 'fast-xml-parser';
 import { defineRegion, step } from '../framework.ts';
 import { expectMinFiles } from '../validators.ts';
-import { createProgress } from '../progress.ts';
 import { runCommand } from '../../lib/command.ts';
 import { concurrent } from '../../lib/concurrent.ts';
 import { withRetry } from '../../lib/retry.ts';
@@ -124,17 +123,14 @@ export default defineRegion('de/schleswig_holstein', [
 		const ids: string[] = JSON.parse(await readFile(join(ctx.tempDir, 'ids.json'), 'utf-8'));
 		const shuffled = shuffle(ids);
 
-		const progress = createProgress(shuffled.length, {
-			etaLabel: 'converted',
-			labels: ['converted', 'skipped', 'empty'],
-		});
-
-		await concurrent(shuffled, CONCURRENCY, async (id) => {
-			const result = await processTile(id, tilesDir, ctx.tempDir);
-			progress.tick(result);
-		});
-
-		progress.done();
+		await concurrent(
+			shuffled,
+			CONCURRENCY,
+			async (id) => {
+				return await processTile(id, tilesDir, ctx.tempDir);
+			},
+			{ etaLabel: 'converted', labels: ['converted', 'skipped', 'empty'] },
+		);
 
 		await expectMinFiles(tilesDir, '*.jp2', 50);
 	}),

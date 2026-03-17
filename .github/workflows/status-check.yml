@@ -24,22 +24,26 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Setup Deno
-        uses: denoland/setup-deno@v2
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          deno-version: v2.x
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
 
       - name: Check formatting
-        run: deno fmt --check
+        run: npm run format:check
 
-      - name: Lint
-        run: deno lint
+      - name: Typecheck
+        run: npm run typecheck
 
       - name: Run tests
-        run: deno test -A
+        run: npm run test
 
       - name: Run status-check
-        run: deno run -A src/status-check.ts
+        run: npx tsx src/status-check.ts
         env:
           dir_data: ${{ github.workspace }}/data-output
 

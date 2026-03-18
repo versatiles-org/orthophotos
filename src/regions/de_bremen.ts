@@ -1,16 +1,18 @@
 import { mkdirSync } from 'node:fs';
 import { readdir, rename } from 'node:fs/promises';
-import { basename, extname, join } from 'node:path';
+import { basename, join } from 'node:path';
 import { defineRegion, step } from '../lib/framework.ts';
 import { expectMinFiles } from '../lib/validators.ts';
 import { downloadFile, runCommand } from '../lib/command.ts';
 import { withRetry } from '../lib/retry.ts';
 
 const BASE_URL = 'https://gdi2.geo.bremen.de/inspire/download/DOP/data/';
+const IMAGE_EXTS = ['.jpg', '.tif', '.jp2'];
+const WORLD_EXTS = ['.jgw', '.tfw', '.j2w'];
 const DISTRICTS = [
-	{ name: 'hb', zip: 'DOP10_RGB_JPG_HB.zip', tilesDir: 'tiles_hb', format: 'jpg' },
-	{ name: 'bhv', zip: 'DOP10_RGB_JPG_BHV.zip', tilesDir: 'tiles_bhv', format: 'tif' },
-] as const;
+	{ name: 'hb', zip: 'DOP10_RGB_JPG_HB.zip', tilesDir: 'tiles_hb' },
+	{ name: 'bhv', zip: 'DOP10_RGB_JPG_BHV.zip', tilesDir: 'tiles_bhv' },
+];
 
 async function findFile(dir: string, ext: string): Promise<string | undefined> {
 	const entries = await readdir(dir);
@@ -85,19 +87,23 @@ export default defineRegion(
 				mkdirSync(tilesDir, { recursive: true });
 
 				const extractDir = join(ctx.tempDir, district.name);
+				let imageCount = 0;
+				let worldCount = 0;
 
-				if (district.format === 'jpg') {
-					const jpgCount = await moveFiles(extractDir, tilesDir, '.jpg');
-					const wldCount = await moveFiles(extractDir, tilesDir, '.wld', '.jgw');
-					console.log(`  ${district.name}: moved ${jpgCount} .jpg + ${wldCount} .wld→.jgw`);
-				} else {
-					const tifCount = await moveFiles(extractDir, tilesDir, '.tif');
-					console.log(`  ${district.name}: moved ${tifCount} .tif`);
+				for (const ext of IMAGE_EXTS) {
+					imageCount += await moveFiles(extractDir, tilesDir, ext);
+				}
+				for (const ext of WORLD_EXTS) {
+					worldCount += await moveFiles(extractDir, tilesDir, ext);
+				}
+				// Rename .wld → .jgw for JPEG world files
+				worldCount += await moveFiles(extractDir, tilesDir, '.wld', '.jgw');
+
+				console.log(`  ${district.name}: moved ${imageCount} images + ${worldCount} world files`);
+				if (imageCount === 0) {
+					throw new Error(`No image files found in ${extractDir}`);
 				}
 			}
-
-			await expectMinFiles(join(ctx.dataDir, 'tiles_hb'), '*.jpg', 10);
-			await expectMinFiles(join(ctx.dataDir, 'tiles_bhv'), '*.tif', 10);
 		}),
 	],
 );

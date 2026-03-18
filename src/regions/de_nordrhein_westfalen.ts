@@ -39,6 +39,7 @@ export default defineRegion(
 			name: 'Geobasis NRW',
 			url: 'https://www.opengeodata.nrw.de/produkte/geobasis/lusat/akt/dop/dop_jp2_f10/',
 		},
+		date: '2024',
 		vrt: { defaults: { bands: [1, 2, 3] } },
 	},
 	[

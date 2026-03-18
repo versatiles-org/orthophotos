@@ -21,6 +21,7 @@ export default defineRegion(
 			name: 'Bundesamt für Landestopografie swisstopo',
 			url: 'https://www.swisstopo.admin.ch/de/orthobilder-swissimage-10-cm',
 		},
+		date: '2017-2024',
 		vrt: { defaults: { ext: 'tif', useFileList: true } },
 	},
 	[

@@ -23,6 +23,7 @@ export default defineRegion(
 			name: 'Główny Urząd Geodezji i Kartografii',
 			url: 'https://www.geoportal.gov.pl/en/data/orthophotomap-orto/',
 		},
+		date: '2023',
 		vrt: {},
 	},
 	[

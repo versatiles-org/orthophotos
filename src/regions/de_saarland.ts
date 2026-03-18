@@ -54,6 +54,7 @@ export default defineRegion(
 			name: 'GeoBasis DE/LVGL-SL (2025)',
 			url: 'https://geoportal.saarland.de/app-article/geobasisdatenuebersicht/',
 		},
+		date: '2024',
 		vrt: {},
 	},
 	[

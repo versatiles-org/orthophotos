@@ -58,7 +58,7 @@ export interface RegionMetadata {
 	entries: string[];
 	license: RegionLicense;
 	creator: RegionCreator;
-	date?: string;
+	date: string;
 	vrt?: VrtConfig;
 }
 

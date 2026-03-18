@@ -34,6 +34,7 @@ export default defineRegion(
 			name: 'GeoSN',
 			url: 'https://www.geodaten.sachsen.de/luftbild-produkte-3995.html',
 		},
+		date: '2024',
 		vrt: {},
 	},
 	[

@@ -14,6 +14,7 @@ const dummyMeta: RegionMetadata = {
 	entries: ['tiles'],
 	license: { name: 'CC0', url: 'https://creativecommons.org/publicdomain/zero/1.0/', requiresAttribution: false },
 	creator: { name: 'Test', url: 'https://example.com' },
+	date: '2024',
 };
 
 test('runPipeline - runs steps sequentially and completes', async () => {

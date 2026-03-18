@@ -17,6 +17,7 @@ export default defineRegion(
 			name: 'GeoDanmark',
 			url: 'https://dataforsyningen.dk/data/981',
 		},
+		date: '2024',
 		vrt: {},
 	},
 	[

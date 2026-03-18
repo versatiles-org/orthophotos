@@ -19,6 +19,7 @@ export default defineRegion(
 			name: 'ČÚZK',
 			url: 'https://geoportal.cuzk.gov.cz/(S(zggl1k35qp1wg4q33q1a5gov))/Default.aspx?mode=TextMeta&text=ortofoto_info&side=ortofoto',
 		},
+		date: '2024-2025',
 		vrt: {
 			custom: async (ctx) => {
 				const rgbFiles = (await readdir(join(ctx.dataDir, 'tiles_rgb'))).filter((f) => f.endsWith('.jp2')).sort();

@@ -17,6 +17,7 @@ export default defineRegion(
 			name: 'Amt für Tiefbau und Geoinformation',
 			url: 'https://www.opendata.li/de/daten#esc_entry=159&esc_context=24',
 		},
+		date: '2023',
 		vrt: { defaults: { ext: 'tif', srcnodata: '0 0 0' } },
 	},
 	[

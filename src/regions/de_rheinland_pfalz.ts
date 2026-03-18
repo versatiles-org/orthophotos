@@ -41,6 +41,7 @@ export default defineRegion(
 			name: 'GeoBasis-DE / LVermGeoRP 2025, www.lvermgeo.rlp.de',
 			url: 'https://geoshop.rlp.de/opendata-dop20.html',
 		},
+		date: '2024',
 		vrt: {},
 	},
 	[

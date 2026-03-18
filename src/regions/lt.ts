@@ -22,6 +22,7 @@ export default defineRegion(
 			name: 'Nacionalinė žemės tarnyba prie Aplinkos ministerijos',
 			url: 'https://www.geoportal.lt/geoportal/paieska',
 		},
+		date: '2019',
 		vrt: {},
 	},
 	[

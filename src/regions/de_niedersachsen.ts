@@ -47,6 +47,7 @@ export default defineRegion(
 			name: 'GeoBasis-DE/LGLN, 2025',
 			url: 'https://ni-lgln-opengeodata.hub.arcgis.com/apps/lgln-opengeodata::digitales-orthophoto-dop/about',
 		},
+		date: '2024',
 		vrt: { defaults: { ext: 'tif' } },
 	},
 	[

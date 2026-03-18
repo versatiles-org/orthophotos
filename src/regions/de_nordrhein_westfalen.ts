@@ -5,11 +5,10 @@ import { defineRegion, step } from '../lib/framework.ts';
 import { expectMinFiles } from '../lib/validators.ts';
 import { shuffle } from '../lib/array.ts';
 import { downloadFile, runCommand } from '../lib/command.ts';
-import { concurrent } from '../lib/concurrent.ts';
+import { CONCURRENCY, concurrent } from '../lib/concurrent.ts';
 import { withRetry } from '../lib/retry.ts';
 
 const INDEX_URL = 'https://www.opengeodata.nrw.de/produkte/geobasis/lusat/akt/dop/dop_jp2_f10/';
-const CONCURRENCY = 16;
 
 export function parseFilenames(html: string): string[] {
 	const pattern = /file name="(dop[^"]*\.jp2)"/g;
@@ -39,7 +38,7 @@ export default defineRegion(
 			name: 'Geobasis NRW',
 			url: 'https://www.opengeodata.nrw.de/produkte/geobasis/lusat/akt/dop/dop_jp2_f10/',
 		},
-		date: '2024',
+		date: '2025',
 		vrt: { defaults: { bands: [1, 2, 3] } },
 	},
 	[

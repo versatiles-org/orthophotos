@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, rmSync, renameSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { defineRegion, step } from '../lib/framework.ts';
 import { expectMinFiles } from '../lib/validators.ts';
 import { shuffle } from '../lib/array.ts';
@@ -42,7 +43,7 @@ export default defineRegion(
 			const tilesDir = join(ctx.dataDir, 'tiles');
 			mkdirSync(tilesDir, { recursive: true });
 
-			const urlsPath = resolve(ctx.projDir, 'urls.txt');
+			const urlsPath = join(dirname(fileURLToPath(import.meta.url)), 'de_sachsen.txt');
 			const content = await readFile(urlsPath, 'utf-8');
 			const urls = content.trim().split('\n').filter(Boolean);
 			console.log(`  Found ${urls.length} tile URLs`);

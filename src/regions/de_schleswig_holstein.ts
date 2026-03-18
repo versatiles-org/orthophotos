@@ -1,4 +1,4 @@
-import { mkdirSync, existsSync, statSync, renameSync, rmSync } from 'node:fs';
+import { mkdirSync, existsSync, statSync, renameSync, rmSync, readFileSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { XMLParser } from 'fast-xml-parser';
@@ -49,6 +49,20 @@ export function parseTileUrl(xml: string): string | undefined {
 	return undefined;
 }
 
+function isValidTiff(path: string): boolean {
+	try {
+		const header = Buffer.alloc(4);
+		const fd = readFileSync(path);
+		if (fd.length < 4) return false;
+		fd.copy(header, 0, 0, 4);
+		// TIFF: starts with II (little-endian) or MM (big-endian) followed by magic number 42
+		const magic = header.readUInt16LE(0);
+		return (magic === 0x4949 || magic === 0x4d4d) && fd.length > 1000;
+	} catch {
+		return false;
+	}
+}
+
 async function processTile(id: string, tilesDir: string, tempDir: string): Promise<'skipped' | 'converted' | 'empty'> {
 	const destJp2 = join(tilesDir, `${id}.jp2`);
 	if (existsSync(destJp2)) return 'skipped';
@@ -63,7 +77,6 @@ async function processTile(id: string, tilesDir: string, tempDir: string): Promi
 		const tileXml = await readFile(tileXmlPath, 'utf-8');
 		const url = parseTileUrl(tileXml);
 		if (!url) {
-			console.warn(`  No image URL found for ${id}, skipping`);
 			return 'empty';
 		}
 
@@ -74,7 +87,17 @@ async function processTile(id: string, tilesDir: string, tempDir: string): Promi
 			return 'empty';
 		}
 
-		await runCommand('gdal_translate', ['-q', tifPath, jp2Path, '-co', 'QUALITY=100']);
+		if (!isValidTiff(tifPath)) {
+			console.warn(`  ${id}: not a valid TIFF (${size} bytes), skipping`);
+			return 'empty';
+		}
+
+		try {
+			await runCommand('gdal_translate', ['-q', tifPath, jp2Path, '-co', 'QUALITY=100']);
+		} catch (err) {
+			console.warn(`  ${id}: gdal_translate failed, skipping`);
+			return 'empty';
+		}
 		renameSync(jp2Path, destJp2);
 		return 'converted';
 	} finally {

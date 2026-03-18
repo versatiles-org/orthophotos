@@ -17,12 +17,12 @@ export function parseTileUrls(geojson: string): string[] {
 	};
 
 	// Group by tile_id, keep the most recent (highest Aktualitaet)
-	const byTileId = new Map<string, { url: string; year: string }>();
+	const byTileId = new Map<string, { url: string; date: string }>();
 	for (const feature of data.features) {
 		const { tile_id, Aktualitaet, rgb } = feature.properties;
 		const existing = byTileId.get(tile_id);
-		if (!existing || Aktualitaet > existing.year) {
-			byTileId.set(tile_id, { url: rgb, year: Aktualitaet });
+		if (!existing || Aktualitaet > existing.date) {
+			byTileId.set(tile_id, { url: rgb, date: Aktualitaet });
 		}
 	}
 
@@ -44,10 +44,10 @@ export default defineRegion(
 			requiresAttribution: true,
 		},
 		creator: {
-			name: 'GeoBasis-DE/LGLN, 2025',
+			name: 'GeoBasis-DE/LGLN, 2026',
 			url: 'https://ni-lgln-opengeodata.hub.arcgis.com/apps/lgln-opengeodata::digitales-orthophoto-dop/about',
 		},
-		date: '2024',
+		date: '2025',
 		vrt: { defaults: { ext: 'tif' } },
 	},
 	[

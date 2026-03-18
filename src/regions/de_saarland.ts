@@ -10,7 +10,7 @@ import { CONCURRENCY, concurrent } from '../lib/concurrent.ts';
 import { withRetry } from '../lib/retry.ts';
 
 const ATOM_URL =
-	'https://geoportal.saarland.de/mapbender/php/mod_inspireDownloadFeed.php?id=6c2eb4e4-6b85-4858-93f8-b62a2ef87987&type=DATASET&generateFrom=wmslayer&layerid=46303';
+	'https://geoportal.saarland.de/mapbender/php/mod_inspireDownloadFeed.php?id=e7995adf-2aeb-4fa4-a536-041e3cc8b24a&type=DATASET&generateFrom=wmslayer&layerid=46747';
 
 const xmlParser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
 
@@ -54,7 +54,7 @@ export default defineRegion(
 			name: 'GeoBasis DE/LVGL-SL (2025)',
 			url: 'https://geoportal.saarland.de/app-article/geobasisdatenuebersicht/',
 		},
-		date: '2024',
+		date: '2023',
 		vrt: {},
 	},
 	[

@@ -5,11 +5,10 @@ import { defineRegion, step } from '../lib/framework.ts';
 import { expectMinFiles } from '../lib/validators.ts';
 import { shuffle } from '../lib/array.ts';
 import { downloadFile, runCommand } from '../lib/command.ts';
-import { concurrent } from '../lib/concurrent.ts';
+import { CONCURRENCY, concurrent } from '../lib/concurrent.ts';
 import { withRetry } from '../lib/retry.ts';
 
 const BASE_URL = 'https://data.geobasis-bb.de/geobasis/daten/dop/rgb_jpg/';
-const CONCURRENCY = 4;
 
 export function parseZipFilenames(html: string): string[] {
 	const pattern = /href="(dop_[^"]+\.zip)"/g;

@@ -15,6 +15,8 @@
 
 import { createProgress, type ProgressOptions } from './progress.ts';
 
+export const CONCURRENCY = 4;
+
 export async function concurrent<T>(
 	items: T[],
 	concurrency: number,

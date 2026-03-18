@@ -6,12 +6,11 @@ import { defineRegion, step } from '../lib/framework.ts';
 import { expectMinFiles } from '../lib/validators.ts';
 import { shuffle } from '../lib/array.ts';
 import { downloadFile, runCommand } from '../lib/command.ts';
-import { concurrent } from '../lib/concurrent.ts';
+import { CONCURRENCY, concurrent } from '../lib/concurrent.ts';
 import { withRetry } from '../lib/retry.ts';
 
 const ATOM_URL =
 	'https://www.geoportal.hessen.de/mapbender/php/mod_inspireDownloadFeed.php?id=0b30f537-3bd0-44d4-83b0-e3c1542ca265&type=DATASET&generateFrom=wmslayer&layerid=54936';
-const CONCURRENCY = 4;
 
 const xmlParser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
 
@@ -91,7 +90,7 @@ export default defineRegion(
 						for (const p of [tifPath, jp2Path]) {
 							try {
 								rmSync(p, { force: true });
-							} catch { }
+							} catch {}
 						}
 					}
 				},

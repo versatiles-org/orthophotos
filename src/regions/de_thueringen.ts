@@ -5,10 +5,8 @@ import { defineRegion, step } from '../lib/framework.ts';
 import { expectMinFiles } from '../lib/validators.ts';
 import { shuffle } from '../lib/array.ts';
 import { downloadFile, runCommand } from '../lib/command.ts';
-import { concurrent } from '../lib/concurrent.ts';
+import { CONCURRENCY, concurrent } from '../lib/concurrent.ts';
 import { withRetry } from '../lib/retry.ts';
-
-const CONCURRENCY = 4;
 
 export function generateCoords(): { x: number; y: number; id: string }[] {
 	const coords: { x: number; y: number; id: string }[] = [];

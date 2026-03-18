@@ -5,12 +5,11 @@ import { defineRegion, step } from '../lib/framework.ts';
 import { expectMinFiles } from '../lib/validators.ts';
 import { shuffle } from '../lib/array.ts';
 import { downloadFile } from '../lib/command.ts';
-import { concurrent } from '../lib/concurrent.ts';
+import { CONCURRENCY, concurrent } from '../lib/concurrent.ts';
 import { withRetry } from '../lib/retry.ts';
 
 const GEOJSON_URL =
 	'https://arcgis-geojson.s3.eu-de.cloud-object-storage.appdomain.cloud/dop20/lgln-opengeodata-dop20.geojson';
-const CONCURRENCY = 4;
 
 export function parseTileUrls(geojson: string): string[] {
 	const data = JSON.parse(geojson) as {

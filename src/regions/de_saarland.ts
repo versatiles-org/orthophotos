@@ -6,12 +6,11 @@ import { defineRegion, step } from '../lib/framework.ts';
 import { expectMinFiles } from '../lib/validators.ts';
 import { shuffle } from '../lib/array.ts';
 import { downloadFile, runCommand } from '../lib/command.ts';
-import { concurrent } from '../lib/concurrent.ts';
+import { CONCURRENCY, concurrent } from '../lib/concurrent.ts';
 import { withRetry } from '../lib/retry.ts';
 
 const ATOM_URL =
 	'https://geoportal.saarland.de/mapbender/php/mod_inspireDownloadFeed.php?id=6c2eb4e4-6b85-4858-93f8-b62a2ef87987&type=DATASET&generateFrom=wmslayer&layerid=46303';
-const CONCURRENCY = 4;
 
 const xmlParser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
 

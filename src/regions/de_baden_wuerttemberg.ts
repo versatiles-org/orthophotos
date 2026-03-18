@@ -5,11 +5,10 @@ import { defineRegion, step } from '../lib/framework.ts';
 import { expectMinFiles } from '../lib/validators.ts';
 import { downloadFile, runCommand } from '../lib/command.ts';
 import { shuffle } from '../lib/array.ts';
-import { concurrent } from '../lib/concurrent.ts';
+import { CONCURRENCY, concurrent } from '../lib/concurrent.ts';
 import { withRetry } from '../lib/retry.ts';
 
 const BASE_URL = 'https://opengeodata.lgl-bw.de/data/dop20/';
-const CONCURRENCY = 4;
 
 export function generateTileIds(): string[] {
 	const ids: string[] = [];

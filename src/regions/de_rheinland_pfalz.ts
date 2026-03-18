@@ -5,11 +5,10 @@ import { defineRegion, step } from '../lib/framework.ts';
 import { expectMinFiles } from '../lib/validators.ts';
 import { shuffle } from '../lib/array.ts';
 import { runCommand } from '../lib/command.ts';
-import { concurrent } from '../lib/concurrent.ts';
+import { CONCURRENCY, concurrent } from '../lib/concurrent.ts';
 import { withRetry } from '../lib/retry.ts';
 
 const INDEX_URL = 'https://geobasis-rlp.de/data/dop20rgb/current/jp2/';
-const CONCURRENCY = 4;
 
 export function parseFilenames(html: string): string[] {
 	const pattern = /href="([^"]+\.jp2)"/g;

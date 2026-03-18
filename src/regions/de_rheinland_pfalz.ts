@@ -1,6 +1,25 @@
-import { bashStep, defineRegion } from '../lib/framework.ts';
-import { expectMinFiles } from '../lib/validators.ts';
+import { existsSync, mkdirSync, rmSync, renameSync } from 'node:fs';
+import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { defineRegion, step } from '../lib/framework.ts';
+import { expectMinFiles } from '../lib/validators.ts';
+import { shuffle } from '../lib/array.ts';
+import { runCommand } from '../lib/command.ts';
+import { concurrent } from '../lib/concurrent.ts';
+import { withRetry } from '../lib/retry.ts';
+
+const INDEX_URL = 'https://geobasis-rlp.de/data/dop20rgb/current/jp2/';
+const CONCURRENCY = 4;
+
+export function parseFilenames(html: string): string[] {
+	const pattern = /href="([^"]+\.jp2)"/g;
+	const filenames: string[] = [];
+	let match;
+	while ((match = pattern.exec(html)) !== null) {
+		filenames.push(match[1]);
+	}
+	return filenames;
+}
 
 export default defineRegion(
 	'de/rheinland_pfalz',
@@ -26,11 +45,49 @@ export default defineRegion(
 		vrt: {},
 	},
 	[
-		bashStep('fetch', {
-			scriptFile: '1_fetch.sh',
-			validate: async (ctx) => {
-				await expectMinFiles(join(ctx.dataDir, 'tiles'), '*', 50);
-			},
+		step('fetch-index', async (ctx) => {
+			const indexPath = join(ctx.tempDir, 'index.html');
+			if (!existsSync(indexPath)) {
+				console.log('  Fetching index...');
+				// -k for insecure SSL
+				await withRetry(() => runCommand('curl', ['-sko', indexPath, INDEX_URL]), { maxAttempts: 3 });
+			}
+
+			const html = await readFile(indexPath, 'utf-8');
+			const filenames = parseFilenames(html);
+			await writeFile(join(ctx.tempDir, 'filenames.json'), JSON.stringify(filenames));
+			console.log(`  Found ${filenames.length} tiles`);
+		}),
+
+		step('download-tiles', async (ctx) => {
+			const tilesDir = join(ctx.dataDir, 'tiles');
+			mkdirSync(tilesDir, { recursive: true });
+
+			const filenames: string[] = JSON.parse(await readFile(join(ctx.tempDir, 'filenames.json'), 'utf-8'));
+
+			await concurrent(
+				shuffle(filenames),
+				CONCURRENCY,
+				async (filename) => {
+					const dest = join(tilesDir, filename);
+					if (existsSync(dest)) return 'skipped';
+
+					const tmpPath = join(ctx.tempDir, `${filename}.tmp`);
+					try {
+						// -k for insecure SSL
+						await withRetry(() => runCommand('curl', ['-sko', tmpPath, `${INDEX_URL}${filename}`]), { maxAttempts: 3 });
+						renameSync(tmpPath, dest);
+						return 'downloaded';
+					} finally {
+						try {
+							rmSync(tmpPath, { force: true });
+						} catch {}
+					}
+				},
+				{ labels: ['downloaded', 'skipped'] },
+			);
+
+			await expectMinFiles(tilesDir, '*.jp2', 50);
 		}),
 	],
 );

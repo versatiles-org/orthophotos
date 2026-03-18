@@ -73,7 +73,7 @@ Environment variables loaded from `config.env`:
 
 Regions are being migrated from bash scripts (`regions/<cc>/<region>/1_fetch.sh`) to TypeScript modules (`src/regions/<region>.ts`). Each migrated region file contains both metadata and pipeline steps.
 
-**Already migrated:** `de/berlin`, `de/schleswig_holstein`, `de/bayern`, `de/brandenburg`
+**Already migrated:** `de/berlin`, `de/schleswig_holstein`, `de/bayern`, `de/brandenburg`, `de/hamburg`, `de/bremen`, `de/baden_wuerttemberg`, `de/hessen`, `de/mecklenburg_vorpommern`, `de/niedersachsen`, `de/nordrhein_westfalen`, `de/rheinland_pfalz`, `de/saarland`, `de/sachsen`, `de/sachsen_anhalt`, `de/thueringen`
 
 **How to migrate a region:**
 

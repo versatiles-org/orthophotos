@@ -1,6 +1,34 @@
-import { bashStep, defineRegion } from '../lib/framework.ts';
+import { existsSync, mkdirSync } from 'node:fs';
+import { readFile, writeFile } from 'node:fs/promises';
+import { basename, join } from 'node:path';
+import { defineRegion, step } from '../lib/framework.ts';
 import { expectMinFiles } from '../lib/validators.ts';
-import { join } from 'node:path';
+import { shuffle } from '../lib/array.ts';
+import { downloadFile } from '../lib/command.ts';
+import { concurrent } from '../lib/concurrent.ts';
+import { withRetry } from '../lib/retry.ts';
+
+const GEOJSON_URL =
+	'https://arcgis-geojson.s3.eu-de.cloud-object-storage.appdomain.cloud/dop20/lgln-opengeodata-dop20.geojson';
+const CONCURRENCY = 4;
+
+export function parseTileUrls(geojson: string): string[] {
+	const data = JSON.parse(geojson) as {
+		features: { properties: { tile_id: string; Aktualitaet: string; rgb: string } }[];
+	};
+
+	// Group by tile_id, keep the most recent (highest Aktualitaet)
+	const byTileId = new Map<string, { url: string; year: string }>();
+	for (const feature of data.features) {
+		const { tile_id, Aktualitaet, rgb } = feature.properties;
+		const existing = byTileId.get(tile_id);
+		if (!existing || Aktualitaet > existing.year) {
+			byTileId.set(tile_id, { url: rgb, year: Aktualitaet });
+		}
+	}
+
+	return [...byTileId.values()].map((v) => v.url);
+}
 
 export default defineRegion(
 	'de/niedersachsen',
@@ -23,11 +51,40 @@ export default defineRegion(
 		vrt: { defaults: { ext: 'tif' } },
 	},
 	[
-		bashStep('fetch', {
-			scriptFile: '1_fetch.sh',
-			validate: async (ctx) => {
-				await expectMinFiles(join(ctx.dataDir, 'tiles'), '*', 50);
-			},
+		step('fetch-geojson', async (ctx) => {
+			const geojsonPath = join(ctx.tempDir, 'lgln-opengeodata-dop20.geojson');
+			if (!existsSync(geojsonPath)) {
+				console.log('  Fetching GeoJSON...');
+				await withRetry(() => downloadFile(GEOJSON_URL, geojsonPath), { maxAttempts: 3 });
+			}
+
+			const content = await readFile(geojsonPath, 'utf-8');
+			const urls = parseTileUrls(content);
+			await writeFile(join(ctx.tempDir, 'urls.json'), JSON.stringify(urls));
+			console.log(`  Found ${urls.length} unique tile URLs`);
+		}),
+
+		step('download-tiles', async (ctx) => {
+			const tilesDir = join(ctx.dataDir, 'tiles');
+			mkdirSync(tilesDir, { recursive: true });
+
+			const urls: string[] = JSON.parse(await readFile(join(ctx.tempDir, 'urls.json'), 'utf-8'));
+
+			await concurrent(
+				shuffle(urls),
+				CONCURRENCY,
+				async (url) => {
+					const filename = basename(url);
+					const dest = join(tilesDir, filename);
+					if (existsSync(dest)) return 'skipped';
+
+					await withRetry(() => downloadFile(url, dest), { maxAttempts: 3 });
+					return 'downloaded';
+				},
+				{ labels: ['downloaded', 'skipped'] },
+			);
+
+			await expectMinFiles(tilesDir, '*', 50);
 		}),
 	],
 );

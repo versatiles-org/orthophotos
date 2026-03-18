@@ -1,6 +1,29 @@
-import { bashStep, defineRegion } from '../lib/framework.ts';
-import { expectMinFiles } from '../lib/validators.ts';
+import { existsSync, mkdirSync, rmSync, renameSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { defineRegion, step } from '../lib/framework.ts';
+import { expectMinFiles } from '../lib/validators.ts';
+import { shuffle } from '../lib/array.ts';
+import { downloadFile, runCommand } from '../lib/command.ts';
+import { concurrent } from '../lib/concurrent.ts';
+import { withRetry } from '../lib/retry.ts';
+
+const ATOM_URL = 'https://www.geodaten-mv.de/dienste/dop20_atom?type=dataset&id=f94d17fa-b29b-41f7-a4b8-6e10f1aae38e';
+const CONCURRENCY = 8;
+
+export function parseTileUrls(xml: string): { url: string; id: string }[] {
+	const tiles: { url: string; id: string }[] = [];
+	const pattern = /href="([^"]*dop20rgbi_[^"]*\.tif[^"]*)"/g;
+	let match;
+	while ((match = pattern.exec(xml)) !== null) {
+		const url = match[1].replace(/amp;/g, '');
+		const fileMatch = url.match(/file=([^&]+)/);
+		if (fileMatch) {
+			tiles.push({ url, id: fileMatch[1] });
+		}
+	}
+	return tiles;
+}
 
 export default defineRegion(
 	'de/mecklenburg_vorpommern',
@@ -24,11 +47,48 @@ export default defineRegion(
 		vrt: { defaults: { bands: [1, 2, 3] } },
 	},
 	[
-		bashStep('fetch', {
-			scriptFile: '1_fetch.sh',
-			validate: async (ctx) => {
-				await expectMinFiles(join(ctx.dataDir, 'tiles'), '*.jp2', 50);
-			},
+		step('fetch-atom', async (ctx) => {
+			const atomPath = join(ctx.tempDir, 'atom.xml');
+			if (!existsSync(atomPath)) {
+				console.log('  Fetching atom.xml...');
+				await withRetry(() => downloadFile(ATOM_URL, atomPath), { maxAttempts: 3 });
+			}
+		}),
+
+		step('download-tiles', async (ctx) => {
+			const tilesDir = join(ctx.dataDir, 'tiles');
+			mkdirSync(tilesDir, { recursive: true });
+
+			const xml = await readFile(join(ctx.tempDir, 'atom.xml'), 'utf-8');
+			const tiles = parseTileUrls(xml);
+			console.log(`  Found ${tiles.length} tiles`);
+
+			await concurrent(
+				shuffle(tiles),
+				CONCURRENCY,
+				async ({ url, id }) => {
+					const destJp2 = join(tilesDir, `${id}.jp2`);
+					if (existsSync(destJp2)) return 'skipped';
+
+					const tifPath = join(ctx.tempDir, `${id}.tif`);
+					const jp2Path = join(ctx.tempDir, `${id}.jp2`);
+					try {
+						await withRetry(() => downloadFile(url, tifPath), { maxAttempts: 3 });
+						await runCommand('gdal_translate', ['-q', tifPath, jp2Path]);
+						renameSync(jp2Path, destJp2);
+						return 'converted';
+					} finally {
+						for (const p of [tifPath, jp2Path]) {
+							try {
+								rmSync(p, { force: true });
+							} catch {}
+						}
+					}
+				},
+				{ labels: ['converted', 'skipped'] },
+			);
+
+			await expectMinFiles(tilesDir, '*.jp2', 50);
 		}),
 	],
 );

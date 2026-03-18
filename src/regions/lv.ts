@@ -17,6 +17,7 @@ export default defineRegion(
 			name: 'Latvijas Ģeotelpiskās informācijas aģentūra',
 			url: 'https://www.lgia.gov.lv/lv/aerofotografesanas-6-cikls-2016-2018-g',
 		},
+		vrt: { defaults: { srs: 'EPSG:3059' } },
 	},
 	[
 		bashStep('fetch', {

@@ -51,6 +51,7 @@ export default defineRegion(
 			url: 'https://daten.berlin.de/datensaetze/orthofotografie-im-inspire-datenmodell-truedop20rgbi-2025-sommer-f9369d23',
 		},
 		date: '2025',
+		vrt: { defaults: { bands: [1, 2, 3] } },
 	},
 	[
 		step('fetch-feed', async (ctx) => {

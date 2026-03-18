@@ -107,6 +107,7 @@ export default defineRegion(
 			url: 'https://opendata.schleswig-holstein.de/dataset/digitale-orthophotos-dop20',
 		},
 		date: '2017-2024',
+		vrt: { defaults: { bands: [1, 2, 3] } },
 	},
 	[
 		step('fetch-index', async (ctx) => {

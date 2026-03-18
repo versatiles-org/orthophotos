@@ -25,6 +25,7 @@ export default defineRegion(
 			name: 'LGL, www.lgl-bw.de',
 			url: 'https://www.lgl-bw.de/Produkte/Luftbildprodukte/DOP20/',
 		},
+		vrt: {},
 	},
 	[
 		bashStep('fetch', {

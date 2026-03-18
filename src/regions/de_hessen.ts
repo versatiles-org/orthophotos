@@ -21,6 +21,7 @@ export default defineRegion(
 			name: 'Hessisches Landesamt für Bodenmanagement und Geoinformation',
 			url: 'https://www.geoportal.hessen.de/mapbender/php/mod_showMetadata.php?resource=layer&layout=tabs&redirectToMetadataUrl=1&id=54936',
 		},
+		vrt: { defaults: { useFileList: true } },
 	},
 	[
 		bashStep('fetch', {

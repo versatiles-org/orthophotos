@@ -31,6 +31,7 @@ export default defineRegion(
 			name: "Institut national de l'information géographique et forestière (IGN-F)",
 			url: 'https://geoservices.ign.fr/documentation/donnees/ortho/bdortho',
 		},
+		vrt: { defaults: { srcnodata: '255 255 255', bands: [1, 2, 3] } },
 	},
 	[
 		bashStep('fetch', {

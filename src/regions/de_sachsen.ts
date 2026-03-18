@@ -23,6 +23,7 @@ export default defineRegion(
 			name: 'GeoSN',
 			url: 'https://www.geodaten.sachsen.de/luftbild-produkte-3995.html',
 		},
+		vrt: {},
 	},
 	[
 		bashStep('fetch', {

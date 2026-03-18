@@ -54,6 +54,7 @@ export default defineRegion(
 			url: 'https://metaver.de/trefferanzeige?cmd=doShowDocument&docuuid=910260F7-AC66-40F3-8BA2-E7108C3C71C9',
 		},
 		date: '2025',
+		vrt: { defaults: { ext: 'jpg', srs: 'EPSG:25832' } },
 	},
 	[
 		step('download-zips', async (ctx) => {

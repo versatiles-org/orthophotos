@@ -21,6 +21,7 @@ export default defineRegion(
 			name: 'GeoBasis-DE / LVermGeo ST',
 			url: 'https://www.lvermgeo.sachsen-anhalt.de/de/gdp-open-data.html',
 		},
+		vrt: { defaults: { addalpha: false, allowProjectionDifference: true, srs: 'EPSG:25832' } },
 	},
 	[
 		bashStep('fetch', {

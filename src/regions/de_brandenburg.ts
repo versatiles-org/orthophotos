@@ -45,6 +45,7 @@ export default defineRegion(
 			url: 'https://data.geobasis-bb.de/geobasis/daten/dop/rgb_jpg/',
 		},
 		date: '2023',
+		vrt: { defaults: { ext: 'jpg', srs: 'EPSG:25833' } },
 	},
 	[
 		step('fetch-index', async (ctx) => {

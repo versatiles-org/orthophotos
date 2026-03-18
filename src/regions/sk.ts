@@ -17,6 +17,7 @@ export default defineRegion(
 			name: 'GKÚ',
 			url: 'https://rpi.gov.sk/metadata/3b046df1-7867-4377-b15b-6ae6bac999da',
 		},
+		vrt: { defaults: { ext: 'tif' } },
 	},
 	[
 		bashStep('fetch', {

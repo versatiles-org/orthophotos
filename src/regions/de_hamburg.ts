@@ -1,3 +1,4 @@
+import { readFile, writeFile } from 'node:fs/promises';
 import { bashStep, defineRegion } from '../lib/framework.ts';
 import { expectMinFiles } from '../lib/validators.ts';
 import { join } from 'node:path';
@@ -22,6 +23,14 @@ export default defineRegion(
 		creator: {
 			name: 'Freie und Hansestadt Hamburg, Landesbetrieb Geoinformation und Vermessung (LGV)',
 			url: 'https://metaver.de/trefferanzeige?docuuid=5DF0990B-9195-41E7-9960-9214BC85B4DA',
+		},
+		vrt: {
+			defaults: { ext: 'tif', bands: [1, 2, 3] },
+			postProcess: async (_ctx, _entry, vrtPath) => {
+				const content = await readFile(vrtPath, 'utf-8');
+				const patched = content.replace(/<\/ScaleRatio>/g, '</ScaleRatio>\n      <UseMaskBand>true</UseMaskBand>');
+				await writeFile(vrtPath, patched);
+			},
 		},
 	},
 	[

@@ -12,6 +12,7 @@ import { readStatusEntries } from '../lib/yaml.ts';
 import { safeRemoveDir } from '../lib/fs.ts';
 import { getRegionPipeline } from '../regions/index.ts';
 import { runPipeline } from '../lib/framework.ts';
+import { buildVrt } from './vrt.ts';
 
 export interface TaskContext {
 	name: string; // Region identifier (e.g., "de/bw")
@@ -95,20 +96,24 @@ async function taskFetch(ctx: TaskContext): Promise<void> {
 
 /**
  * Task 2: Build VRTs.
- * Runs the region's 2_build_vrt.sh script.
+ * Uses TypeScript VRT config if available, otherwise falls back to 2_build_vrt.sh.
  */
 async function taskVrt(ctx: TaskContext): Promise<void> {
 	console.log('Building VRT...');
 	mkdirSync(ctx.tempDir, { recursive: true });
 
-	const scriptPath = resolve(ctx.projDir, '2_build_vrt.sh');
-	const env = {
-		DATA: ctx.dataDir,
-		TEMP: ctx.tempDir,
-		PROJ: ctx.projDir,
-	};
-
-	await runBashScript(scriptPath, env, ctx.dataDir);
+	const pipeline = getRegionPipeline(ctx.name);
+	if (pipeline?.metadata.vrt) {
+		await buildVrt(ctx, pipeline.metadata);
+	} else {
+		const scriptPath = resolve(ctx.projDir, '2_build_vrt.sh');
+		const env = {
+			DATA: ctx.dataDir,
+			TEMP: ctx.tempDir,
+			PROJ: ctx.projDir,
+		};
+		await runBashScript(scriptPath, env, ctx.dataDir);
+	}
 
 	// Clean up temp directory after successful completion
 	await safeRemoveDir(ctx.tempDir);

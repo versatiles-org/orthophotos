@@ -20,6 +20,7 @@ export default defineRegion(
 			name: 'BEV',
 			url: 'https://data.bev.gv.at/geonetwork/srv/api/records/3c3803b3-1b53-4fb5-9595-9217b9891862',
 		},
+		vrt: { defaults: { ext: 'tif', srs: 'EPSG:25833' } },
 	},
 	[
 		bashStep('fetch', {

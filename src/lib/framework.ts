@@ -35,6 +35,23 @@ export interface RegionCreator {
 	url: string;
 }
 
+export interface VrtEntryConfig {
+	ext?: 'jp2' | 'tif' | 'jpg';
+	bands?: number[];
+	addalpha?: boolean;
+	srcnodata?: string;
+	srs?: string;
+	allowProjectionDifference?: boolean;
+	useFileList?: boolean;
+}
+
+export interface VrtConfig {
+	defaults?: VrtEntryConfig;
+	entries?: Record<string, VrtEntryConfig>;
+	postProcess?: (ctx: StepContext, entry: string, vrtPath: string) => Promise<void>;
+	custom?: (ctx: StepContext) => Promise<void>;
+}
+
 export interface RegionMetadata {
 	status: 'success' | 'error';
 	notes: string[];
@@ -42,6 +59,7 @@ export interface RegionMetadata {
 	license: RegionLicense;
 	creator: RegionCreator;
 	date?: string;
+	vrt?: VrtConfig;
 }
 
 export interface RegionPipeline {

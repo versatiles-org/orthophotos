@@ -22,6 +22,7 @@ export default defineRegion(
 			name: 'GeoBasis DE/LVGL-SL (2025)',
 			url: 'https://geoportal.saarland.de/app-article/geobasisdatenuebersicht/',
 		},
+		vrt: {},
 	},
 	[
 		bashStep('fetch', {

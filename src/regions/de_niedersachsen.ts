@@ -20,6 +20,7 @@ export default defineRegion(
 			name: 'GeoBasis-DE/LGLN, 2025',
 			url: 'https://ni-lgln-opengeodata.hub.arcgis.com/apps/lgln-opengeodata::digitales-orthophoto-dop/about',
 		},
+		vrt: { defaults: { ext: 'tif' } },
 	},
 	[
 		bashStep('fetch', {

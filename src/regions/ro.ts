@@ -17,6 +17,7 @@ export default defineRegion(
 			name: 'Agenția de Informații Geospațiale a Apărării',
 			url: 'https://data.gov.ro/en/dataset/ortofotoplan-scara-1-5000-pentru-teritoriul-romaniei',
 		},
+		vrt: {},
 	},
 	[
 		bashStep('fetch', {

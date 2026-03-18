@@ -53,6 +53,7 @@ export default defineRegion(
 			url: 'https://geodaten.bayern.de/opengeodata/OpenDataDetail.html?pn=dop20rgb',
 		},
 		date: '2025-06',
+		vrt: {},
 	},
 	[
 		step('fetch-kml', async (ctx) => {

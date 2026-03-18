@@ -25,6 +25,7 @@ export default defineRegion(
 			name: 'GDI-Th',
 			url: 'https://geoportal.thueringen.de/gdi-th/download-offene-geodaten/download-luftbilder-und-orthophotos',
 		},
+		vrt: { defaults: { bands: [1, 2, 3] } },
 	},
 	[
 		bashStep('fetch', {

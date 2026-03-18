@@ -156,7 +156,7 @@ async function taskConvert(ctx: TaskContext): Promise<void> {
 		const tempVersatiles = resolve(ctx.tempDir, `${source}.versatiles`);
 		const outputVersatiles = resolve(ctx.dataDir, `${source}.versatiles`);
 
-		const vpl = `from_gdal_raster filename="${inputVrt}" level_max=17 max_reuse_gdal=8 | raster_overview | raster_format format=webp quality="70,16:50,17:30" speed=0`;
+		const vpl = `from_gdal_raster filename="${inputVrt}" level_min=17 level_max=17 gdal_reuse_limit=8 | raster_overview | raster_format format=webp quality="70,16:50,17:30" effort=100`;
 		await runVersatiles(`[,vpl](${vpl})`, tempVersatiles);
 
 		// Move to final location

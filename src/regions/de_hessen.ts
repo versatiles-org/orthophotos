@@ -51,9 +51,10 @@ export default defineRegion(
 		},
 		creator: {
 			name: 'Hessisches Landesamt für Bodenmanagement und Geoinformation',
-			url: 'https://www.geoportal.hessen.de/mapbender/php/mod_showMetadata.php?resource=layer&layout=tabs&redirectToMetadataUrl=1&id=54936',
+			url: 'https://opendata.hessen.de/en/dataset/atkis-dop-20',
 		},
 		vrt: { defaults: { useFileList: true } },
+		date: '2024',
 	},
 	[
 		step('fetch-atom', async (ctx) => {
@@ -90,7 +91,7 @@ export default defineRegion(
 						for (const p of [tifPath, jp2Path]) {
 							try {
 								rmSync(p, { force: true });
-							} catch {}
+							} catch { }
 						}
 					}
 				},

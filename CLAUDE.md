@@ -49,10 +49,11 @@ Task spec supports: numbers (`3`), names (`fetch`), ranges (`1-3`), comma lists 
 - `src/` - TypeScript source code
   - `src/run.ts` - Main entry point
   - `src/run/` - CLI args, task implementations, command wrappers
+  - `src/regions/` - Region definitions (metadata + fetch pipeline steps)
   - `src/server/` - VPL generation, rsync, frontend download
   - `src/status/` - Region scanning, status.yml parsing, GeoJSON loading
-  - `src/lib/` - Utilities (command exec, retry, fs helpers, YAML)
-- `regions/<cc>/<region>/` - Per-region scripts (`1_fetch.sh`, `2_build_vrt.sh`) and `status.yml`
+  - `src/lib/` - Utilities (command exec, retry, fs helpers, YAML, framework, validators, concurrent, progress)
+- `regions/<cc>/<region>/` - Legacy per-region bash scripts (`1_fetch.sh`, `2_build_vrt.sh`) and `status.yml`
 - `data/` - NUTS TopoJSON reference data
 - `web/` - Frontend assets
 - `wms/` - WMS scraping utility
@@ -67,6 +68,35 @@ Environment variables loaded from `config.env`:
 - `dir_data` - Directory for large datasets and outputs (required)
 - `dir_temp` - Directory for temporary processing files (required)
 - `rsync_host`, `rsync_port`, `rsync_id` - Remote storage connection (required for sync tasks)
+
+### Region Migration (Bash → TypeScript)
+
+Regions are being migrated from bash scripts (`regions/<cc>/<region>/1_fetch.sh`) to TypeScript modules (`src/regions/<region>.ts`). Each migrated region file contains both metadata and pipeline steps.
+
+**Already migrated:** `de/berlin`, `de/schleswig_holstein`, `de/bayern`, `de/brandenburg`
+
+**How to migrate a region:**
+
+1. Read the bash script in `regions/<cc>/<region>/1_fetch.sh` to understand the fetch logic
+2. Read `regions/<cc>/<region>/status.yml` for metadata (status, notes, license, creator, entries)
+3. Verify the data source URLs still work; update if the API has changed
+4. Create/update `src/regions/<cc>_<region>.ts` with:
+   - **Metadata object** with all fields from `status.yml`, minus `rating`, plus `date` (when photos were taken, e.g. `'2025'`, `'2023-06'`, `'2017-2024'`)
+   - **Pipeline steps** using `step()` from `src/lib/framework.ts`
+5. Use library utilities: `downloadFile` (curl wrapper), `concurrent` (parallel processing with progress bar), `withRetry` (retry with backoff), `shuffle` (randomize order)
+6. Use `fast-xml-parser` for XML/Atom feed parsing instead of regex
+7. Add postcondition validation via `expectMinFiles`/`expectFile` from `src/lib/validators.ts`
+8. Run `npm run check` to verify
+
+**Required metadata fields:**
+- `status`: `'success'` or `'error'`
+- `notes`: string array describing quirks/issues
+- `entries`: tile directory names (e.g. `['tiles']`)
+- `license`: `{ name, url, requiresAttribution }`
+- `creator`: `{ name, url }`
+- `date`: when the photos were taken (must be added during migration)
+
+**Fallback:** Regions without a TypeScript definition automatically fall back to running `1_fetch.sh` via bash.
 
 ### External CLI Dependencies
 

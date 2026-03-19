@@ -20,6 +20,24 @@ export async function isValidRaster(path: string): Promise<boolean> {
 }
 
 /**
+ * Collects invalid download errors during a concurrent fetch loop.
+ * Call `add()` for each invalid file, then `throwIfAny()` after the loop completes.
+ */
+export class DownloadErrors {
+	private errors: { url: string; file: string }[] = [];
+
+	add(url: string, file: string): void {
+		this.errors.push({ url, file });
+	}
+
+	throwIfAny(): void {
+		if (this.errors.length === 0) return;
+		const list = this.errors.map((e) => `  ${e.file} (${e.url})`).join('\n');
+		throw new Error(`${this.errors.length} invalid download(s):\n${list}`);
+	}
+}
+
+/**
  * Check that a directory contains at least `min` files matching a glob pattern.
  */
 export async function expectMinFiles(dir: string, pattern: string, min: number): Promise<void> {

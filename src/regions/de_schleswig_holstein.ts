@@ -3,7 +3,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { XMLParser } from 'fast-xml-parser';
 import { defineRegion, step } from '../lib/framework.ts';
-import { expectMinFiles, isValidRaster } from '../lib/validators.ts';
+import { DownloadErrors, expectMinFiles, isValidRaster } from '../lib/validators.ts';
 import { shuffle } from '../lib/array.ts';
 import { downloadFile, runCommand } from '../lib/command.ts';
 import { concurrent } from '../lib/concurrent.ts';
@@ -49,7 +49,12 @@ export function parseTileUrl(xml: string): string | undefined {
 	return undefined;
 }
 
-async function processTile(id: string, tilesDir: string, tempDir: string): Promise<'skipped' | 'converted' | 'empty'> {
+async function processTile(
+	id: string,
+	tilesDir: string,
+	tempDir: string,
+	errors: DownloadErrors,
+): Promise<'skipped' | 'converted' | 'empty' | 'invalid'> {
 	const destJp2 = join(tilesDir, `${id}.jp2`);
 	if (existsSync(destJp2)) return 'skipped';
 
@@ -74,15 +79,15 @@ async function processTile(id: string, tilesDir: string, tempDir: string): Promi
 		}
 
 		if (!(await isValidRaster(tifPath))) {
-			console.warn(`  ${id}: not a valid raster (${size} bytes), skipping`);
-			return 'empty';
+			errors.add(url, `${id}.tif`);
+			return 'invalid';
 		}
 
 		try {
 			await runCommand('gdal_translate', ['-q', tifPath, jp2Path, '-co', 'QUALITY=100']);
-		} catch (err) {
-			console.warn(`  ${id}: gdal_translate failed, skipping`);
-			return 'empty';
+		} catch {
+			errors.add(url, `${id}.tif`);
+			return 'invalid';
 		}
 		renameSync(jp2Path, destJp2);
 		return 'converted';
@@ -142,15 +147,18 @@ export default defineRegion(
 			const ids: string[] = JSON.parse(await readFile(join(ctx.tempDir, 'ids.json'), 'utf-8'));
 			const shuffled = shuffle(ids);
 
+			const errors = new DownloadErrors();
+
 			await concurrent(
 				shuffled,
 				CONCURRENCY,
 				async (id) => {
-					return await processTile(id, tilesDir, ctx.tempDir);
+					return await processTile(id, tilesDir, ctx.tempDir, errors);
 				},
-				{ labels: ['converted', 'skipped', 'empty'] },
+				{ labels: ['converted', 'skipped', 'empty', 'invalid'] },
 			);
 
+			errors.throwIfAny();
 			await expectMinFiles(tilesDir, '*.jp2', 50);
 		}),
 	],

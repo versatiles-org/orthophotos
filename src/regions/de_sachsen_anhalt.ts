@@ -3,7 +3,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { XMLParser } from 'fast-xml-parser';
 import { defineRegion, step } from '../lib/framework.ts';
-import { expectMinFiles } from '../lib/validators.ts';
+import { DownloadErrors, expectMinFiles, isValidRaster } from '../lib/validators.ts';
 import { shuffle } from '../lib/array.ts';
 import { downloadFile, runCommand } from '../lib/command.ts';
 import { CONCURRENCY, concurrent } from '../lib/concurrent.ts';
@@ -77,6 +77,8 @@ export default defineRegion(
 
 			const ids: string[] = JSON.parse(await readFile(join(ctx.tempDir, 'ids.json'), 'utf-8'));
 
+			const errors = new DownloadErrors();
+
 			await concurrent(
 				shuffle(ids),
 				CONCURRENCY,
@@ -86,9 +88,15 @@ export default defineRegion(
 
 					const tifPath = join(ctx.tempDir, `${id}.tif`);
 					const jp2Path = join(ctx.tempDir, `${id}.jp2`);
+					const url = `${DOWNLOAD_BASE}${id}.tif`;
 
 					try {
-						await withRetry(() => downloadFile(`${DOWNLOAD_BASE}${id}.tif`, tifPath), { maxAttempts: 3 });
+						await withRetry(() => downloadFile(url, tifPath), { maxAttempts: 3 });
+
+						if (!(await isValidRaster(tifPath))) {
+							errors.add(url, `${id}.tif`);
+							return 'invalid';
+						}
 
 						await runCommand('gdal', ['raster', 'edit', '--nodata', '255', tifPath]);
 						await runCommand('gdal_translate', [
@@ -117,9 +125,10 @@ export default defineRegion(
 						}
 					}
 				},
-				{ labels: ['converted', 'skipped'] },
+				{ labels: ['converted', 'skipped', 'invalid'] },
 			);
 
+			errors.throwIfAny();
 			await expectMinFiles(tilesDir, '*.jp2', 50);
 		}),
 	],

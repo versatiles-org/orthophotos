@@ -3,7 +3,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { XMLParser } from 'fast-xml-parser';
 import { defineRegion, step } from '../lib/framework.ts';
-import { expectMinFiles } from '../lib/validators.ts';
+import { DownloadErrors, expectMinFiles, isValidRaster } from '../lib/validators.ts';
 import { shuffle } from '../lib/array.ts';
 import { downloadFile, runCommand } from '../lib/command.ts';
 import { CONCURRENCY, concurrent } from '../lib/concurrent.ts';
@@ -108,6 +108,8 @@ export default defineRegion(
 
 			const urls: string[] = JSON.parse(await readFile(join(ctx.tempDir, 'tile_urls.json'), 'utf-8'));
 
+			const errors = new DownloadErrors();
+
 			await concurrent(
 				shuffle(urls),
 				CONCURRENCY,
@@ -120,6 +122,10 @@ export default defineRegion(
 					const jp2Path = join(ctx.tempDir, `${id}.jp2`);
 					try {
 						await withRetry(() => downloadFile(url, tifPath), { maxAttempts: 3 });
+						if (!(await isValidRaster(tifPath))) {
+							errors.add(url, `${id}.tif`);
+							return 'invalid';
+						}
 						await runCommand('gdal_translate', ['-q', tifPath, jp2Path]);
 						renameSync(jp2Path, destJp2);
 						return 'converted';
@@ -131,9 +137,10 @@ export default defineRegion(
 						}
 					}
 				},
-				{ labels: ['converted', 'skipped'] },
+				{ labels: ['converted', 'skipped', 'invalid'] },
 			);
 
+			errors.throwIfAny();
 			await expectMinFiles(tilesDir, '*.jp2', 50);
 		}),
 	],

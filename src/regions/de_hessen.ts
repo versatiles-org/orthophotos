@@ -1,9 +1,9 @@
-import { existsSync, mkdirSync, rmSync, renameSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, rmSync, renameSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { XMLParser } from 'fast-xml-parser';
 import { defineRegion, step } from '../lib/framework.ts';
-import { expectMinFiles, isValidRaster } from '../lib/validators.ts';
+import { DownloadErrors, expectMinFiles, isValidRaster } from '../lib/validators.ts';
 import { shuffle } from '../lib/array.ts';
 import { downloadFile, runCommand } from '../lib/command.ts';
 import { CONCURRENCY, concurrent } from '../lib/concurrent.ts';
@@ -72,13 +72,14 @@ export default defineRegion(
 			const tiles = parseAtomEntries(xml);
 			console.log(`  Found ${tiles.length} tiles`);
 
+			const errors = new DownloadErrors();
+
 			await concurrent(
 				shuffle(tiles),
 				CONCURRENCY,
 				async ({ url, id }) => {
 					const destJp2 = join(tilesDir, `${id}.jp2`);
-					const skipFile = join(tilesDir, `${id}.skip`);
-					if (existsSync(destJp2) || existsSync(skipFile)) return 'skipped';
+					if (existsSync(destJp2)) return 'skipped';
 
 					const tifPath = join(ctx.tempDir, `${id}.tif`);
 					const jp2Path = join(ctx.tempDir, `${id}.jp2`);
@@ -86,8 +87,8 @@ export default defineRegion(
 						await withRetry(() => downloadFile(url, tifPath), { maxAttempts: 3 });
 
 						if (!(await isValidRaster(tifPath))) {
-							writeFileSync(skipFile, '');
-							return 'empty';
+							errors.add(url, `${id}.tif`);
+							return 'invalid';
 						}
 
 						await runCommand('gdal_translate', ['-q', tifPath, jp2Path]);
@@ -101,9 +102,10 @@ export default defineRegion(
 						}
 					}
 				},
-				{ labels: ['converted', 'skipped', 'empty'] },
+				{ labels: ['converted', 'skipped', 'invalid'] },
 			);
 
+			errors.throwIfAny();
 			await expectMinFiles(tilesDir, '*.jp2', 50);
 		}),
 	],

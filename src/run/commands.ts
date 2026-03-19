@@ -137,6 +137,6 @@ export async function runGdalwarp(inputPath: string, outputPath: string, tempDir
  * Runs versatiles convert with a VPL source (inline string or file path).
  */
 export async function runVersatiles(vplSource: string, outputPath: string, cwd?: string): Promise<void> {
-	const args = ['convert', vplSource, outputPath];
+	const args = ['--cache-dir', '/tmp/', 'convert', vplSource, outputPath];
 	await runCommand('versatiles', args, { cwd });
 }

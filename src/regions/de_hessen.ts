@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, rmSync, renameSync } from 'node:fs';
+import { existsSync, mkdirSync, rmSync, renameSync, statSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { XMLParser } from 'fast-xml-parser';
@@ -11,6 +11,7 @@ import { withRetry } from '../lib/retry.ts';
 
 const ATOM_URL =
 	'https://www.geoportal.hessen.de/mapbender/php/mod_inspireDownloadFeed.php?id=0b30f537-3bd0-44d4-83b0-e3c1542ca265&type=DATASET&generateFrom=wmslayer&layerid=54936';
+const MIN_TILE_SIZE_BYTES = 1e6; // 1 MB
 
 const xmlParser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
 
@@ -77,12 +78,35 @@ export default defineRegion(
 				CONCURRENCY,
 				async ({ url, id }) => {
 					const destJp2 = join(tilesDir, `${id}.jp2`);
-					if (existsSync(destJp2)) return 'skipped';
+					if (existsSync(destJp2)) {
+						// Remove previously downloaded files that are too small to be valid
+						if (statSync(destJp2).size < MIN_TILE_SIZE_BYTES) {
+							rmSync(destJp2, { force: true });
+						} else {
+							return 'skipped';
+						}
+					}
 
 					const tifPath = join(ctx.tempDir, `${id}.tif`);
 					const jp2Path = join(ctx.tempDir, `${id}.jp2`);
 					try {
 						await withRetry(() => downloadFile(url, tifPath), { maxAttempts: 3 });
+
+						// Validate: must be a real file, not an error page
+						const size = statSync(tifPath).size;
+						if (size < MIN_TILE_SIZE_BYTES) {
+							console.warn(`  ${id}: download too small (${size} bytes), skipping`);
+							return 'empty';
+						}
+
+						// Verify the file has georeferencing before converting
+						try {
+							await runCommand('gdalinfo', ['-json', tifPath], { stdout: 'piped', stderr: 'piped' });
+						} catch {
+							console.warn(`  ${id}: not a valid geospatial file, skipping`);
+							return 'empty';
+						}
+
 						await runCommand('gdal_translate', ['-q', tifPath, jp2Path]);
 						renameSync(jp2Path, destJp2);
 						return 'converted';
@@ -94,7 +118,7 @@ export default defineRegion(
 						}
 					}
 				},
-				{ labels: ['converted', 'skipped'] },
+				{ labels: ['converted', 'skipped', 'empty'] },
 			);
 
 			await expectMinFiles(tilesDir, '*.jp2', 50);

@@ -90,7 +90,11 @@ export function runCommandWithRetry(
 
 /**
  * Downloads a file from a URL using curl.
+ * Downloads to a temporary file first, then renames to avoid partial files.
  */
 export async function downloadFile(url: string, dest: string): Promise<void> {
-	await runCommand('curl', ['-so', dest, url]);
+	const tmp = `${dest}.tmp`;
+	await runCommand('curl', ['-so', tmp, url]);
+	const { renameSync } = await import('node:fs');
+	renameSync(tmp, dest);
 }

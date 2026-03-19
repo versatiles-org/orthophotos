@@ -1,9 +1,9 @@
-import { mkdirSync, existsSync, statSync, renameSync, rmSync, readFileSync } from 'node:fs';
+import { mkdirSync, existsSync, statSync, renameSync, rmSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { XMLParser } from 'fast-xml-parser';
 import { defineRegion, step } from '../lib/framework.ts';
-import { expectMinFiles } from '../lib/validators.ts';
+import { expectMinFiles, isValidRaster } from '../lib/validators.ts';
 import { shuffle } from '../lib/array.ts';
 import { downloadFile, runCommand } from '../lib/command.ts';
 import { concurrent } from '../lib/concurrent.ts';
@@ -49,20 +49,6 @@ export function parseTileUrl(xml: string): string | undefined {
 	return undefined;
 }
 
-function isValidTiff(path: string): boolean {
-	try {
-		const header = Buffer.alloc(4);
-		const fd = readFileSync(path);
-		if (fd.length < 4) return false;
-		fd.copy(header, 0, 0, 4);
-		// TIFF: starts with II (little-endian) or MM (big-endian) followed by magic number 42
-		const magic = header.readUInt16LE(0);
-		return (magic === 0x4949 || magic === 0x4d4d) && fd.length > 1000;
-	} catch {
-		return false;
-	}
-}
-
 async function processTile(id: string, tilesDir: string, tempDir: string): Promise<'skipped' | 'converted' | 'empty'> {
 	const destJp2 = join(tilesDir, `${id}.jp2`);
 	if (existsSync(destJp2)) return 'skipped';
@@ -87,8 +73,8 @@ async function processTile(id: string, tilesDir: string, tempDir: string): Promi
 			return 'empty';
 		}
 
-		if (!isValidTiff(tifPath)) {
-			console.warn(`  ${id}: not a valid TIFF (${size} bytes), skipping`);
+		if (!(await isValidRaster(tifPath))) {
+			console.warn(`  ${id}: not a valid raster (${size} bytes), skipping`);
 			return 'empty';
 		}
 

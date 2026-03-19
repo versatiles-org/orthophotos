@@ -5,6 +5,19 @@
 import { stat } from 'node:fs/promises';
 import { glob } from 'node:fs/promises';
 import { join } from 'node:path';
+import { runCommand } from './command.ts';
+
+/**
+ * Check that a file is a valid GDAL-readable raster with georeferencing.
+ */
+export async function isValidRaster(path: string): Promise<boolean> {
+	try {
+		await runCommand('gdalinfo', ['-json', path], { stdout: 'piped', stderr: 'piped' });
+		return true;
+	} catch {
+		return false;
+	}
+}
 
 /**
  * Check that a directory contains at least `min` files matching a glob pattern.

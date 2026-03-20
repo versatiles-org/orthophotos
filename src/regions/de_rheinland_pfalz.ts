@@ -31,7 +31,6 @@ export default defineRegion(
 			'National license instead of an international standard.',
 			'Rather than a national mosaic, inconsistent regional mosaics with different access and formats are available instead.',
 		],
-		entries: ['tiles'],
 		license: {
 			name: 'DL-DE->BY-2.0',
 			url: 'https://www.govdata.de/dl-de/by-2-0',
@@ -42,7 +41,6 @@ export default defineRegion(
 			url: 'https://geoshop.rlp.de/opendata-dop20.html',
 		},
 		date: '2025',
-		vrt: {},
 	},
 	[
 		step('fetch-index', async (ctx) => {

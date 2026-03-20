@@ -13,7 +13,6 @@ export default defineRegion(
 			'Unknown license.',
 			'Server returns errors.',
 		],
-		entries: ['tiles'],
 		license: {
 			name: 'Unknown',
 			url: 'https://www.geoportal.gov.pl/en/data/orthophotomap-orto/',
@@ -24,7 +23,6 @@ export default defineRegion(
 			url: 'https://www.geoportal.gov.pl/en/data/orthophotomap-orto/',
 		},
 		date: '2023',
-		vrt: {},
 	},
 	[
 		bashStep('fetch', {

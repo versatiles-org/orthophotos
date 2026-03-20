@@ -28,7 +28,6 @@ export default defineRegion(
 			'National license instead of an international standard.',
 			'Rather than a national mosaic, inconsistent regional mosaics with different access and formats are available instead.',
 		],
-		entries: ['tiles'],
 		license: {
 			name: 'DL-DE->Zero-2.0',
 			url: 'https://www.govdata.de/dl-de/zero-2-0',
@@ -39,7 +38,6 @@ export default defineRegion(
 			url: 'https://www.opengeodata.nrw.de/produkte/geobasis/lusat/akt/dop/dop_jp2_f10/',
 		},
 		date: '2025',
-		vrt: { defaults: { bands: [1, 2, 3] } },
 	},
 	[
 		step('fetch-index', async (ctx) => {

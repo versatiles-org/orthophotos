@@ -44,7 +44,6 @@ export default defineRegion(
 			'National license instead of an international standard.',
 			'Rather than a national mosaic, inconsistent regional mosaics with different access and formats are available instead.',
 		],
-		entries: ['tiles'],
 		license: {
 			name: 'DL-DE->BY-2.0',
 			url: 'https://www.govdata.de/dl-de/by-2-0',
@@ -55,7 +54,6 @@ export default defineRegion(
 			url: 'https://www.lvermgeo.sachsen-anhalt.de/de/gdp-open-data.html',
 		},
 		date: '2020',
-		vrt: { defaults: { addalpha: false, allowProjectionDifference: true, srs: 'EPSG:25832' } },
 	},
 	[
 		step('fetch-atom', async (ctx) => {

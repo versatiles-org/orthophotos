@@ -7,7 +7,6 @@ export default defineRegion(
 	{
 		status: 'success',
 		notes: ['Images are unnecessarily packed into container files, such as ZIP.', 'License requires attribution.'],
-		entries: ['tiles'],
 		license: {
 			name: 'CC BY 4.0',
 			url: 'https://creativecommons.org/licenses/by/4.0/',
@@ -18,7 +17,6 @@ export default defineRegion(
 			url: 'https://data.gov.ro/en/dataset/ortofotoplan-scara-1-5000-pentru-teritoriul-romaniei',
 		},
 		date: '2023',
-		vrt: {},
 	},
 	[
 		bashStep('fetch', {

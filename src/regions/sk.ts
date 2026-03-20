@@ -7,7 +7,6 @@ export default defineRegion(
 	{
 		status: 'error',
 		notes: ['Images are unnecessarily packed into container files, such as ZIP.', 'License requires attribution.'],
-		entries: ['tiles'],
 		license: {
 			name: 'CC BY 4.0',
 			url: 'https://creativecommons.org/licenses/by/4.0/',
@@ -18,7 +17,6 @@ export default defineRegion(
 			url: 'https://rpi.gov.sk/metadata/3b046df1-7867-4377-b15b-6ae6bac999da',
 		},
 		date: '2023',
-		vrt: { defaults: { ext: 'tif' } },
 	},
 	[
 		bashStep('fetch', {

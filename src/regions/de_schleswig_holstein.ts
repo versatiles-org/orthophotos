@@ -110,7 +110,6 @@ export default defineRegion(
 			'License requires attribution.',
 			'Rather than a national mosaic, inconsistent regional mosaics with different access and formats are available instead.',
 		],
-		entries: ['tiles'],
 		license: {
 			name: 'CC BY 4.0',
 			url: 'https://creativecommons.org/licenses/by/4.0/',
@@ -121,7 +120,6 @@ export default defineRegion(
 			url: 'https://opendata.schleswig-holstein.de/dataset/digitale-orthophotos-dop20',
 		},
 		date: '2017-2024',
-		vrt: { defaults: { bands: [1, 2, 3] } },
 	},
 	[
 		step('fetch-index', async (ctx) => {

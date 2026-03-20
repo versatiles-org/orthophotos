@@ -7,7 +7,6 @@ export default defineRegion(
 	{
 		status: 'success',
 		notes: ['License requires attribution', 'Only WMS available', 'Access requires token'],
-		entries: ['tiles'],
 		license: {
 			name: 'CC BY 4.0',
 			url: 'https://creativecommons.org/licenses/by/4.0/',
@@ -18,7 +17,6 @@ export default defineRegion(
 			url: 'https://dataforsyningen.dk/data/981',
 		},
 		date: '2024',
-		vrt: {},
 	},
 	[
 		bashStep('fetch', {

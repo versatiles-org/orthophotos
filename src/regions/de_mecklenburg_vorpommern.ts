@@ -34,7 +34,6 @@ export default defineRegion(
 			'License requires attribution.',
 			'Rather than a national mosaic, inconsistent regional mosaics with different access and formats are available instead.',
 		],
-		entries: ['tiles'],
 		license: {
 			name: 'CC BY 4.0',
 			url: 'https://creativecommons.org/licenses/by/4.0/',
@@ -45,7 +44,6 @@ export default defineRegion(
 			url: 'https://www.geoportal-mv.de/portal/Suche/Metadatenuebersicht/Details/Downloaddienst%20Digitale%20Orthophotos%2020cm%20MV%20(ATOM_MV_DOP)/0dea084c-5d2f-4aa0-a974-481dcd85a0ab',
 		},
 		date: '2024',
-		vrt: { defaults: { bands: [1, 2, 3] } },
 	},
 	[
 		step('fetch-atom', async (ctx) => {

@@ -13,15 +13,6 @@ export default defineRegion(
 			'The images have a high resolution, but they are not stored in tiled mode, which makes them extremely slow to read.',
 			'National license instead of an international standard.',
 		],
-		entries: [
-			'tiles_UTM01SW84',
-			'tiles_RGSPM06U21',
-			'tiles_RGR92UTM40S',
-			'tiles_RGM04UTM38S',
-			'tiles_RGFG95UTM22',
-			'tiles_RGAF09UTM20',
-			'tiles_LAMB93',
-		],
 		license: {
 			name: 'LO 2.0',
 			url: 'https://www.data.gouv.fr/datasets/licence-ouverte-2-0',
@@ -32,7 +23,6 @@ export default defineRegion(
 			url: 'https://geoservices.ign.fr/documentation/donnees/ortho/bdortho',
 		},
 		date: '2024',
-		vrt: { defaults: { srcnodata: '255 255 255', bands: [1, 2, 3] } },
 	},
 	[
 		bashStep('fetch', {

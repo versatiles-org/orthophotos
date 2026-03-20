@@ -33,7 +33,6 @@ export default defineRegion(
 			'National license instead of an international standard.',
 			'Rather than a national mosaic, inconsistent regional mosaics with different access and formats are available instead.',
 		],
-		entries: ['tiles'],
 		license: {
 			name: 'DL-DE->BY-2.0',
 			url: 'https://www.govdata.de/dl-de/by-2-0',
@@ -44,7 +43,6 @@ export default defineRegion(
 			url: 'https://data.geobasis-bb.de/geobasis/daten/dop/rgb_jpg/',
 		},
 		date: '2023',
-		vrt: { defaults: { ext: 'jpg', srs: 'EPSG:25833' } },
 	},
 	[
 		step('fetch-index', async (ctx) => {

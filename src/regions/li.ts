@@ -7,7 +7,6 @@ export default defineRegion(
 	{
 		status: 'success',
 		notes: ['License requires attribution.'],
-		entries: ['tiles'],
 		license: {
 			name: 'CC BY 4.0',
 			url: 'https://creativecommons.org/licenses/by/4.0/',
@@ -18,7 +17,6 @@ export default defineRegion(
 			url: 'https://www.opendata.li/de/daten#esc_entry=159&esc_context=24',
 		},
 		date: '2023',
-		vrt: { defaults: { ext: 'tif', srcnodata: '0 0 0' } },
 	},
 	[
 		bashStep('fetch', {

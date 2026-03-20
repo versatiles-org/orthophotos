@@ -41,7 +41,6 @@ export default defineRegion(
 			'License requires attribution.',
 			'Rather than a national mosaic, inconsistent regional mosaics with different access and formats are available instead.',
 		],
-		entries: ['tiles'],
 		license: {
 			name: 'CC BY 4.0',
 			url: 'https://creativecommons.org/licenses/by/4.0/',
@@ -52,7 +51,6 @@ export default defineRegion(
 			url: 'https://geodaten.bayern.de/opengeodata/OpenDataDetail.html?pn=dop20rgb',
 		},
 		date: '2025-06',
-		vrt: {},
 	},
 	[
 		step('fetch-kml', async (ctx) => {

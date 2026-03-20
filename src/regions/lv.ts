@@ -7,7 +7,6 @@ export default defineRegion(
 	{
 		status: 'success',
 		notes: ['License requires attribution.'],
-		entries: ['tiles'],
 		license: {
 			name: 'CC BY 4.0',
 			url: 'https://creativecommons.org/licenses/by/4.0/',
@@ -18,7 +17,6 @@ export default defineRegion(
 			url: 'https://www.lgia.gov.lv/lv/aerofotografesanas-6-cikls-2016-2018-g',
 		},
 		date: '2016-2018',
-		vrt: { defaults: { srs: 'EPSG:3059' } },
 	},
 	[
 		bashStep('fetch', {

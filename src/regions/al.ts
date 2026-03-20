@@ -7,7 +7,6 @@ export default defineRegion(
 	{
 		status: 'success',
 		notes: ['Only WMS found.', 'Server is very slow.', 'Full coverage only for 2015.'],
-		entries: ['tiles'],
 		license: {
 			name: 'CC0',
 			url: 'https://creativecommons.org/publicdomain/zero/1.0/',
@@ -18,7 +17,6 @@ export default defineRegion(
 			url: 'https://geoportal.asig.gov.al/geonetwork/srv/alb/catalog.search#/metadata/b50abc17-b932-4a96-b97a-ae6cba52c2fb',
 		},
 		date: '2015',
-		vrt: {},
 	},
 	[
 		bashStep('fetch', {

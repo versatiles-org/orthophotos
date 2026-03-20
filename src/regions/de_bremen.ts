@@ -43,7 +43,6 @@ export default defineRegion(
 			'JPEGs with World files are provided, but not more convenient GeoTIFFs/JPEG2000.',
 			'Rather than a national mosaic, inconsistent regional mosaics with different access and formats are available instead.',
 		],
-		entries: ['tiles_hb', 'tiles_bhv'],
 		license: {
 			name: 'CC BY 4.0',
 			url: 'https://creativecommons.org/licenses/by/4.0/',
@@ -54,7 +53,6 @@ export default defineRegion(
 			url: 'https://metaver.de/trefferanzeige?cmd=doShowDocument&docuuid=910260F7-AC66-40F3-8BA2-E7108C3C71C9',
 		},
 		date: '2025',
-		vrt: { defaults: { ext: 'jpg', srs: 'EPSG:25832' } },
 	},
 	[
 		step('download-zips', async (ctx) => {

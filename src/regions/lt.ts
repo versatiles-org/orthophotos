@@ -12,7 +12,6 @@ export default defineRegion(
 			'Server is very, very slow.',
 			'No license information found.',
 		],
-		entries: ['tiles'],
 		license: {
 			name: 'CC0',
 			url: 'https://creativecommons.org/publicdomain/zero/1.0/',
@@ -23,7 +22,6 @@ export default defineRegion(
 			url: 'https://www.geoportal.lt/geoportal/paieska',
 		},
 		date: '2019',
-		vrt: {},
 	},
 	[
 		bashStep('fetch', {

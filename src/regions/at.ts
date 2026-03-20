@@ -66,7 +66,6 @@ export default defineRegion(
 	{
 		status: 'success',
 		notes: ['License requires attribution.'],
-		entries: ['tiles'],
 		license: {
 			name: 'CC BY 4.0',
 			url: 'https://creativecommons.org/licenses/by/4.0/',
@@ -77,7 +76,6 @@ export default defineRegion(
 			url: 'https://data.bev.gv.at/geonetwork/srv/api/records/3c3803b3-1b53-4fb5-9595-9217b9891862',
 		},
 		date: '2021-2024',
-		vrt: { defaults: { ext: 'tif', srs: 'EPSG:31255' } },
 	},
 	[
 		step('fetch-service-feed', async (ctx) => {

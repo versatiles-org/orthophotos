@@ -35,7 +35,6 @@ export default defineRegion(
 			'License requires attribution.',
 			'National license instead of an international standard.',
 		],
-		entries: ['tiles'],
 		license: {
 			name: 'Open Government Data (OGD)',
 			url: 'https://www.swisstopo.admin.ch/de/nutzungsbedingungen-kostenlose-geodaten-und-geodienste',
@@ -46,7 +45,6 @@ export default defineRegion(
 			url: 'https://www.swisstopo.admin.ch/de/orthobilder-swissimage-10-cm',
 		},
 		date: '2017-2024',
-		vrt: { defaults: { ext: 'tif', useFileList: true } },
 	},
 	[
 		step('fetch-index', async (ctx) => {

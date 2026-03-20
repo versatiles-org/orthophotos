@@ -37,7 +37,6 @@ export default defineRegion(
 			'License requires attribution.',
 			'Rather than a national mosaic, inconsistent regional mosaics with different access and formats are available instead.',
 		],
-		entries: ['tiles'],
 		license: {
 			name: 'CC BY 4.0',
 			url: 'https://creativecommons.org/licenses/by/4.0/',
@@ -48,7 +47,6 @@ export default defineRegion(
 			url: 'https://ni-lgln-opengeodata.hub.arcgis.com/apps/lgln-opengeodata::digitales-orthophoto-dop/about',
 		},
 		date: '2025',
-		vrt: { defaults: { ext: 'tif' } },
 	},
 	[
 		step('fetch-geojson', async (ctx) => {

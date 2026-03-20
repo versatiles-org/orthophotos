@@ -3,7 +3,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { XMLParser } from 'fast-xml-parser';
 import { defineRegion, step } from '../lib/framework.ts';
-import { DownloadErrors, expectMinFiles, isValidRaster } from '../lib/validators.ts';
+import { ErrorBucket, expectMinFiles, isValidRaster } from '../lib/validators.ts';
 import { shuffle } from '../lib/array.ts';
 import { downloadFile, runCommand } from '../lib/command.ts';
 import { concurrent } from '../lib/concurrent.ts';
@@ -53,7 +53,7 @@ async function processTile(
 	id: string,
 	tilesDir: string,
 	tempDir: string,
-	errors: DownloadErrors,
+	errors: ErrorBucket,
 ): Promise<'skipped' | 'converted' | 'empty' | 'invalid'> {
 	const destJp2 = join(tilesDir, `${id}.jp2`);
 	if (existsSync(destJp2)) return 'skipped';
@@ -79,14 +79,14 @@ async function processTile(
 		}
 
 		if (!(await isValidRaster(tifPath))) {
-			errors.add(url, `${id}.tif`);
+			errors.add(`Invalid raster: ${url}, file: ${id}.tif`);
 			return 'invalid';
 		}
 
 		try {
 			await runCommand('gdal_translate', ['-q', tifPath, jp2Path, '-co', 'QUALITY=100']);
 		} catch {
-			errors.add(url, `${id}.tif`);
+			errors.add(`Failed to convert raster: ${url}, file: ${id}.tif`);
 			return 'invalid';
 		}
 		renameSync(jp2Path, destJp2);
@@ -147,7 +147,7 @@ export default defineRegion(
 			const ids: string[] = JSON.parse(await readFile(join(ctx.tempDir, 'ids.json'), 'utf-8'));
 			const shuffled = shuffle(ids);
 
-			const errors = new DownloadErrors();
+			const errors = new ErrorBucket();
 
 			await concurrent(
 				shuffled,

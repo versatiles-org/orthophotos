@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { XMLParser } from 'fast-xml-parser';
 import { defineRegion, step } from '../lib/framework.ts';
-import { DownloadErrors, expectMinFiles, isValidRaster } from '../lib/validators.ts';
+import { ErrorBucket, expectMinFiles, isValidRaster } from '../lib/validators.ts';
 import { shuffle } from '../lib/array.ts';
 import { downloadFile, runCommand } from '../lib/command.ts';
 import { CONCURRENCY, concurrent } from '../lib/concurrent.ts';
@@ -72,7 +72,7 @@ export default defineRegion(
 			const tiles = parseAtomEntries(xml);
 			console.log(`  Found ${tiles.length} tiles`);
 
-			const errors = new DownloadErrors();
+			const errors = new ErrorBucket();
 
 			await concurrent(
 				shuffle(tiles),
@@ -87,7 +87,7 @@ export default defineRegion(
 						await withRetry(() => downloadFile(url, tifPath), { maxAttempts: 3 });
 
 						if (!(await isValidRaster(tifPath))) {
-							errors.add(url, `${id}.tif`);
+							errors.add(`Invalid raster: ${url}, file: ${id}.tif`);
 							return 'invalid';
 						}
 

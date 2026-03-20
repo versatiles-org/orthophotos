@@ -20,20 +20,20 @@ export async function isValidRaster(path: string): Promise<boolean> {
 }
 
 /**
- * Collects invalid download errors during a concurrent fetch loop.
- * Call `add()` for each invalid file, then `throwIfAny()` after the loop completes.
+ * Collects error messages during a concurrent fetch loop.
+ * Call `add()` for each error, then `throwIfAny()` after the loop completes.
  */
-export class DownloadErrors {
-	private errors: { url: string; file: string }[] = [];
+export class ErrorBucket {
+	private errors: string[] = [];
 
-	add(url: string, file: string): void {
-		this.errors.push({ url, file });
+	add(msg: string): void {
+		this.errors.push(msg);
 	}
 
 	throwIfAny(): void {
 		if (this.errors.length === 0) return;
-		const list = this.errors.map((e) => `  ${e.file} (${e.url})`).join('\n');
-		throw new Error(`${this.errors.length} invalid download(s):\n${list}`);
+		const list = this.errors.map((msg) => `  ${msg}`).join('\n');
+		throw new Error(`${this.errors.length} error(s) occurred:\n${list}`);
 	}
 }
 

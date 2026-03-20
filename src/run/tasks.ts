@@ -5,19 +5,11 @@
 
 import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import { resolve, join } from 'node:path';
-import {
-	runBashScript,
-	runRsyncDownload,
-	runRsyncUpload,
-	runVersatilesRasterConvert,
-	runVersatilesRasterMerge,
-} from './commands.ts';
+import { runBashScript, runRsyncDownload, runRsyncUpload, runVersatilesRasterMerge } from './commands.ts';
 import { TASK_NUMBER_TO_NAME } from './tasks.constants.ts';
 import { safeRemoveDir } from '../lib/fs.ts';
 import { getRegionPipeline } from '../regions/index.ts';
 import { runPipeline } from '../lib/framework.ts';
-import { concurrent, CONCURRENCY } from '../lib/concurrent.ts';
-import { shuffle } from '../lib/array.ts';
 
 export interface TaskContext {
 	name: string; // Region identifier (e.g., "de/bw")
@@ -64,9 +56,9 @@ async function taskDownload(ctx: TaskContext): Promise<void> {
 }
 
 /**
- * Task 1: Fetch new source data and convert each raster to .versatiles.
- * Runs the region's pipeline steps, then scans dataDir for source rasters,
- * converts each via `versatiles raster convert`, and writes filelist.txt.
+ * Task 1: Fetch new source data.
+ * Runs the region's pipeline steps (which download and convert rasters to .versatiles),
+ * then scans dataDir for .versatiles files and writes filelist.txt.
  */
 async function taskFetch(ctx: TaskContext): Promise<void> {
 	console.log('Fetching new data...');
@@ -90,52 +82,21 @@ async function taskFetch(ctx: TaskContext): Promise<void> {
 		await runBashScript(scriptPath, env, ctx.tempDir);
 	}
 
-	// Scan for source rasters and convert each to .versatiles
-	console.log('Converting rasters to .versatiles...');
-	const rasterExts = ['.tif', '.tiff', '.jp2', '.jpg', '.jpeg', '.png'];
-	const rasterFiles: string[] = [];
+	// Scan for .versatiles files and write filelist.txt
+	const versatilesFiles: string[] = [];
 
-	function scanDir(dir: string, relBase: string): void {
+	function scanDir(dir: string): void {
 		if (!existsSync(dir)) return;
 		for (const entry of readdirSync(dir, { withFileTypes: true })) {
 			if (entry.isDirectory()) {
-				scanDir(join(dir, entry.name), join(relBase, entry.name));
-			} else if (rasterExts.some((ext) => entry.name.toLowerCase().endsWith(ext))) {
-				rasterFiles.push(join(relBase, entry.name));
+				scanDir(join(dir, entry.name));
+			} else if (entry.name.endsWith('.versatiles')) {
+				versatilesFiles.push(join(dir, entry.name));
 			}
 		}
 	}
-	scanDir(ctx.dataDir, '');
+	scanDir(ctx.dataDir);
 
-	// Filter out files that already have a corresponding .versatiles
-	const toConvert = shuffle(
-		rasterFiles.filter((f) => {
-			const versatilesPath = resolve(ctx.dataDir, f.replace(/\.[^.]+$/, '.versatiles'));
-			return !existsSync(versatilesPath);
-		}),
-	);
-
-	if (toConvert.length > 0) {
-		console.log(
-			`  Converting ${toConvert.length} raster files (${rasterFiles.length - toConvert.length} already done)...`,
-		);
-		await concurrent(
-			toConvert,
-			CONCURRENCY,
-			async (relPath) => {
-				const inputPath = resolve(ctx.dataDir, relPath);
-				const outputPath = resolve(ctx.dataDir, relPath.replace(/\.[^.]+$/, '.versatiles'));
-				await runVersatilesRasterConvert(inputPath, outputPath);
-				return 'converted';
-			},
-			{ labels: ['converted'] },
-		);
-	} else {
-		console.log('  All rasters already converted.');
-	}
-
-	// Write filelist.txt with all .versatiles files
-	const versatilesFiles = rasterFiles.map((f) => resolve(ctx.dataDir, f.replace(/\.[^.]+$/, '.versatiles')));
 	const filelistPath = resolve(ctx.dataDir, 'filelist.txt');
 	writeFileSync(filelistPath, versatilesFiles.join('\n'));
 	console.log(`  Wrote filelist.txt with ${versatilesFiles.length} entries.`);

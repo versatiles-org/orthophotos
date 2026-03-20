@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, rmSync, renameSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { defineRegion, step } from '../lib/framework.ts';
@@ -7,6 +7,7 @@ import { shuffle } from '../lib/array.ts';
 import { downloadFile, runCommand } from '../lib/command.ts';
 import { CONCURRENCY, concurrent } from '../lib/concurrent.ts';
 import { withRetry } from '../lib/retry.ts';
+import { runVersatilesRasterConvert } from '../run/commands.ts';
 
 export function generateCoords(): { x: number; y: number; id: string }[] {
 	const coords: { x: number; y: number; id: string }[] = [];
@@ -53,13 +54,14 @@ export default defineRegion(
 				coords,
 				CONCURRENCY,
 				async ({ x, y, id }) => {
-					const destTif = join(tilesDir, `${id}.tif`);
+					const destVersatiles = join(tilesDir, `${id}.versatiles`);
 					const skipFile = join(tilesDir, `${id}.skip`);
-					if (existsSync(destTif) || existsSync(skipFile)) return 'skipped';
+					if (existsSync(destVersatiles) || existsSync(skipFile)) return 'skipped';
 
 					const jsonPath = join(ctx.tempDir, `${id}.json`);
 					const zipPath = join(ctx.tempDir, `${id}.zip`);
 					const extractDir = join(ctx.tempDir, id);
+					const tifPath = join(ctx.tempDir, `${id}.tif`);
 
 					try {
 						const bbox = `${x * 1000}&bbox%5B%5D=${y * 1000}&bbox%5B%5D=${(x + 1) * 1000}&bbox%5B%5D=${(y + 1) * 1000}`;
@@ -93,12 +95,14 @@ export default defineRegion(
 							return 'empty';
 						}
 
-						renameSync(join(extractDir, tifFile), destTif);
-						return 'downloaded';
+						// Convert to .versatiles and delete source
+						const srcTif = join(extractDir, tifFile);
+						await runVersatilesRasterConvert(srcTif, destVersatiles);
+						return 'converted';
 					} catch {
 						return 'empty';
 					} finally {
-						for (const p of [jsonPath, zipPath]) {
+						for (const p of [jsonPath, zipPath, tifPath]) {
 							try {
 								rmSync(p, { force: true });
 							} catch {}
@@ -108,10 +112,10 @@ export default defineRegion(
 						} catch {}
 					}
 				},
-				{ labels: ['downloaded', 'skipped', 'empty'] },
+				{ labels: ['converted', 'skipped', 'empty'] },
 			);
 
-			await expectMinFiles(tilesDir, '*.tif', 50);
+			await expectMinFiles(tilesDir, '*.versatiles', 50);
 		}),
 	],
 );

@@ -16,7 +16,7 @@
 		"upgrade": "npm-check-updates -u && npm install"
 	},
 	"dependencies": {
-		"fast-xml-parser": "^5.5.6",
+		"fast-xml-parser": "^5.5.8",
 		"topojson-client": "^3.1.0",
 		"yaml": "^2.8.2"
 	},

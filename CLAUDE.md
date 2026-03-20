@@ -35,8 +35,8 @@ Run via `npm run run -- <region> <tasks>` (e.g., `npm run run -- de/baden_wuertt
 | # | Name     | Description                                      |
 |---|----------|--------------------------------------------------|
 | 0 | download | Rsync pull existing data from remote              |
-| 1 | fetch    | Execute region's `1_fetch.sh`                     |
-| 2 | vrt      | Execute region's `2_build_vrt.sh`                 |
+| 1 | fetch    | Run region's TypeScript pipeline or `1_fetch.sh`  |
+| 2 | vrt      | Build VRT from metadata config or `2_build_vrt.sh`|
 | 3 | preview  | Create 200x200px preview TIFF via gdalwarp        |
 | 4 | convert  | Generate VPL, convert to .versatiles              |
 | 5 | upload   | Rsync push to remote                              |
@@ -97,6 +97,41 @@ Regions are being migrated from bash scripts (`regions/<cc>/<region>/1_fetch.sh`
 - `date`: when the photos were taken (must be added during migration)
 
 **Fallback:** Regions without a TypeScript definition automatically fall back to running `1_fetch.sh` via bash.
+
+### Standard Fetch Patterns
+
+Region fetch implementations should follow these patterns consistently:
+
+**Concurrency:** Import `CONCURRENCY` from `src/lib/concurrent.ts` (default: 4). Only define a local constant when a region or the download server genuinely needs a different value.
+
+**Atomic downloads:** `downloadFile()` downloads to `${dest}.tmp` then renames atomically, so partial files are never left behind.
+
+**Download validation:** After downloading a raster file (TIF), validate it with `isValidRaster()` from `src/lib/validators.ts` before converting. This uses `gdalinfo` to verify the file is GDAL-readable. Invalid files must be reported, not silently skipped.
+
+**Error collection (not skip files):** When a downloaded image fails validation, use `DownloadErrors` from `src/lib/validators.ts`:
+1. Create `const errors = new DownloadErrors()` before the `concurrent` loop
+2. On invalid download: delete the file, call `errors.add(url, filename)`, return `'invalid'`
+3. After the loop: call `errors.throwIfAny()` — this throws a single error listing all invalid files with their URLs
+4. Do **not** create `.skip` files for invalid downloads — the pipeline should fail loudly so the issue is investigated
+
+**Skip files (.skip) — only for coordinate probing:** Some regions (e.g. `de/baden_wuerttemberg`, `de/thueringen`) probe a grid of coordinates where many tiles don't exist. Use `.skip` files only for these "tile doesn't exist" cases to avoid re-probing on every run. Never use `.skip` for actual download failures.
+
+**Resumability:** Check `existsSync(dest)` before downloading to skip already-completed tiles. Use `shuffle()` to distribute load across servers.
+
+**Progress labels:** Use `{ labels: ['converted', 'skipped', 'invalid'] }` (or `['downloaded', 'skipped']` for direct downloads without conversion). Add `'empty'` only for regions with coordinate probing.
+
+**Temp file cleanup:** Always clean up temp files in a `finally` block:
+```typescript
+try {
+    // download + convert
+} finally {
+    for (const p of [tifPath, jp2Path]) {
+        try { rmSync(p, { force: true }); } catch {}
+    }
+}
+```
+
+**VRT configuration:** Add `vrt` to metadata for declarative `gdalbuildvrt` config. Use `vrt: {}` for simple defaults (jp2 + addalpha). Override with `defaults: { ext, bands, srs, srcnodata, ... }`. Use `custom` callback only for complex cases (e.g. `cz`).
 
 ### External CLI Dependencies
 

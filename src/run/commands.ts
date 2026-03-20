@@ -2,6 +2,7 @@
  * External command execution utilities for the run script.
  */
 
+import { spawn } from 'node:child_process';
 import { requireRsyncConfig } from '../config.ts';
 import { runCommand } from '../lib/command.ts';
 
@@ -97,6 +98,35 @@ export async function runBashScript(
 }
 
 /**
+ * Runs a command with stdout/stderr suppressed. On failure, prints captured output before throwing.
+ */
+async function runCommandQuiet(cmd: string, args: string[]): Promise<void> {
+	return new Promise((resolve, reject) => {
+		const child = spawn(cmd, args, { stdio: ['inherit', 'pipe', 'pipe'] });
+
+		const stdoutChunks: Buffer[] = [];
+		const stderrChunks: Buffer[] = [];
+
+		child.stdout.on('data', (chunk: Buffer) => stdoutChunks.push(chunk));
+		child.stderr.on('data', (chunk: Buffer) => stderrChunks.push(chunk));
+
+		child.on('error', reject);
+
+		child.on('close', (code) => {
+			if (code === 0) {
+				resolve();
+			} else {
+				const stdout = Buffer.concat(stdoutChunks).toString();
+				const stderr = Buffer.concat(stderrChunks).toString();
+				if (stdout) process.stdout.write(stdout);
+				if (stderr) process.stderr.write(stderr);
+				reject(new Error(`Command "${cmd}" exited with code ${code}`));
+			}
+		});
+	});
+}
+
+/**
  * Runs `versatiles raster convert` to convert a single raster file to .versatiles format.
  */
 export async function runVersatilesRasterConvert(
@@ -112,7 +142,7 @@ export async function runVersatilesRasterConvert(
 		args.push('--quality', String(options.quality));
 	}
 	args.push(input, output);
-	await runCommand('versatiles', args);
+	await runCommandQuiet('versatiles', args);
 }
 
 /**

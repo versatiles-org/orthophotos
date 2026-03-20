@@ -82,7 +82,7 @@ function parseTaskToken(token: string): number[] {
  *   "1,2,3" -> [1, 2, 3]
  *   "1-3" -> [1, 2, 3]
  *   "fetch" -> [1]
- *   "all" -> [0, 1, 5, 2, 5, 3, 5, 4, 5, 6]
+ *   "all" -> [0, 1, 3, 2, 3, 4]
  */
 export function expandTasks(taskSpec: string): number[] {
 	const tokens = taskSpec.split(',');
@@ -135,21 +135,16 @@ export function getHelpText(): string {
 
 Tasks:
   0 | download   rsync pull existing data from remote
-  1 | fetch      fetch new source data
-  2 | vrt        build VRTs
-  3 | preview    create preview TIFFs
-  4 | convert    convert to .versatiles
-  5 | upload     rsync push to remote
-  6 | delete     delete local data for the region
-  all            run full pipeline: 0 1 5 2 5 3 5 4 5 6
+  1 | fetch      fetch + per-file versatiles raster convert
+  2 | merge      versatiles raster merge into result.versatiles
+  3 | upload     rsync push to remote
+  4 | delete     delete local data for the region
+  all            run full pipeline: 0 1 3 2 3 4
 
 Examples:
   npm run run -- de/bw 1
-  npm run run -- fr 2-4
-  npm run run -- de/bw 1,2,3
+  npm run run -- fr 1-2
+  npm run run -- de/bw 1,2
   npm run run -- de/bw all
-
-Note: Tasks 2, 3, and 4 may require increasing the file descriptor limit:
-  ulimit -n 8192
 `;
 }

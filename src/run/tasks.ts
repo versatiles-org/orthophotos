@@ -1,18 +1,23 @@
 /**
  * Task implementations for the run script.
- * Tasks 0-6 matching the original run.sh functionality.
+ * Tasks 0-4 matching the new pipeline structure.
  */
 
-import { mkdirSync } from 'node:fs';
-import { rename } from 'node:fs/promises';
-import { resolve } from 'node:path';
-import { runBashScript, runGdalwarp, runRsyncDownload, runRsyncUpload, runVersatiles } from './commands.ts';
+import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
+import { resolve, join } from 'node:path';
+import {
+	runBashScript,
+	runRsyncDownload,
+	runRsyncUpload,
+	runVersatilesRasterConvert,
+	runVersatilesRasterMerge,
+} from './commands.ts';
 import { TASK_NUMBER_TO_NAME } from './tasks.constants.ts';
-import { readStatusEntries } from '../lib/yaml.ts';
 import { safeRemoveDir } from '../lib/fs.ts';
 import { getRegionPipeline } from '../regions/index.ts';
 import { runPipeline } from '../lib/framework.ts';
-import { buildVrt } from './vrt.ts';
+import { concurrent, CONCURRENCY } from '../lib/concurrent.ts';
+import { shuffle } from '../lib/array.ts';
 
 export interface TaskContext {
 	name: string; // Region identifier (e.g., "de/bw")
@@ -36,18 +41,12 @@ export async function runTask(taskNum: number, ctx: TaskContext): Promise<void> 
 			await taskFetch(ctx);
 			break;
 		case 2:
-			await taskVrt(ctx);
+			await taskMerge(ctx);
 			break;
 		case 3:
-			await taskPreview(ctx);
-			break;
-		case 4:
-			await taskConvert(ctx);
-			break;
-		case 5:
 			await taskUpload(ctx);
 			break;
-		case 6:
+		case 4:
 			await taskDelete(ctx);
 			break;
 		default:
@@ -65,8 +64,9 @@ async function taskDownload(ctx: TaskContext): Promise<void> {
 }
 
 /**
- * Task 1: Fetch new source data.
- * Runs the region's 1_fetch.sh script.
+ * Task 1: Fetch new source data and convert each raster to .versatiles.
+ * Runs the region's pipeline steps, then scans dataDir for source rasters,
+ * converts each via `versatiles raster convert`, and writes filelist.txt.
  */
 async function taskFetch(ctx: TaskContext): Promise<void> {
 	console.log('Fetching new data...');
@@ -90,87 +90,79 @@ async function taskFetch(ctx: TaskContext): Promise<void> {
 		await runBashScript(scriptPath, env, ctx.tempDir);
 	}
 
-	// Clean up temp directory after successful completion
-	await safeRemoveDir(ctx.tempDir);
-}
+	// Scan for source rasters and convert each to .versatiles
+	console.log('Converting rasters to .versatiles...');
+	const rasterExts = ['.tif', '.tiff', '.jp2', '.jpg', '.jpeg', '.png'];
+	const rasterFiles: string[] = [];
 
-/**
- * Task 2: Build VRTs.
- * Uses TypeScript VRT config if available, otherwise falls back to 2_build_vrt.sh.
- */
-async function taskVrt(ctx: TaskContext): Promise<void> {
-	console.log('Building VRT...');
-	mkdirSync(ctx.tempDir, { recursive: true });
+	function scanDir(dir: string, relBase: string): void {
+		if (!existsSync(dir)) return;
+		for (const entry of readdirSync(dir, { withFileTypes: true })) {
+			if (entry.isDirectory()) {
+				scanDir(join(dir, entry.name), join(relBase, entry.name));
+			} else if (rasterExts.some((ext) => entry.name.toLowerCase().endsWith(ext))) {
+				rasterFiles.push(join(relBase, entry.name));
+			}
+		}
+	}
+	scanDir(ctx.dataDir, '');
 
-	const pipeline = getRegionPipeline(ctx.name);
-	if (pipeline?.metadata.vrt) {
-		await buildVrt(ctx, pipeline.metadata);
+	// Filter out files that already have a corresponding .versatiles
+	const toConvert = shuffle(
+		rasterFiles.filter((f) => {
+			const versatilesPath = resolve(ctx.dataDir, f.replace(/\.[^.]+$/, '.versatiles'));
+			return !existsSync(versatilesPath);
+		}),
+	);
+
+	if (toConvert.length > 0) {
+		console.log(
+			`  Converting ${toConvert.length} raster files (${rasterFiles.length - toConvert.length} already done)...`,
+		);
+		await concurrent(
+			toConvert,
+			CONCURRENCY,
+			async (relPath) => {
+				const inputPath = resolve(ctx.dataDir, relPath);
+				const outputPath = resolve(ctx.dataDir, relPath.replace(/\.[^.]+$/, '.versatiles'));
+				await runVersatilesRasterConvert(inputPath, outputPath);
+				return 'converted';
+			},
+			{ labels: ['converted'] },
+		);
 	} else {
-		const scriptPath = resolve(ctx.projDir, '2_build_vrt.sh');
-		const env = {
-			DATA: ctx.dataDir,
-			TEMP: ctx.tempDir,
-			PROJ: ctx.projDir,
-		};
-		await runBashScript(scriptPath, env, ctx.dataDir);
+		console.log('  All rasters already converted.');
 	}
+
+	// Write filelist.txt with all .versatiles files
+	const versatilesFiles = rasterFiles.map((f) => resolve(ctx.dataDir, f.replace(/\.[^.]+$/, '.versatiles')));
+	const filelistPath = resolve(ctx.dataDir, 'filelist.txt');
+	writeFileSync(filelistPath, versatilesFiles.join('\n'));
+	console.log(`  Wrote filelist.txt with ${versatilesFiles.length} entries.`);
 
 	// Clean up temp directory after successful completion
 	await safeRemoveDir(ctx.tempDir);
 }
 
 /**
- * Task 3: Create preview TIFFs.
- * Uses gdalwarp to create 200x200 pixel preview images.
+ * Task 2: Merge all per-file .versatiles into one result.
+ * Reads filelist.txt and runs `versatiles raster merge`.
  */
-async function taskPreview(ctx: TaskContext): Promise<void> {
-	console.log('Creating preview images...');
+async function taskMerge(ctx: TaskContext): Promise<void> {
+	console.log('Merging .versatiles files...');
 
-	const statusPath = resolve(ctx.projDir, 'status.yml');
-	const sources = readStatusEntries(statusPath);
-
-	for (const source of sources) {
-		console.log(`  Processing ${source}...`);
-		mkdirSync(ctx.tempDir, { recursive: true });
-
-		const inputVrt = resolve(ctx.dataDir, `${source}.vrt`);
-		const tempTif = resolve(ctx.tempDir, `${source}.tif`);
-		const outputTif = resolve(ctx.dataDir, `${source}.tif`);
-
-		await runGdalwarp(inputVrt, tempTif, ctx.dataDir);
-
-		// Move temp file to final location
-		await rename(tempTif, outputTif);
+	const filelistPath = resolve(ctx.dataDir, 'filelist.txt');
+	if (!existsSync(filelistPath)) {
+		throw new Error(`filelist.txt not found in ${ctx.dataDir}. Run the fetch task first.`);
 	}
+
+	const outputPath = resolve(ctx.dataDir, 'result.versatiles');
+	await runVersatilesRasterMerge(filelistPath, outputPath);
+	console.log(`  Merged into ${outputPath}`);
 }
 
 /**
- * Task 4: Convert to .versatiles format.
- */
-async function taskConvert(ctx: TaskContext): Promise<void> {
-	console.log('Converting data...');
-
-	const statusPath = resolve(ctx.projDir, 'status.yml');
-	const sources = readStatusEntries(statusPath);
-
-	for (const source of sources) {
-		console.log(`  Converting ${source}...`);
-		mkdirSync(ctx.tempDir, { recursive: true });
-
-		const inputVrt = resolve(ctx.dataDir, `${source}.vrt`);
-		const tempVersatiles = resolve(ctx.tempDir, `${source}.versatiles`);
-		const outputVersatiles = resolve(ctx.dataDir, `${source}.versatiles`);
-
-		const vpl = `from_gdal_raster filename="${inputVrt}" level_min=17 level_max=17 gdal_reuse_limit=8 | raster_overview | raster_format format=webp quality="70,16:50,17:30" effort=100`;
-		await runVersatiles(`[,vpl](${vpl})`, tempVersatiles);
-
-		// Move to final location
-		await rename(tempVersatiles, outputVersatiles);
-	}
-}
-
-/**
- * Task 5: Upload data to remote server.
+ * Task 3: Upload data to remote server.
  * Excludes tiles/ and tiles_{*}/ directories.
  */
 async function taskUpload(ctx: TaskContext): Promise<void> {
@@ -179,7 +171,7 @@ async function taskUpload(ctx: TaskContext): Promise<void> {
 }
 
 /**
- * Task 6: Delete local data.
+ * Task 4: Delete local data.
  * Removes both data and temp directories.
  */
 async function taskDelete(ctx: TaskContext): Promise<void> {

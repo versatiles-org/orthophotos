@@ -10,8 +10,6 @@ const REQUIRED_COMMANDS = [
 	'7z',
 	'curl',
 	'gdal_translate',
-	'gdalbuildvrt',
-	'gdalwarp',
 	'htmlq',
 	'jq',
 	'parallel',
@@ -110,33 +108,36 @@ export async function runBashScript(
 }
 
 /**
- * Runs gdalwarp to create a preview image.
+ * Runs `versatiles raster convert` to convert a single raster file to .versatiles format.
  */
-export async function runGdalwarp(inputPath: string, outputPath: string, tempDir: string): Promise<void> {
-	const args = [
-		'-tr',
-		'200',
-		'200',
-		'-r',
-		'nearest',
-		'-overwrite',
-		'-multi',
-		'-wo',
-		'NUM_THREADS=4',
-		'-co',
-		'COMPRESS=ZSTD',
-		'-co',
-		'PREDICTOR=2',
-		inputPath,
-		outputPath,
-	];
-	await runCommand('gdalwarp', args, { cwd: tempDir });
+export async function runVersatilesRasterConvert(
+	input: string,
+	output: string,
+	options?: { maxZoom?: number; quality?: number },
+): Promise<void> {
+	const args = ['raster', 'convert'];
+	if (options?.maxZoom != null) {
+		args.push('--max-zoom', String(options.maxZoom));
+	}
+	if (options?.quality != null) {
+		args.push('--quality', String(options.quality));
+	}
+	args.push(input, output);
+	await runCommand('versatiles', args);
 }
 
 /**
- * Runs versatiles convert with a VPL source (inline string or file path).
+ * Runs `versatiles raster merge` to merge multiple .versatiles files into one.
  */
-export async function runVersatiles(vplSource: string, outputPath: string, cwd?: string): Promise<void> {
-	const args = ['--cache-dir', '/tmp/', 'convert', vplSource, outputPath];
-	await runCommand('versatiles', args, { cwd });
+export async function runVersatilesRasterMerge(
+	filelistPath: string,
+	output: string,
+	options?: { quality?: number },
+): Promise<void> {
+	const args = ['raster', 'merge'];
+	if (options?.quality != null) {
+		args.push('--quality', String(options.quality));
+	}
+	args.push(filelistPath, output);
+	await runCommand('versatiles', args);
 }

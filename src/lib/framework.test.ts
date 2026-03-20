@@ -11,7 +11,6 @@ const dummyCtx: StepContext = {
 const dummyMeta: RegionMetadata = {
 	status: 'success',
 	notes: [],
-	entries: ['tiles'],
 	license: { name: 'CC0', url: 'https://creativecommons.org/publicdomain/zero/1.0/', requiresAttribution: false },
 	creator: { name: 'Test', url: 'https://example.com' },
 	date: '2024',

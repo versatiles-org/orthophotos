@@ -26,12 +26,12 @@ test('validateRegionName - rejects invalid formats', () => {
 test('expandTasks - single numeric task', () => {
 	expect(expandTasks('3')).toEqual([3]);
 	expect(expandTasks('0')).toEqual([0]);
-	expect(expandTasks('6')).toEqual([6]);
+	expect(expandTasks('4')).toEqual([4]);
 });
 
 test('expandTasks - comma-separated tasks', () => {
 	expect(expandTasks('1,2,3')).toEqual([1, 2, 3]);
-	expect(expandTasks('0,5,6')).toEqual([0, 5, 6]);
+	expect(expandTasks('0,3,4')).toEqual([0, 3, 4]);
 });
 
 test('expandTasks - range ascending', () => {
@@ -46,25 +46,23 @@ test('expandTasks - range descending', () => {
 test('expandTasks - named tasks', () => {
 	expect(expandTasks('fetch')).toEqual([1]);
 	expect(expandTasks('download')).toEqual([0]);
-	expect(expandTasks('upload')).toEqual([5]);
-	expect(expandTasks('vrt')).toEqual([2]);
-	expect(expandTasks('preview')).toEqual([3]);
-	expect(expandTasks('convert')).toEqual([4]);
-	expect(expandTasks('delete')).toEqual([6]);
+	expect(expandTasks('merge')).toEqual([2]);
+	expect(expandTasks('upload')).toEqual([3]);
+	expect(expandTasks('delete')).toEqual([4]);
 });
 
 test('expandTasks - all', () => {
-	expect(expandTasks('all')).toEqual([0, 1, 5, 2, 5, 3, 5, 4, 5, 6]);
-	expect(expandTasks('ALL')).toEqual([0, 1, 5, 2, 5, 3, 5, 4, 5, 6]);
+	expect(expandTasks('all')).toEqual([0, 1, 3, 2, 3, 4]);
+	expect(expandTasks('ALL')).toEqual([0, 1, 3, 2, 3, 4]);
 });
 
 test('expandTasks - mixed specifications', () => {
-	expect(expandTasks('1,3-5')).toEqual([1, 3, 4, 5]);
+	expect(expandTasks('1,3-4')).toEqual([1, 3, 4]);
 	expect(expandTasks('fetch,2-3')).toEqual([1, 2, 3]);
 });
 
 test('expandTasks - throws on invalid task number', () => {
-	expect(() => expandTasks('7')).toThrow('Invalid task number');
+	expect(() => expandTasks('5')).toThrow('Invalid task number');
 	expect(() => expandTasks('99')).toThrow('Invalid task number');
 });
 
@@ -85,7 +83,7 @@ test('parseArgs - parses valid arguments', () => {
 	expect(parseArgs(['fr', '2-4'])).toEqual({ name: 'fr', tasks: [2, 3, 4] });
 	expect(parseArgs(['de', 'all'])).toEqual({
 		name: 'de',
-		tasks: [0, 1, 5, 2, 5, 3, 5, 4, 5, 6],
+		tasks: [0, 1, 3, 2, 3, 4],
 	});
 });
 

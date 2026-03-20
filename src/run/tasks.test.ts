@@ -1,6 +1,5 @@
 import { expect, test } from 'vitest';
 import { mkdirSync, writeFileSync, existsSync } from 'node:fs';
-import { rmSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runTask, type TaskContext } from './tasks.ts';
@@ -35,7 +34,7 @@ test('runTask - throws on negative task number', async () => {
 	await cleanupTestTemp();
 });
 
-test('runTask - task 6 (delete) removes directories', async () => {
+test('runTask - task 4 (delete) removes directories', async () => {
 	const ctx = createTestContext('delete-test');
 
 	// Create test directories
@@ -45,7 +44,7 @@ test('runTask - task 6 (delete) removes directories', async () => {
 	writeFileSync(resolve(ctx.tempDir, 'temp.txt'), 'temp');
 
 	// Run delete task
-	await runTask(6, ctx);
+	await runTask(4, ctx);
 
 	// Verify directories are removed
 	expect(existsSync(ctx.dataDir)).toBe(false);
@@ -54,7 +53,7 @@ test('runTask - task 6 (delete) removes directories', async () => {
 	await cleanupTestTemp();
 });
 
-test('runTask - task 6 (delete) handles non-existent directories', async () => {
+test('runTask - task 4 (delete) handles non-existent directories', async () => {
 	const ctx = createTestContext('nonexistent');
 
 	// Ensure directories don't exist
@@ -62,12 +61,12 @@ test('runTask - task 6 (delete) handles non-existent directories', async () => {
 	await safeRemoveDir(ctx.tempDir);
 
 	// Should not throw
-	await runTask(6, ctx);
+	await runTask(4, ctx);
 
 	await cleanupTestTemp();
 });
 
-// Note: Tasks 0-5 require external tools, rsync configuration, or actual region scripts.
+// Note: Tasks 0-3 require external tools, rsync configuration, or actual region scripts.
 // They would need more extensive mocking or integration test setup to test fully.
 // The following tests verify task routing by checking that tasks fail appropriately
 // when required resources are missing.
@@ -96,7 +95,7 @@ test('runTask - task 0 (download) requires rsync config', async () => {
 	}
 });
 
-test('runTask - task 5 (upload) requires rsync config', async () => {
+test('runTask - task 3 (upload) requires rsync config', async () => {
 	const ctx = createTestContext('upload-test');
 
 	// Save current env
@@ -110,7 +109,7 @@ test('runTask - task 5 (upload) requires rsync config', async () => {
 	delete process.env['rsync_id'];
 
 	try {
-		await expect(runTask(5, ctx)).rejects.toThrow('rsync_host');
+		await expect(runTask(3, ctx)).rejects.toThrow('rsync_host');
 	} finally {
 		// Restore env
 		if (savedHost) process.env['rsync_host'] = savedHost;

@@ -6,18 +6,7 @@ import { requireRsyncConfig } from '../config.ts';
 import { runCommand } from '../lib/command.ts';
 
 /** Required CLI tools (excluding yq which is replaced by native YAML parsing) */
-const REQUIRED_COMMANDS = [
-	'7z',
-	'curl',
-	'gdal_translate',
-	'htmlq',
-	'jq',
-	'parallel',
-	'unzip',
-	'versatiles',
-	'wget',
-	'xmlstarlet',
-];
+const REQUIRED_COMMANDS = ['curl', 'gdal_translate', 'unzip', 'versatiles', 'wget'];
 
 /**
  * Checks if a command is available in PATH.

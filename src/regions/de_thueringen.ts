@@ -53,14 +53,13 @@ export default defineRegion(
 				coords,
 				CONCURRENCY,
 				async ({ x, y, id }) => {
-					const destJp2 = join(tilesDir, `${id}.jp2`);
+					const destTif = join(tilesDir, `${id}.tif`);
 					const skipFile = join(tilesDir, `${id}.skip`);
-					if (existsSync(destJp2) || existsSync(skipFile)) return 'skipped';
+					if (existsSync(destTif) || existsSync(skipFile)) return 'skipped';
 
 					const jsonPath = join(ctx.tempDir, `${id}.json`);
 					const zipPath = join(ctx.tempDir, `${id}.zip`);
 					const extractDir = join(ctx.tempDir, id);
-					const jp2Path = join(ctx.tempDir, `${id}.jp2`);
 
 					try {
 						const bbox = `${x * 1000}&bbox%5B%5D=${y * 1000}&bbox%5B%5D=${(x + 1) * 1000}&bbox%5B%5D=${(y + 1) * 1000}`;
@@ -80,7 +79,9 @@ export default defineRegion(
 						const best = matching.reduce((a, b) => (a.properties.bildflugnr > b.properties.bildflugnr ? a : b));
 
 						const downloadUrl = `https://geoportal.geoportal-th.de/gaialight-th/_apps/dladownload/download.php?type=op&id=${best.properties.gid}`;
-						await withRetry(() => runCommand('curl', ['-sko', zipPath, downloadUrl]), { maxAttempts: 3 });
+						await withRetry(() => runCommand('curl', ['-sko', zipPath, downloadUrl]), {
+							maxAttempts: 3,
+						});
 
 						await runCommand('unzip', ['-qo', zipPath, '-d', extractDir]);
 
@@ -92,29 +93,12 @@ export default defineRegion(
 							return 'empty';
 						}
 
-						const tifPath = join(extractDir, tifFile);
-						await runCommand('gdal_translate', [
-							'-q',
-							'-b',
-							'1',
-							'-b',
-							'2',
-							'-b',
-							'3',
-							'-b',
-							'mask',
-							'-colorinterp_4',
-							'alpha',
-							tifPath,
-							jp2Path,
-						]);
-
-						renameSync(jp2Path, destJp2);
-						return 'converted';
+						renameSync(join(extractDir, tifFile), destTif);
+						return 'downloaded';
 					} catch {
 						return 'empty';
 					} finally {
-						for (const p of [jsonPath, zipPath, jp2Path]) {
+						for (const p of [jsonPath, zipPath]) {
 							try {
 								rmSync(p, { force: true });
 							} catch {}
@@ -124,10 +108,10 @@ export default defineRegion(
 						} catch {}
 					}
 				},
-				{ labels: ['converted', 'skipped', 'empty'] },
+				{ labels: ['downloaded', 'skipped', 'empty'] },
 			);
 
-			await expectMinFiles(tilesDir, '*.jp2', 50);
+			await expectMinFiles(tilesDir, '*.tif', 50);
 		}),
 	],
 );

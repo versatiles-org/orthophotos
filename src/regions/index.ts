@@ -4,8 +4,9 @@
  */
 
 import type { RegionMetadata, RegionPipeline } from '../lib/framework.ts';
+import deThueringen from './de_thueringen.ts';
 
-const pipelines: RegionPipeline[] = [];
+const pipelines: RegionPipeline[] = [deThueringen];
 
 const registry = new Map<string, RegionPipeline>();
 for (const p of pipelines) {

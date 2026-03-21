@@ -80,13 +80,14 @@ Regions are being migrated from bash scripts (`regions/<cc>/<region>/1_fetch.sh`
 1. Read the bash script in `regions/<cc>/<region>/1_fetch.sh` to understand the fetch logic
 2. Read `regions/<cc>/<region>/status.yml` for metadata (status, notes, license, creator, entries)
 3. Verify the data source URLs still work; update if the API has changed
-4. Create/update `src/regions/<cc>_<region>.ts` with:
-   - **Metadata object** with all fields from `status.yml`, minus `rating`, plus `date` (when photos were taken, e.g. `'2025'`, `'2023-06'`, `'2017-2024'`)
-   - **Pipeline steps** using `step()` from `src/lib/framework.ts`
-5. Use library utilities: `downloadFile` (curl wrapper), `concurrent` (parallel processing with progress bar), `withRetry` (retry with backoff), `shuffle` (randomize order)
+4. Create/update `src/regions/<cc>_<region>.ts` using `defineTileRegion()` from `src/lib/process_tiles.ts`:
+   - **`meta`** with all fields from `status.yml`, minus `rating`, plus `date` (when photos were taken, e.g. `'2025'`, `'2023-06'`, `'2017-2024'`)
+   - **`init`** fetches index/feed, parses it, returns items with `id` field. Use `ctx.tempDir` for caching.
+   - **`download`** downloads per item, returns data for convert stage (or `'empty'`/`void`)
+   - **`convert`** produces final `.versatiles` file via `runVersatilesRasterConvert`
+5. Use library utilities: `downloadFile` (curl wrapper), `withRetry` (retry with backoff)
 6. Use `fast-xml-parser` for XML/Atom feed parsing instead of regex
-7. Add postcondition validation via `expectMinFiles`/`expectFile` from `src/lib/validators.ts`
-8. Run `npm run check` to verify
+7. Run `npm run check` to verify
 
 **Required metadata fields:**
 - `status`: `'success'` or `'error'`
@@ -97,6 +98,62 @@ Regions are being migrated from bash scripts (`regions/<cc>/<region>/1_fetch.sh`
 - `date`: when the photos were taken (must be added during migration)
 
 **Fallback:** Regions without a TypeScript definition automatically fall back to running `1_fetch.sh` via bash.
+
+### New Tile Pipeline (`defineTileRegion`)
+
+All regions are being migrated to a new pipeline that produces `.versatiles` files via `versatiles raster` commands. The pipeline is: **download image data → convert to `.versatiles` → merge into one file**.
+
+**API:** `defineTileRegion()` from `src/lib/process_tiles.ts` provides a flat config that handles all boilerplate (tilesDir setup, shuffle, skip checks, progress, expectMinFiles). It returns a `RegionPipeline` directly — no need to compose `defineRegion` + `step()` manually.
+
+```typescript
+import { defineTileRegion } from '../lib/process_tiles.ts';
+
+export default defineTileRegion({
+    name: 'de/example',
+    meta: { status: 'success', notes: [...], license: {...}, creator: {...}, date: '2024' },
+    init: async (ctx) => {
+        // Fetch index/feed, parse, return items. Use ctx.tempDir for caching.
+        const feedPath = join(ctx.tempDir, 'feed.xml');
+        if (!existsSync(feedPath)) await downloadFile(FEED_URL, feedPath);
+        return parseFeed(await readFile(feedPath, 'utf-8'));
+    },
+    download: async (item, { dest, tempDir, skipDest }) => {
+        // Download + return data for convert stage
+        const tifPath = join(tempDir, `${item.id}.tif`);
+        try {
+            await downloadFile(item.url, tifPath);
+            return { srcTif: tifPath };
+        } finally {
+            try { rmSync(tifPath, { force: true }); } catch {}
+        }
+    },
+    convertConcurrency: 4,         // optional, default: availableParallelism() / 4
+    convert: async (data, { dest }) => {
+        await runVersatilesRasterConvert(data.srcTif, dest);
+    },
+    minFiles: 50,
+});
+```
+
+**Interface:**
+- `name` — region ID (e.g. `'de/thueringen'`)
+- `meta` — region metadata (status, notes, license, creator, date)
+- `init(ctx)` — returns `T[]` of items to process. Each item must have an `id: string`. Receives `StepContext` for access to `tempDir`/`dataDir`. Handle all index fetching and caching here.
+- `downloadConcurrency?` — default: `CONCURRENCY` (4)
+- `download(item, tileCtx)` — per-item download. Return data for `convert`, `'empty'` for missing tiles, or `void` for single-stage.
+- `convertConcurrency?` — default: `Math.max(1, Math.floor(availableParallelism() / 4))`
+- `convert?(data, tileCtx)` — receives non-empty download result. Produce the final `.versatiles` file at `tileCtx.dest`.
+- `minFiles` — minimum expected `*.versatiles` output files
+
+**`TileContext`** passed to download/convert callbacks:
+- `dest` — output path (`tiles/${id}.versatiles`)
+- `skipDest` — skip marker path (`tiles/${id}.skip`)
+- `tempDir` — temporary directory
+- `tilesDir` — output tiles directory
+
+**Built-in behavior:** shuffles items, skips existing `.versatiles`/`.skip` files, shows progress bar, runs `expectMinFiles` after completion.
+
+**Reference implementation:** `src/regions/de_thueringen.ts` — two-stage with coordinate probing, ZIP extraction, and VersaTiles conversion.
 
 ### Standard Fetch Patterns
 

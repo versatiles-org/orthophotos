@@ -8,13 +8,10 @@
  *
  *   defineRegion('de/example', metadata, tileSteps({
  *     init: () => generateCoords(),
- *     dest: ({ id }) => `${id}.versatiles`,
  *     download: { concurrency: 4, fn: async ({ id }, { dest, tempDir }) => {
  *       await downloadFile(url, dest);
- *       return skip('downloaded');
  *     }},
- *     labels: ['downloaded', 'skipped'],
- *     minFiles: { pattern: '*.versatiles', count: 50 },
+ *     minFiles: 50,
  *   }));
  *
  * With pre-steps:
@@ -28,48 +25,52 @@
 import { existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { shuffle } from './array.ts';
-import { step, type StepContext } from './framework.ts';
-import { pipeline, Skip, skip } from './pipeline.ts';
+import { step, type Step, type StepContext } from './framework.ts';
+import { pipeline, skip } from './pipeline.ts';
 import { expectMinFiles } from './validators.ts';
+
+/** Items must have an `id` property used to derive output and skip-file paths. */
+export interface TileItem {
+	id: string;
+	[key: string]: unknown;
+}
 
 /** Context passed to download/convert callbacks */
 export interface TileContext {
-	/** Full path to the output file */
+	/** Full path to the output file (`${id}.versatiles`) */
 	dest: string;
+	/** Full path to the skip file (`${id}.skip`) */
+	skipDest: string;
 	/** Directory for temporary files */
 	tempDir: string;
 	/** Directory where output tiles live */
 	tilesDir: string;
 }
 
-export interface ProcessTilesOptions<T, D = string | void> {
+const LABELS = ['converted', 'skipped', 'empty'] as const;
+
+export interface ProcessTilesOptions<T extends TileItem, D = void> {
 	/** Generate the items to process */
 	init: (ctx: StepContext) => T[] | Promise<T[]>;
-	/** Output filename relative to tilesDir */
-	dest: (item: T) => string;
-	/** Skip-file name relative to tilesDir (for probe-based regions) */
-	skipFile?: (item: T) => string;
 	/** Download stage */
 	download: {
 		concurrency: number;
-		fn: (item: T, ctx: TileContext) => Promise<D | Skip | null | undefined | void>;
+		fn: (item: T, ctx: TileContext) => Promise<D | 'empty' | void>;
 	};
 	/** Convert stage (optional). When present, download.fn returns D, convert.fn receives it. */
 	convert?: {
 		concurrency: number;
-		fn: (data: Exclude<D, Skip | null | undefined | void>, ctx: TileContext) => Promise<string | void>;
+		fn: (data: Exclude<D, 'empty' | void>, ctx: TileContext) => Promise<void>;
 	};
-	/** Progress bar labels */
-	labels: string[];
-	/** Minimum output files validation */
-	minFiles: { pattern: string; count: number };
+	/** Minimum number of *.versatiles output files required */
+	minFiles: number;
 }
 
 /**
  * Creates a download-tiles Step[] from a tiles config.
  * Use with defineRegion as the steps argument.
  */
-export function tileSteps<T, D>(options: ProcessTilesOptions<T, D>): ReturnType<typeof step>[] {
+export function tileSteps<T extends TileItem, D>(options: ProcessTilesOptions<T, D>): Step[] {
 	return [
 		step('download-tiles', async (ctx) => {
 			const items = await options.init(ctx);
@@ -78,55 +79,56 @@ export function tileSteps<T, D>(options: ProcessTilesOptions<T, D>): ReturnType<
 	];
 }
 
-async function processTiles<T, D>(items: T[], ctx: StepContext, options: ProcessTilesOptions<T, D>): Promise<void> {
+type ConvertEnvelope<D> = { data: Exclude<D, 'empty' | void>; tileCtx: TileContext };
+
+async function processTiles<T extends TileItem, D>(
+	items: T[],
+	ctx: StepContext,
+	options: ProcessTilesOptions<T, D>,
+): Promise<void> {
 	const tilesDir = join(ctx.dataDir, 'tiles');
 	mkdirSync(tilesDir, { recursive: true });
 
 	const shuffled = shuffle([...items]);
 
-	const resolveDest = (item: T): string => join(tilesDir, options.dest(item));
-
-	const isSkipped = (item: T): boolean => {
-		if (existsSync(resolveDest(item))) return true;
-		if (options.skipFile && existsSync(join(tilesDir, options.skipFile(item)))) return true;
-		return false;
-	};
-
 	const makeTileCtx = (item: T): TileContext => ({
-		dest: resolveDest(item),
+		dest: join(tilesDir, `${item.id}.versatiles`),
+		skipDest: join(tilesDir, `${item.id}.skip`),
 		tempDir: ctx.tempDir,
 		tilesDir,
 	});
 
-	type Envelope = { data: Exclude<D, Skip | null | undefined | void>; tileCtx: TileContext };
+	const isSkipped = (item: T): boolean => {
+		const tileCtx = makeTileCtx(item);
+		return existsSync(tileCtx.dest) || existsSync(tileCtx.skipDest);
+	};
 
 	if (options.convert) {
 		const { download, convert } = options;
-		await pipeline(shuffled, { progress: { labels: options.labels } })
+		await pipeline(shuffled, { progress: { labels: [...LABELS] } })
 			.map(download.concurrency, async (item: T) => {
 				if (isSkipped(item)) return skip('skipped');
 				const tileCtx = makeTileCtx(item);
 				const result = await download.fn(item, tileCtx);
-				if (result instanceof Skip || result == null) return result as Skip | null;
-				return { data: result, tileCtx } as Envelope;
+				if (result === 'empty') return skip('empty');
+				if (result == null) return null;
+				return { data: result, tileCtx } as ConvertEnvelope<D>;
 			})
 			.forEach(convert.concurrency, async (envelope) => {
-				const { data, tileCtx } = envelope as Envelope;
-				return await convert.fn(data, tileCtx);
+				const { data, tileCtx } = envelope as ConvertEnvelope<D>;
+				await convert.fn(data, tileCtx);
+				return 'converted';
 			});
 	} else {
 		const { download } = options;
-		await pipeline(shuffled, { progress: { labels: options.labels } })
-			.map(download.concurrency, async (item: T) => {
-				if (isSkipped(item)) return skip('skipped');
-				const tileCtx = makeTileCtx(item);
-				const result = await download.fn(item, tileCtx);
-				if (result instanceof Skip) return result;
-				if (typeof result === 'string') return result;
-				return null;
-			})
-			.run();
+		await pipeline(shuffled, { progress: { labels: [...LABELS] } }).forEach(download.concurrency, async (item: T) => {
+			if (isSkipped(item)) return 'skipped';
+			const tileCtx = makeTileCtx(item);
+			const result = await download.fn(item, tileCtx);
+			if (result === 'empty') return 'empty';
+			return 'converted';
+		});
 	}
 
-	await expectMinFiles(tilesDir, options.minFiles.pattern, options.minFiles.count);
+	await expectMinFiles(tilesDir, '*.versatiles', options.minFiles);
 }

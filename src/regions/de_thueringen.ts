@@ -4,7 +4,6 @@ import { join } from 'node:path';
 import { defineRegion } from '../lib/framework.ts';
 import { downloadFile, runCommand } from '../lib/command.ts';
 import { CONCURRENCY } from '../lib/concurrent.ts';
-import { skip } from '../lib/pipeline.ts';
 import { tileSteps } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
 import { runVersatilesRasterConvert } from '../run/commands.ts';
@@ -45,11 +44,9 @@ export default defineRegion(
 	},
 	tileSteps({
 		init: () => generateCoords(),
-		dest: ({ id }) => `${id}.versatiles`,
-		skipFile: ({ id }) => `${id}.skip`,
 		download: {
 			concurrency: CONCURRENCY,
-			fn: async ({ x, y, id }, { tempDir, tilesDir }) => {
+			fn: async ({ x, y, id }, { tempDir, skipDest }) => {
 				const jsonPath = join(tempDir, `${id}.json`);
 				const zipPath = join(tempDir, `${id}.zip`);
 				const extractDir = join(tempDir, id);
@@ -66,8 +63,8 @@ export default defineRegion(
 					type Feature = { properties: { bildnr: string; bildflugnr: number; gid: number } };
 					const matching = (features as Feature[]).filter((f) => f.properties.bildnr === id);
 					if (matching.length === 0) {
-						writeFileSync(join(tilesDir, `${id}.skip`), '');
-						return skip('empty');
+						writeFileSync(skipDest, '');
+						return 'empty';
 					}
 					const best = matching.reduce((a, b) => (a.properties.bildflugnr > b.properties.bildflugnr ? a : b));
 
@@ -82,13 +79,11 @@ export default defineRegion(
 					const files = await readdir(extractDir, { recursive: true });
 					const tifFile = files.find((f) => typeof f === 'string' && f.endsWith('.tif'));
 					if (!tifFile) {
-						writeFileSync(join(tilesDir, `${id}.skip`), '');
-						return skip('empty');
+						writeFileSync(skipDest, '');
+						return 'empty';
 					}
 
 					return { srcTif: join(extractDir, tifFile), extractDir };
-				} catch {
-					return skip('empty');
 				} finally {
 					for (const p of [jsonPath, zipPath]) {
 						try {
@@ -99,11 +94,10 @@ export default defineRegion(
 			},
 		},
 		convert: {
-			concurrency: 2,
+			concurrency: 4,
 			fn: async ({ srcTif, extractDir }, { dest }) => {
 				try {
 					await runVersatilesRasterConvert(srcTif, dest);
-					return 'converted';
 				} finally {
 					try {
 						rmSync(extractDir, { recursive: true, force: true });
@@ -111,7 +105,6 @@ export default defineRegion(
 				}
 			},
 		},
-		labels: ['converted', 'skipped', 'empty'],
-		minFiles: { pattern: '*.versatiles', count: 50 },
+		minFiles: 50,
 	}),
 );

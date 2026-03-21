@@ -4,9 +4,15 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { StepContext } from './framework.ts';
 import { skip } from './pipeline.ts';
-import { processTiles } from './process_tiles.ts';
+import { tileSteps } from './process_tiles.ts';
 
-describe('processTiles', () => {
+/** Helper: run tileSteps config through the generated step */
+async function runTileSteps<T, D>(ctx: StepContext, options: Parameters<typeof tileSteps<T, D>>[0]): Promise<void> {
+	const steps = tileSteps(options);
+	for (const s of steps) await s.run(ctx);
+}
+
+describe('tileSteps', () => {
 	let ctx: StepContext;
 	let testDir: string;
 
@@ -24,12 +30,25 @@ describe('processTiles', () => {
 		rmSync(testDir, { recursive: true, force: true });
 	});
 
+	it('returns a Step array with a download-tiles step', () => {
+		const steps = tileSteps({
+			init: () => [],
+			dest: () => 'x',
+			download: { concurrency: 1, fn: async () => skip('done') },
+			labels: ['done'],
+			minFiles: { pattern: '*', count: 0 },
+		});
+		expect(steps).toHaveLength(1);
+		expect(steps[0].name).toBe('download-tiles');
+	});
+
 	it('single-stage: downloads to dest', async () => {
-		await processTiles(['a', 'b', 'c'], ctx, {
+		await runTileSteps(ctx, {
+			init: () => ['a', 'b', 'c'],
 			dest: (item) => `${item}.txt`,
 			download: {
 				concurrency: 2,
-				fn: async (item, dest) => {
+				fn: async (item, { dest }) => {
 					writeFileSync(dest, item);
 					return skip('downloaded');
 				},
@@ -45,7 +64,8 @@ describe('processTiles', () => {
 	});
 
 	it('two-stage: download then convert', async () => {
-		await processTiles(['x', 'y'], ctx, {
+		await runTileSteps(ctx, {
+			init: () => ['x', 'y'],
 			dest: (item) => `${item}.out`,
 			download: {
 				concurrency: 2,
@@ -55,7 +75,7 @@ describe('processTiles', () => {
 			},
 			convert: {
 				concurrency: 1,
-				fn: async (data, dest) => {
+				fn: async (data, { dest }) => {
 					writeFileSync(dest, data.value);
 					return 'converted';
 				},
@@ -75,11 +95,12 @@ describe('processTiles', () => {
 		writeFileSync(join(tilesDir, 'a.txt'), 'existing');
 
 		let downloadCount = 0;
-		await processTiles(['a', 'b'], ctx, {
+		await runTileSteps(ctx, {
+			init: () => ['a', 'b'],
 			dest: (item) => `${item}.txt`,
 			download: {
 				concurrency: 2,
-				fn: async (item, dest) => {
+				fn: async (item, { dest }) => {
 					downloadCount++;
 					writeFileSync(dest, item);
 					return skip('downloaded');
@@ -99,12 +120,13 @@ describe('processTiles', () => {
 		writeFileSync(join(tilesDir, 'a.skip'), '');
 
 		let downloadCount = 0;
-		await processTiles(['a', 'b'], ctx, {
+		await runTileSteps(ctx, {
+			init: () => ['a', 'b'],
 			dest: (item) => `${item}.txt`,
 			skipFile: (item) => `${item}.skip`,
 			download: {
 				concurrency: 2,
-				fn: async (item, dest) => {
+				fn: async (item, { dest }) => {
 					downloadCount++;
 					writeFileSync(dest, item);
 					return skip('downloaded');
@@ -118,11 +140,12 @@ describe('processTiles', () => {
 	});
 
 	it('handles skip() from download callback', async () => {
-		await processTiles(['a', 'b', 'c'], ctx, {
+		await runTileSteps(ctx, {
+			init: () => ['a', 'b', 'c'],
 			dest: (item) => `${item}.txt`,
 			download: {
 				concurrency: 2,
-				fn: async (item, dest) => {
+				fn: async (item, { dest }) => {
 					if (item === 'b') return skip('empty');
 					writeFileSync(dest, item);
 					return skip('downloaded');
@@ -139,7 +162,8 @@ describe('processTiles', () => {
 	});
 
 	it('handles skip() in two-stage download', async () => {
-		await processTiles(['a', 'b', 'c'], ctx, {
+		await runTileSteps(ctx, {
+			init: () => ['a', 'b', 'c'],
 			dest: (item) => `${item}.out`,
 			download: {
 				concurrency: 2,
@@ -150,7 +174,7 @@ describe('processTiles', () => {
 			},
 			convert: {
 				concurrency: 1,
-				fn: async (data, dest) => {
+				fn: async (data, { dest }) => {
 					writeFileSync(dest, data.value);
 					return 'converted';
 				},
@@ -166,7 +190,8 @@ describe('processTiles', () => {
 	});
 
 	it('filters null from download in two-stage mode', async () => {
-		await processTiles(['a', 'b', 'c'], ctx, {
+		await runTileSteps(ctx, {
+			init: () => ['a', 'b', 'c'],
 			dest: (item) => `${item}.out`,
 			download: {
 				concurrency: 2,
@@ -177,7 +202,7 @@ describe('processTiles', () => {
 			},
 			convert: {
 				concurrency: 1,
-				fn: async (data, dest) => {
+				fn: async (data, { dest }) => {
 					writeFileSync(dest, data.value);
 					return 'converted';
 				},
@@ -195,11 +220,12 @@ describe('processTiles', () => {
 		const tilesDir = join(ctx.dataDir, 'tiles');
 		expect(existsSync(tilesDir)).toBe(false);
 
-		await processTiles(['a'], ctx, {
+		await runTileSteps(ctx, {
+			init: () => ['a'],
 			dest: (item) => `${item}.txt`,
 			download: {
 				concurrency: 1,
-				fn: async (item, dest) => {
+				fn: async (item, { dest }) => {
 					writeFileSync(dest, item);
 					return skip('downloaded');
 				},
@@ -209,5 +235,50 @@ describe('processTiles', () => {
 		});
 
 		expect(existsSync(tilesDir)).toBe(true);
+	});
+
+	it('passes tilesDir in context for skip file writing', async () => {
+		await runTileSteps(ctx, {
+			init: () => ['a'],
+			dest: (item) => `${item}.txt`,
+			download: {
+				concurrency: 1,
+				fn: async (item, { dest, tilesDir }) => {
+					writeFileSync(join(tilesDir, `${item}.marker`), '');
+					writeFileSync(dest, item);
+					return skip('downloaded');
+				},
+			},
+			labels: ['downloaded', 'skipped'],
+			minFiles: { pattern: '*.txt', count: 1 },
+		});
+
+		const tilesDir = join(ctx.dataDir, 'tiles');
+		expect(existsSync(join(tilesDir, 'a.marker'))).toBe(true);
+	});
+
+	it('async init receives StepContext', async () => {
+		writeFileSync(join(ctx.tempDir, 'items.json'), JSON.stringify(['p', 'q']));
+
+		await runTileSteps<string, string | void>(ctx, {
+			init: async (stepCtx) => {
+				const { readFile } = await import('node:fs/promises');
+				return JSON.parse(await readFile(join(stepCtx.tempDir, 'items.json'), 'utf-8')) as string[];
+			},
+			dest: (item) => `${item}.txt`,
+			download: {
+				concurrency: 1,
+				fn: async (item, { dest }) => {
+					writeFileSync(dest, item);
+					return skip('downloaded');
+				},
+			},
+			labels: ['downloaded', 'skipped'],
+			minFiles: { pattern: '*.txt', count: 1 },
+		});
+
+		const tilesDir = join(ctx.dataDir, 'tiles');
+		expect(existsSync(join(tilesDir, 'p.txt'))).toBe(true);
+		expect(existsSync(join(tilesDir, 'q.txt'))).toBe(true);
 	});
 });

@@ -4,42 +4,47 @@
  * Handles the boilerplate that every region repeats:
  * tilesDir setup, shuffle, skip checks, progress, and expectMinFiles.
  *
- * Single-stage (download only):
- *   await processTiles(urls, ctx, {
- *     dest: (url) => basename(url),
- *     download: { concurrency: 8, fn: async (url, dest) => {
+ * Usage via tileSteps() — returns Step[] for defineRegion:
+ *
+ *   defineRegion('de/example', metadata, tileSteps({
+ *     init: () => generateCoords(),
+ *     dest: ({ id }) => `${id}.versatiles`,
+ *     download: { concurrency: 4, fn: async ({ id }, { dest, tempDir }) => {
  *       await downloadFile(url, dest);
- *       return 'downloaded';
+ *       return skip('downloaded');
  *     }},
  *     labels: ['downloaded', 'skipped'],
- *     minFiles: { pattern: '*.jp2', count: 50 },
- *   });
- *
- * Two-stage (download + convert):
- *   await processTiles(coords, ctx, {
- *     dest: ({ id }) => `${id}.versatiles`,
- *     skipFile: ({ id }) => `${id}.skip`,
- *     download: { concurrency: 4, fn: async ({ id }) => {
- *       const tif = await downloadTif(id);
- *       return { tif };
- *     }},
- *     convert: { concurrency: 2, fn: async ({ tif }, dest) => {
- *       await convert(tif, dest);
- *       return 'converted';
- *     }},
- *     labels: ['converted', 'skipped', 'empty'],
  *     minFiles: { pattern: '*.versatiles', count: 50 },
- *   });
+ *   }));
+ *
+ * With pre-steps:
+ *
+ *   defineRegion('de/example', metadata, [
+ *     step('fetch-index', async (ctx) => { ... }),
+ *     ...tileSteps({ init: async (ctx) => readUrls(ctx), ... }),
+ *   ]);
  */
 
 import { existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { shuffle } from './array.ts';
-import type { StepContext } from './framework.ts';
+import { step, type StepContext } from './framework.ts';
 import { pipeline, Skip, skip } from './pipeline.ts';
 import { expectMinFiles } from './validators.ts';
 
+/** Context passed to download/convert callbacks */
+export interface TileContext {
+	/** Full path to the output file */
+	dest: string;
+	/** Directory for temporary files */
+	tempDir: string;
+	/** Directory where output tiles live */
+	tilesDir: string;
+}
+
 export interface ProcessTilesOptions<T, D = string | void> {
+	/** Generate the items to process */
+	init: (ctx: StepContext) => T[] | Promise<T[]>;
 	/** Output filename relative to tilesDir */
 	dest: (item: T) => string;
 	/** Skip-file name relative to tilesDir (for probe-based regions) */
@@ -47,12 +52,12 @@ export interface ProcessTilesOptions<T, D = string | void> {
 	/** Download stage */
 	download: {
 		concurrency: number;
-		fn: (item: T, dest: string) => Promise<D | Skip | null | undefined | void>;
+		fn: (item: T, ctx: TileContext) => Promise<D | Skip | null | undefined | void>;
 	};
 	/** Convert stage (optional). When present, download.fn returns D, convert.fn receives it. */
 	convert?: {
 		concurrency: number;
-		fn: (data: Exclude<D, Skip | null | undefined | void>, dest: string) => Promise<string | void>;
+		fn: (data: Exclude<D, Skip | null | undefined | void>, ctx: TileContext) => Promise<string | void>;
 	};
 	/** Progress bar labels */
 	labels: string[];
@@ -60,11 +65,20 @@ export interface ProcessTilesOptions<T, D = string | void> {
 	minFiles: { pattern: string; count: number };
 }
 
-export async function processTiles<T, D>(
-	items: T[],
-	ctx: StepContext,
-	options: ProcessTilesOptions<T, D>,
-): Promise<void> {
+/**
+ * Creates a download-tiles Step[] from a tiles config.
+ * Use with defineRegion as the steps argument.
+ */
+export function tileSteps<T, D>(options: ProcessTilesOptions<T, D>): ReturnType<typeof step>[] {
+	return [
+		step('download-tiles', async (ctx) => {
+			const items = await options.init(ctx);
+			await processTiles(items, ctx, options);
+		}),
+	];
+}
+
+async function processTiles<T, D>(items: T[], ctx: StepContext, options: ProcessTilesOptions<T, D>): Promise<void> {
 	const tilesDir = join(ctx.dataDir, 'tiles');
 	mkdirSync(tilesDir, { recursive: true });
 
@@ -78,29 +92,35 @@ export async function processTiles<T, D>(
 		return false;
 	};
 
-	type Envelope = { data: Exclude<D, Skip | null | undefined | void>; dest: string };
+	const makeTileCtx = (item: T): TileContext => ({
+		dest: resolveDest(item),
+		tempDir: ctx.tempDir,
+		tilesDir,
+	});
+
+	type Envelope = { data: Exclude<D, Skip | null | undefined | void>; tileCtx: TileContext };
 
 	if (options.convert) {
 		const { download, convert } = options;
 		await pipeline(shuffled, { progress: { labels: options.labels } })
 			.map(download.concurrency, async (item: T) => {
 				if (isSkipped(item)) return skip('skipped');
-				const dest = resolveDest(item);
-				const result = await download.fn(item, dest);
+				const tileCtx = makeTileCtx(item);
+				const result = await download.fn(item, tileCtx);
 				if (result instanceof Skip || result == null) return result as Skip | null;
-				return { data: result, dest } as Envelope;
+				return { data: result, tileCtx } as Envelope;
 			})
 			.forEach(convert.concurrency, async (envelope) => {
-				const { data, dest } = envelope as Envelope;
-				return await convert.fn(data, dest);
+				const { data, tileCtx } = envelope as Envelope;
+				return await convert.fn(data, tileCtx);
 			});
 	} else {
 		const { download } = options;
 		await pipeline(shuffled, { progress: { labels: options.labels } })
 			.map(download.concurrency, async (item: T) => {
 				if (isSkipped(item)) return skip('skipped');
-				const dest = resolveDest(item);
-				const result = await download.fn(item, dest);
+				const tileCtx = makeTileCtx(item);
+				const result = await download.fn(item, tileCtx);
 				if (result instanceof Skip) return result;
 				if (typeof result === 'string') return result;
 				return null;

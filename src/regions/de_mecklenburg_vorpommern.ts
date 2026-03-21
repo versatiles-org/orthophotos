@@ -1,15 +1,13 @@
-import { existsSync, mkdirSync, rmSync, renameSync } from 'node:fs';
+import { existsSync, rmSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { defineRegion, step } from '../lib/framework.ts';
-import { DownloadErrors, expectMinFiles, isValidRaster } from '../lib/validators.ts';
-import { shuffle } from '../lib/array.ts';
-import { downloadFile, runCommand } from '../lib/command.ts';
-import { concurrent } from '../lib/concurrent.ts';
+import { downloadFile } from '../lib/command.ts';
+import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
+import { isValidRaster } from '../lib/validators.ts';
+import { runVersatilesRasterConvert } from '../run/commands.ts';
 
 const ATOM_URL = 'https://www.geodaten-mv.de/dienste/dop20_atom?type=dataset&id=f94d17fa-b29b-41f7-a4b8-6e10f1aae38e';
-const CONCURRENCY = 8;
 
 export function parseTileUrls(xml: string): { url: string; id: string }[] {
 	const tiles: { url: string; id: string }[] = [];
@@ -25,9 +23,9 @@ export function parseTileUrls(xml: string): { url: string; id: string }[] {
 	return tiles;
 }
 
-export default defineRegion(
-	'de/mecklenburg_vorpommern',
-	{
+export default defineTileRegion({
+	name: 'de/mecklenburg_vorpommern',
+	meta: {
 		status: 'success',
 		notes: [
 			'Server is slow.',
@@ -45,56 +43,40 @@ export default defineRegion(
 		},
 		date: '2024',
 	},
-	[
-		step('fetch-atom', async (ctx) => {
-			const atomPath = join(ctx.tempDir, 'atom.xml');
-			if (!existsSync(atomPath)) {
-				console.log('  Fetching atom.xml...');
-				await withRetry(() => downloadFile(ATOM_URL, atomPath), { maxAttempts: 3 });
+	init: async (ctx) => {
+		const atomPath = join(ctx.tempDir, 'atom.xml');
+		if (!existsSync(atomPath)) {
+			console.log('  Fetching atom.xml...');
+			await withRetry(() => downloadFile(ATOM_URL, atomPath), { maxAttempts: 3 });
+		}
+		const xml = await readFile(atomPath, 'utf-8');
+		return parseTileUrls(xml);
+	},
+	downloadConcurrency: 8,
+	download: async ({ url, id }, { tempDir, errors }) => {
+		const tifPath = join(tempDir, `${id}.tif`);
+		try {
+			await withRetry(() => downloadFile(url, tifPath), { maxAttempts: 3 });
+			if (!(await isValidRaster(tifPath))) {
+				errors.add(url, `${id}.tif`);
+				return 'invalid';
 			}
-		}),
-
-		step('download-tiles', async (ctx) => {
-			const tilesDir = join(ctx.dataDir, 'tiles');
-			mkdirSync(tilesDir, { recursive: true });
-
-			const xml = await readFile(join(ctx.tempDir, 'atom.xml'), 'utf-8');
-			const tiles = parseTileUrls(xml);
-			console.log(`  Found ${tiles.length} tiles`);
-
-			const errors = new DownloadErrors();
-
-			await concurrent(
-				shuffle(tiles),
-				CONCURRENCY,
-				async ({ url, id }) => {
-					const destJp2 = join(tilesDir, `${id}.jp2`);
-					if (existsSync(destJp2)) return 'skipped';
-
-					const tifPath = join(ctx.tempDir, `${id}.tif`);
-					const jp2Path = join(ctx.tempDir, `${id}.jp2`);
-					try {
-						await withRetry(() => downloadFile(url, tifPath), { maxAttempts: 3 });
-						if (!(await isValidRaster(tifPath))) {
-							errors.add(url, `${id}.tif`);
-							return 'invalid';
-						}
-						await runCommand('gdal_translate', ['-q', tifPath, jp2Path]);
-						renameSync(jp2Path, destJp2);
-						return 'converted';
-					} finally {
-						for (const p of [tifPath, jp2Path]) {
-							try {
-								rmSync(p, { force: true });
-							} catch {}
-						}
-					}
-				},
-				{ labels: ['converted', 'skipped', 'invalid'] },
-			);
-
-			errors.throwIfAny();
-			await expectMinFiles(tilesDir, '*.jp2', 50);
-		}),
-	],
-);
+			return { tifPath };
+		} catch (err) {
+			try {
+				rmSync(tifPath, { force: true });
+			} catch {}
+			throw err;
+		}
+	},
+	convert: async ({ tifPath }, { dest }) => {
+		try {
+			await runVersatilesRasterConvert(tifPath, dest);
+		} finally {
+			try {
+				rmSync(tifPath, { force: true });
+			} catch {}
+		}
+	},
+	minFiles: 50,
+});

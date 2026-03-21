@@ -1,13 +1,12 @@
-import { existsSync, mkdirSync, rmSync, renameSync } from 'node:fs';
-import { readFile, writeFile } from 'node:fs/promises';
+import { existsSync, rmSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { XMLParser } from 'fast-xml-parser';
-import { defineRegion, step } from '../lib/framework.ts';
-import { DownloadErrors, expectMinFiles, isValidRaster } from '../lib/validators.ts';
-import { shuffle } from '../lib/array.ts';
-import { downloadFile, runCommand } from '../lib/command.ts';
-import { CONCURRENCY, concurrent } from '../lib/concurrent.ts';
+import { downloadFile } from '../lib/command.ts';
+import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
+import { isValidRaster } from '../lib/validators.ts';
+import { runVersatilesRasterConvert } from '../run/commands.ts';
 
 const ATOM_URL =
 	'https://geodatenportal.sachsen-anhalt.de/arcgisinspire/rest/directories/web/INSPIRE_ALKIS/ALKIS_OI_DOP20_MapServer/datasetoi.xml';
@@ -35,9 +34,9 @@ export function parseTileIds(xml: string): string[] {
 	return [...ids];
 }
 
-export default defineRegion(
-	'de/sachsen_anhalt',
-	{
+export default defineTileRegion({
+	name: 'de/sachsen_anhalt',
+	meta: {
 		status: 'success',
 		notes: [
 			'License requires attribution.',
@@ -55,79 +54,40 @@ export default defineRegion(
 		},
 		date: '2020',
 	},
-	[
-		step('fetch-atom', async (ctx) => {
-			const atomPath = join(ctx.tempDir, 'atom.xml');
-			if (!existsSync(atomPath)) {
-				console.log('  Fetching atom.xml...');
-				await withRetry(() => downloadFile(ATOM_URL, atomPath), { maxAttempts: 3 });
+	init: async (ctx) => {
+		const atomPath = join(ctx.tempDir, 'atom.xml');
+		if (!existsSync(atomPath)) {
+			console.log('  Fetching atom.xml...');
+			await withRetry(() => downloadFile(ATOM_URL, atomPath), { maxAttempts: 3 });
+		}
+		const xml = await readFile(atomPath, 'utf-8');
+		const ids = parseTileIds(xml);
+		return ids.map((id) => ({ id, url: `${DOWNLOAD_BASE}${id}.tif` }));
+	},
+	download: async ({ url, id }, { tempDir, errors }) => {
+		const tifPath = join(tempDir, `${id}.tif`);
+		try {
+			await withRetry(() => downloadFile(url, tifPath), { maxAttempts: 3 });
+			if (!(await isValidRaster(tifPath))) {
+				errors.add(url, `${id}.tif`);
+				return 'invalid';
 			}
-
-			const xml = await readFile(atomPath, 'utf-8');
-			const ids = parseTileIds(xml);
-			await writeFile(join(ctx.tempDir, 'ids.json'), JSON.stringify(ids));
-			console.log(`  Found ${ids.length} tile IDs`);
-		}),
-
-		step('download-tiles', async (ctx) => {
-			const tilesDir = join(ctx.dataDir, 'tiles');
-			mkdirSync(tilesDir, { recursive: true });
-
-			const ids: string[] = JSON.parse(await readFile(join(ctx.tempDir, 'ids.json'), 'utf-8'));
-
-			const errors = new DownloadErrors();
-
-			await concurrent(
-				shuffle(ids),
-				CONCURRENCY,
-				async (id) => {
-					const destJp2 = join(tilesDir, `${id}.jp2`);
-					if (existsSync(destJp2)) return 'skipped';
-
-					const tifPath = join(ctx.tempDir, `${id}.tif`);
-					const jp2Path = join(ctx.tempDir, `${id}.jp2`);
-					const url = `${DOWNLOAD_BASE}${id}.tif`;
-
-					try {
-						await withRetry(() => downloadFile(url, tifPath), { maxAttempts: 3 });
-
-						if (!(await isValidRaster(tifPath))) {
-							errors.add(url, `${id}.tif`);
-							return 'invalid';
-						}
-
-						await runCommand('gdal', ['raster', 'edit', '--nodata', '255', tifPath]);
-						await runCommand('gdal_translate', [
-							'-q',
-							'-b',
-							'1',
-							'-b',
-							'2',
-							'-b',
-							'3',
-							'-b',
-							'mask',
-							'-colorinterp_4',
-							'alpha',
-							tifPath,
-							jp2Path,
-						]);
-
-						renameSync(jp2Path, destJp2);
-						return 'converted';
-					} finally {
-						for (const p of [tifPath, jp2Path]) {
-							try {
-								rmSync(p, { force: true });
-							} catch {}
-						}
-					}
-				},
-				{ labels: ['converted', 'skipped', 'invalid'] },
-			);
-
-			errors.throwIfAny();
-			await expectMinFiles(tilesDir, '*.jp2', 50);
-		}),
-	],
-);
+			return { tifPath };
+		} catch (err) {
+			try {
+				rmSync(tifPath, { force: true });
+			} catch {}
+			throw err;
+		}
+	},
+	convert: async ({ tifPath }, { dest }) => {
+		try {
+			await runVersatilesRasterConvert(tifPath, dest);
+		} finally {
+			try {
+				rmSync(tifPath, { force: true });
+			} catch {}
+		}
+	},
+	minFiles: 50,
+});

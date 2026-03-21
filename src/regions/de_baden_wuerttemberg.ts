@@ -1,12 +1,10 @@
-import { existsSync, mkdirSync, rmSync, statSync, renameSync, writeFileSync } from 'node:fs';
+import { rmSync, statSync, writeFileSync } from 'node:fs';
 import { readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { defineRegion, step } from '../lib/framework.ts';
-import { expectMinFiles } from '../lib/validators.ts';
 import { downloadFile, runCommand } from '../lib/command.ts';
-import { shuffle } from '../lib/array.ts';
-import { CONCURRENCY, concurrent } from '../lib/concurrent.ts';
+import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
+import { runVersatilesRasterConvert } from '../run/commands.ts';
 
 const BASE_URL = 'https://opengeodata.lgl-bw.de/data/dop20/';
 
@@ -20,9 +18,9 @@ export function generateTileIds(): string[] {
 	return ids;
 }
 
-export default defineRegion(
-	'de/baden_wuerttemberg',
-	{
+export default defineTileRegion({
+	name: 'de/baden_wuerttemberg',
+	meta: {
 		status: 'success',
 		notes: [
 			'No API, such as an ATOM feed, available.',
@@ -44,80 +42,68 @@ export default defineRegion(
 		},
 		date: '2024',
 	},
-	[
-		step('download-tiles', async (ctx) => {
-			const tilesDir = join(ctx.dataDir, 'tiles');
-			mkdirSync(tilesDir, { recursive: true });
+	init: () => generateTileIds().map((id) => ({ id })),
+	download: async ({ id }, { tempDir, skipDest }) => {
+		const zipPath = join(tempDir, `${id}.zip`);
+		const extractDir = join(tempDir, id);
+		const vrtPath = join(tempDir, `${id}.vrt`);
+		const listPath = join(tempDir, `${id}_files.txt`);
 
-			const ids = shuffle(generateTileIds());
+		try {
+			await withRetry(() => downloadFile(`${BASE_URL}dop20rgb_32_${id}_2_bw.zip`, zipPath), { maxAttempts: 3 });
 
-			await concurrent(
-				ids,
-				CONCURRENCY,
-				async (id) => {
-					const destJp2 = join(tilesDir, `${id}.jp2`);
-					const skipFile = join(tilesDir, `${id}.skip`);
-					if (existsSync(destJp2) || existsSync(skipFile)) return 'skipped';
+			const size = statSync(zipPath).size;
+			if (size < 1000) {
+				writeFileSync(skipDest, '');
+				return 'empty';
+			}
 
-					const zipPath = join(ctx.tempDir, `${id}.zip`);
-					const extractDir = join(ctx.tempDir, id);
-					const vrtPath = join(ctx.tempDir, `${id}.vrt`);
-					const jp2Path = join(ctx.tempDir, `${id}.jp2`);
-					const listPath = join(ctx.tempDir, `${id}_files.txt`);
+			await runCommand('unzip', ['-qo', zipPath, '-d', extractDir]);
 
-					try {
-						await withRetry(() => downloadFile(`${BASE_URL}dop20rgb_32_${id}_2_bw.zip`, zipPath), { maxAttempts: 3 });
-
-						const size = statSync(zipPath).size;
-						if (size < 1000) {
-							writeFileSync(skipFile, '');
-							return 'empty';
-						}
-
-						await runCommand('unzip', ['-qo', zipPath, '-d', extractDir]);
-
-						const tifDir = join(extractDir, `dop20rgb_32_${id}_2_bw`);
-						const tifFiles = (await readdir(tifDir)).filter((f) => f.endsWith('.tif'));
-						if (tifFiles.length === 0) {
-							writeFileSync(skipFile, '');
-							return 'empty';
-						}
-						await writeFile(listPath, tifFiles.map((f) => join(tifDir, f)).join('\n'));
-						await runCommand(
-							'gdalbuildvrt',
-							[
-								'-q',
-								'-addalpha',
-								'-allow_projection_difference',
-								'-a_srs',
-								'EPSG:25832',
-								vrtPath,
-								'-input_file_list',
-								listPath,
-							],
-							{ cwd: ctx.tempDir },
-						);
-
-						await runCommand('gdal_translate', ['-q', vrtPath, jp2Path]);
-						renameSync(jp2Path, destJp2);
-						return 'converted';
-					} catch {
-						return 'empty';
-					} finally {
-						for (const p of [zipPath, vrtPath, jp2Path, listPath]) {
-							try {
-								rmSync(p, { force: true });
-							} catch {}
-						}
-						try {
-							rmSync(extractDir, { recursive: true, force: true });
-						} catch {}
-					}
-				},
-				{ labels: ['converted', 'skipped', 'empty'] },
+			const tifDir = join(extractDir, `dop20rgb_32_${id}_2_bw`);
+			const tifFiles = (await readdir(tifDir)).filter((f) => f.endsWith('.tif'));
+			if (tifFiles.length === 0) {
+				writeFileSync(skipDest, '');
+				return 'empty';
+			}
+			await writeFile(listPath, tifFiles.map((f) => join(tifDir, f)).join('\n'));
+			await runCommand(
+				'gdalbuildvrt',
+				[
+					'-q',
+					'-addalpha',
+					'-allow_projection_difference',
+					'-a_srs',
+					'EPSG:25832',
+					vrtPath,
+					'-input_file_list',
+					listPath,
+				],
+				{ cwd: tempDir },
 			);
 
-			await expectMinFiles(tilesDir, '*.jp2', 50);
-		}),
-	],
-);
+			return { vrtPath, extractDir };
+		} catch {
+			return 'empty';
+		} finally {
+			for (const p of [zipPath, listPath]) {
+				try {
+					rmSync(p, { force: true });
+				} catch {}
+			}
+		}
+	},
+	convert: async ({ vrtPath, extractDir }, { dest }) => {
+		try {
+			await runVersatilesRasterConvert(vrtPath, dest);
+		} finally {
+			try {
+				rmSync(vrtPath, { force: true });
+			} catch {}
+			try {
+				rmSync(extractDir, { recursive: true, force: true });
+			} catch {}
+		}
+	},
+	minFiles: 50,
+});

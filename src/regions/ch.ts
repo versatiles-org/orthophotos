@@ -1,12 +1,10 @@
-import { existsSync, mkdirSync } from 'node:fs';
-import { readFile, writeFile } from 'node:fs/promises';
+import { existsSync, rmSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
-import { defineRegion, step } from '../lib/framework.ts';
-import { expectMinFiles } from '../lib/validators.ts';
-import { shuffle } from '../lib/array.ts';
 import { downloadFile } from '../lib/command.ts';
-import { CONCURRENCY, concurrent } from '../lib/concurrent.ts';
+import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
+import { runVersatilesRasterConvert } from '../run/commands.ts';
 
 const SEARCH_URL =
 	'https://ogd.swisstopo.admin.ch/services/swiseld/services/assets/ch.swisstopo.swissimage-dop10/search?format=image%2Ftiff%3B%20application%3Dgeotiff%3B%20profile%3Dcloud-optimized&resolution=0.1&srid=2056&state=current&csv=true';
@@ -26,9 +24,9 @@ export function deduplicateByCoord(urls: string[]): string[] {
 	return [...byCoord.values()].map((v) => v.url);
 }
 
-export default defineRegion(
-	'ch',
-	{
+export default defineTileRegion({
+	name: 'ch',
+	meta: {
 		status: 'success',
 		notes: [
 			'You have to use an undocumented API to get a constantly changing URL for a CSV file that contains the URLs for the actual tiles.',
@@ -46,46 +44,32 @@ export default defineRegion(
 		},
 		date: '2017-2024',
 	},
-	[
-		step('fetch-index', async (ctx) => {
-			const csvPath = join(ctx.tempDir, 'index.csv');
-			if (!existsSync(csvPath)) {
-				console.log('  Fetching index CSV URL...');
-				const jsonPath = join(ctx.tempDir, 'index.json');
-				await withRetry(() => downloadFile(SEARCH_URL, jsonPath), { maxAttempts: 3 });
-				const json = JSON.parse(await readFile(jsonPath, 'utf-8')) as { href: string };
+	init: async (ctx) => {
+		const csvPath = join(ctx.tempDir, 'index.csv');
+		if (!existsSync(csvPath)) {
+			console.log('  Fetching index CSV URL...');
+			const jsonPath = join(ctx.tempDir, 'index.json');
+			await withRetry(() => downloadFile(SEARCH_URL, jsonPath), { maxAttempts: 3 });
+			const json = JSON.parse(await readFile(jsonPath, 'utf-8')) as { href: string };
 
-				console.log('  Downloading index CSV...');
-				await withRetry(() => downloadFile(json.href, csvPath), { maxAttempts: 3 });
-			}
-
-			const csv = await readFile(csvPath, 'utf-8');
-			const allUrls = csv.trim().split('\n').filter(Boolean);
-			const urls = deduplicateByCoord(allUrls);
-			await writeFile(join(ctx.tempDir, 'urls.json'), JSON.stringify(urls));
-			console.log(`  Found ${allUrls.length} URLs, ${urls.length} unique coordinates`);
-		}),
-
-		step('download-tiles', async (ctx) => {
-			const tilesDir = join(ctx.dataDir, 'tiles');
-			mkdirSync(tilesDir, { recursive: true });
-
-			const urls: string[] = JSON.parse(await readFile(join(ctx.tempDir, 'urls.json'), 'utf-8'));
-
-			await concurrent(
-				shuffle(urls),
-				CONCURRENCY,
-				async (url) => {
-					const filename = basename(url);
-					const dest = join(tilesDir, filename);
-					if (existsSync(dest)) return 'skipped';
-					await withRetry(() => downloadFile(url, dest), { maxAttempts: 3 });
-					return 'downloaded';
-				},
-				{ labels: ['downloaded', 'skipped'] },
-			);
-
-			await expectMinFiles(tilesDir, '*.tif', 50);
-		}),
-	],
-);
+			console.log('  Downloading index CSV...');
+			await withRetry(() => downloadFile(json.href, csvPath), { maxAttempts: 3 });
+		}
+		const csv = await readFile(csvPath, 'utf-8');
+		const allUrls = csv.trim().split('\n').filter(Boolean);
+		const urls = deduplicateByCoord(allUrls);
+		return urls.map((url) => ({ id: basename(url, '.tif'), url }));
+	},
+	download: async ({ url, id }, { dest, tempDir }) => {
+		const tifPath = join(tempDir, `${id}.tif`);
+		try {
+			await withRetry(() => downloadFile(url, tifPath), { maxAttempts: 3 });
+			await runVersatilesRasterConvert(tifPath, dest);
+		} finally {
+			try {
+				rmSync(tifPath, { force: true });
+			} catch {}
+		}
+	},
+	minFiles: 50,
+});

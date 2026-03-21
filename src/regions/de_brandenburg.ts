@@ -1,12 +1,10 @@
-import { existsSync, mkdirSync, rmSync } from 'node:fs';
-import { readFile, writeFile, readdir, rename } from 'node:fs/promises';
+import { existsSync, rmSync } from 'node:fs';
+import { readFile, readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
-import { defineRegion, step } from '../lib/framework.ts';
-import { expectMinFiles } from '../lib/validators.ts';
-import { shuffle } from '../lib/array.ts';
 import { downloadFile, runCommand } from '../lib/command.ts';
-import { CONCURRENCY, concurrent } from '../lib/concurrent.ts';
+import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
+import { runVersatilesRasterConvert } from '../run/commands.ts';
 
 const BASE_URL = 'https://data.geobasis-bb.de/geobasis/daten/dop/rgb_jpg/';
 
@@ -20,9 +18,9 @@ export function parseZipFilenames(html: string): string[] {
 	return [...filenames];
 }
 
-export default defineRegion(
-	'de/brandenburg',
-	{
+export default defineTileRegion({
+	name: 'de/brandenburg',
+	meta: {
 		status: 'success',
 		notes: [
 			'No API, such as an ATOM feed, available.',
@@ -44,61 +42,49 @@ export default defineRegion(
 		},
 		date: '2023',
 	},
-	[
-		step('fetch-index', async (ctx) => {
-			const indexPath = join(ctx.tempDir, 'index.html');
-			if (!existsSync(indexPath)) {
-				console.log('  Fetching index.html...');
-				await withRetry(() => downloadFile(BASE_URL, indexPath), { maxAttempts: 3 });
-			}
+	init: async (ctx) => {
+		const indexPath = join(ctx.tempDir, 'index.html');
+		if (!existsSync(indexPath)) {
+			console.log('  Fetching index.html...');
+			await withRetry(() => downloadFile(BASE_URL, indexPath), { maxAttempts: 3 });
+		}
+		const html = await readFile(indexPath, 'utf-8');
+		const filenames = parseZipFilenames(html);
+		return filenames.map((f) => ({ id: basename(f, '.zip'), url: `${BASE_URL}${f}` }));
+	},
+	download: async ({ url, id }, { tempDir }) => {
+		const zipPath = join(tempDir, `${id}.zip`);
+		const extractDir = join(tempDir, id);
 
-			const html = await readFile(indexPath, 'utf-8');
-			const filenames = parseZipFilenames(html);
-			await writeFile(join(ctx.tempDir, 'filenames.json'), JSON.stringify(filenames));
-			console.log(`  Found ${filenames.length} zip files`);
-		}),
+		try {
+			await withRetry(() => downloadFile(url, zipPath), { maxAttempts: 3 });
+			await runCommand('unzip', ['-qo', zipPath, '-d', extractDir]);
 
-		step('download-tiles', async (ctx) => {
-			const tilesDir = join(ctx.dataDir, 'tiles');
-			mkdirSync(tilesDir, { recursive: true });
+			// Find the .jpg file (GDAL reads .jgw sidecar automatically for georeferencing)
+			const files = await readdir(extractDir, { recursive: true });
+			const jpgFile = files.find((f) => typeof f === 'string' && f.endsWith('.jpg'));
+			if (!jpgFile) return 'empty';
 
-			const filenames: string[] = JSON.parse(await readFile(join(ctx.tempDir, 'filenames.json'), 'utf-8'));
-
-			await concurrent(
-				shuffle(filenames),
-				CONCURRENCY,
-				async (zipName) => {
-					const id = basename(zipName, '.zip');
-					if (existsSync(join(tilesDir, `${id}.jpg`))) return 'skipped';
-
-					const zipPath = join(ctx.tempDir, `${id}.zip`);
-					const extractDir = join(ctx.tempDir, id);
-					try {
-						await withRetry(() => downloadFile(`${BASE_URL}${zipName}`, zipPath), { maxAttempts: 3 });
-						await runCommand('unzip', ['-qo', zipPath, '-d', extractDir]);
-
-						// Move .jpg and .jgw files to tiles dir
-						const files = await readdir(extractDir, { recursive: true });
-						for (const file of files) {
-							const name = typeof file === 'string' ? file : String(file);
-							if (name.endsWith('.jpg') || name.endsWith('.jgw')) {
-								await rename(join(extractDir, name), join(tilesDir, basename(name)));
-							}
-						}
-						return 'downloaded';
-					} finally {
-						try {
-							rmSync(zipPath, { force: true });
-						} catch {}
-						try {
-							rmSync(extractDir, { recursive: true, force: true });
-						} catch {}
-					}
-				},
-				{ labels: ['downloaded', 'skipped'] },
-			);
-
-			await expectMinFiles(tilesDir, '*.jpg', 50);
-		}),
-	],
-);
+			return { jpgPath: join(extractDir, String(jpgFile)), extractDir };
+		} catch (err) {
+			try {
+				rmSync(extractDir, { recursive: true, force: true });
+			} catch {}
+			throw err;
+		} finally {
+			try {
+				rmSync(zipPath, { force: true });
+			} catch {}
+		}
+	},
+	convert: async ({ jpgPath, extractDir }, { dest }) => {
+		try {
+			await runVersatilesRasterConvert(jpgPath, dest);
+		} finally {
+			try {
+				rmSync(extractDir, { recursive: true, force: true });
+			} catch {}
+		}
+	},
+	minFiles: 50,
+});

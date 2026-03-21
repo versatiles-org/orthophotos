@@ -1,10 +1,8 @@
-import { bashStep, defineRegion } from '../lib/framework.ts';
-import { expectMinFiles } from '../lib/validators.ts';
-import { join } from 'node:path';
+import { defineTileRegion } from '../lib/process_tiles.ts';
 
-export default defineRegion(
-	'pl',
-	{
+export default defineTileRegion({
+	name: 'pl',
+	meta: {
 		status: 'error',
 		notes: [
 			'No bulk download available.',
@@ -24,12 +22,7 @@ export default defineRegion(
 		},
 		date: '2023',
 	},
-	[
-		bashStep('fetch', {
-			scriptFile: '1_fetch.sh',
-			validate: async (ctx) => {
-				await expectMinFiles(join(ctx.dataDir, 'tiles'), '*.jp2', 10);
-			},
-		}),
-	],
-);
+	init: () => [],
+	download: async () => {},
+	minFiles: 0,
+});

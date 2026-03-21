@@ -1,17 +1,15 @@
-import { mkdirSync, existsSync, statSync, renameSync, rmSync } from 'node:fs';
-import { readFile, writeFile } from 'node:fs/promises';
+import { existsSync, rmSync, statSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { XMLParser } from 'fast-xml-parser';
-import { defineRegion, step } from '../lib/framework.ts';
-import { DownloadErrors, expectMinFiles, isValidRaster } from '../lib/validators.ts';
-import { shuffle } from '../lib/array.ts';
-import { downloadFile, runCommand } from '../lib/command.ts';
-import { concurrent } from '../lib/concurrent.ts';
+import { downloadFile } from '../lib/command.ts';
+import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
+import { isValidRaster } from '../lib/validators.ts';
+import { runVersatilesRasterConvert } from '../run/commands.ts';
 
 const ATOM_URL = 'https://service.gdi-sh.de/SH_OpenGBD/feeds/DOP20/DOP20.xml';
 const TILE_XML_BASE = 'https://service.gdi-sh.de/SH_OpenGBD/feeds/DOP20/DOP20_';
-const CONCURRENCY = 1;
 
 const xmlParser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
 
@@ -49,61 +47,9 @@ export function parseTileUrl(xml: string): string | undefined {
 	return undefined;
 }
 
-async function processTile(
-	id: string,
-	tilesDir: string,
-	tempDir: string,
-	errors: DownloadErrors,
-): Promise<'skipped' | 'converted' | 'empty' | 'invalid'> {
-	const destJp2 = join(tilesDir, `${id}.jp2`);
-	if (existsSync(destJp2)) return 'skipped';
-
-	const tileXmlPath = join(tempDir, `${id}.xml`);
-	const tifPath = join(tempDir, `${id}.tif`);
-	const jp2Path = join(tempDir, `${id}.jp2`);
-
-	try {
-		await withRetry(() => downloadFile(`${TILE_XML_BASE}${id}.xml`, tileXmlPath), { maxAttempts: 3 });
-
-		const tileXml = await readFile(tileXmlPath, 'utf-8');
-		const url = parseTileUrl(tileXml);
-		if (!url) {
-			return 'empty';
-		}
-
-		await withRetry(() => downloadFile(url, tifPath), { maxAttempts: 3 });
-
-		const size = statSync(tifPath).size;
-		if (size === 46) {
-			return 'empty';
-		}
-
-		if (!(await isValidRaster(tifPath))) {
-			errors.add(url, `${id}.tif`);
-			return 'invalid';
-		}
-
-		try {
-			await runCommand('gdal_translate', ['-q', tifPath, jp2Path, '-co', 'QUALITY=100']);
-		} catch {
-			errors.add(url, `${id}.tif`);
-			return 'invalid';
-		}
-		renameSync(jp2Path, destJp2);
-		return 'converted';
-	} finally {
-		for (const ext of ['.xml', '.tif', '.jp2']) {
-			const p = join(tempDir, `${id}${ext}`);
-			try {
-				rmSync(p, { force: true });
-			} catch {}
-		}
-	}
-}
-
-export default defineRegion(
-	'de/schleswig_holstein',
-	{
+export default defineTileRegion({
+	name: 'de/schleswig_holstein',
+	meta: {
 		status: 'success',
 		notes: [
 			'Server is slow.',
@@ -121,43 +67,60 @@ export default defineRegion(
 		},
 		date: '2017-2024',
 	},
-	[
-		step('fetch-index', async (ctx) => {
-			const atomPath = join(ctx.tempDir, 'atom.xml');
-			if (!existsSync(atomPath)) {
-				console.log('  Fetching atom.xml...');
-				await withRetry(() => downloadFile(ATOM_URL, atomPath), { maxAttempts: 3 });
+	init: async (ctx) => {
+		const atomPath = join(ctx.tempDir, 'atom.xml');
+		if (!existsSync(atomPath)) {
+			console.log('  Fetching atom.xml...');
+			await withRetry(() => downloadFile(ATOM_URL, atomPath), { maxAttempts: 3 });
+		}
+		const xml = await readFile(atomPath, 'utf-8');
+		const ids = parseTileIds(xml);
+		return ids.map((id) => ({ id }));
+	},
+	downloadConcurrency: 1,
+	download: async ({ id }, { tempDir, errors }) => {
+		const tileXmlPath = join(tempDir, `${id}.xml`);
+		const tifPath = join(tempDir, `${id}.tif`);
+
+		try {
+			await withRetry(() => downloadFile(`${TILE_XML_BASE}${id}.xml`, tileXmlPath), { maxAttempts: 3 });
+
+			const tileXml = await readFile(tileXmlPath, 'utf-8');
+			const url = parseTileUrl(tileXml);
+			if (!url) return 'empty';
+
+			await withRetry(() => downloadFile(url, tifPath), { maxAttempts: 3 });
+
+			const size = statSync(tifPath).size;
+			if (size === 46) return 'empty';
+
+			if (!(await isValidRaster(tifPath))) {
+				errors.add(url, `${id}.tif`);
+				return 'invalid';
 			}
-		}),
 
-		step('parse-ids', async (ctx) => {
-			const atomPath = join(ctx.tempDir, 'atom.xml');
-			const xml = await readFile(atomPath, 'utf-8');
-			const ids = parseTileIds(xml);
-			await writeFile(join(ctx.tempDir, 'ids.json'), JSON.stringify(ids));
-			console.log(`  Found ${ids.length} tile IDs`);
-		}),
-
-		step('download-tiles', async (ctx) => {
-			const tilesDir = join(ctx.dataDir, 'tiles');
-			mkdirSync(tilesDir, { recursive: true });
-
-			const ids: string[] = JSON.parse(await readFile(join(ctx.tempDir, 'ids.json'), 'utf-8'));
-			const shuffled = shuffle(ids);
-
-			const errors = new DownloadErrors();
-
-			await concurrent(
-				shuffled,
-				CONCURRENCY,
-				async (id) => {
-					return await processTile(id, tilesDir, ctx.tempDir, errors);
-				},
-				{ labels: ['converted', 'skipped', 'empty', 'invalid'] },
-			);
-
-			errors.throwIfAny();
-			await expectMinFiles(tilesDir, '*.jp2', 50);
-		}),
-	],
-);
+			return { tifPath };
+		} catch (err) {
+			for (const p of [tileXmlPath, tifPath]) {
+				try {
+					rmSync(p, { force: true });
+				} catch {}
+			}
+			throw err;
+		} finally {
+			try {
+				rmSync(tileXmlPath, { force: true });
+			} catch {}
+		}
+	},
+	convert: async ({ tifPath }, { dest }) => {
+		try {
+			await runVersatilesRasterConvert(tifPath, dest);
+		} finally {
+			try {
+				rmSync(tifPath, { force: true });
+			} catch {}
+		}
+	},
+	minFiles: 50,
+});

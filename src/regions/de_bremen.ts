@@ -1,17 +1,16 @@
-import { mkdirSync } from 'node:fs';
-import { readdir, rename } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
-import { defineRegion, step } from '../lib/framework.ts';
-import { expectMinFiles } from '../lib/validators.ts';
 import { downloadFile, runCommand } from '../lib/command.ts';
+import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
+import { runVersatilesRasterConvert } from '../run/commands.ts';
 
 const BASE_URL = 'https://gdi2.geo.bremen.de/inspire/download/DOP/data/';
 const IMAGE_EXTS = ['.jpg', '.tif', '.jp2'];
-const WORLD_EXTS = ['.jgw', '.tfw', '.j2w'];
 const DISTRICTS = [
-	{ name: 'hb', zip: 'DOP10_RGB_JPG_HB.zip', tilesDir: 'tiles_hb' },
-	{ name: 'bhv', zip: 'DOP10_RGB_JPG_BHV.zip', tilesDir: 'tiles_bhv' },
+	{ name: 'hb', zip: 'DOP10_RGB_JPG_HB.zip' },
+	{ name: 'bhv', zip: 'DOP10_RGB_JPG_BHV.zip' },
 ];
 
 async function findFile(dir: string, ext: string): Promise<string | undefined> {
@@ -19,22 +18,9 @@ async function findFile(dir: string, ext: string): Promise<string | undefined> {
 	return entries.find((e) => e.endsWith(ext));
 }
 
-async function moveFiles(srcDir: string, destDir: string, ext: string, renameExt?: string): Promise<number> {
-	let count = 0;
-	const entries = await readdir(srcDir, { recursive: true });
-	for (const entry of entries) {
-		const name = typeof entry === 'string' ? entry : String(entry);
-		if (!name.endsWith(ext)) continue;
-		const destName = renameExt ? basename(name, ext) + renameExt : basename(name);
-		await rename(join(srcDir, name), join(destDir, destName));
-		count++;
-	}
-	return count;
-}
-
-export default defineRegion(
-	'de/bremen',
-	{
+export default defineTileRegion({
+	name: 'de/bremen',
+	meta: {
 		status: 'success',
 		notes: [
 			'No API, such as an ATOM feed, available.',
@@ -54,19 +40,16 @@ export default defineRegion(
 		},
 		date: '2025',
 	},
-	[
-		step('download-zips', async (ctx) => {
-			for (const district of DISTRICTS) {
-				const dest = join(ctx.tempDir, district.zip);
-				console.log(`  Downloading ${district.zip}...`);
-				await withRetry(() => downloadFile(`${BASE_URL}${district.zip}`, dest), { maxAttempts: 3 });
-			}
-		}),
+	init: async (ctx) => {
+		const items: { id: string; srcPath: string }[] = [];
 
-		step('extract', async (ctx) => {
-			for (const district of DISTRICTS) {
+		for (const district of DISTRICTS) {
+			const extractDir = join(ctx.tempDir, district.name);
+
+			if (!existsSync(extractDir)) {
 				const outerZip = join(ctx.tempDir, district.zip);
-				const extractDir = join(ctx.tempDir, district.name);
+				console.log(`  Downloading ${district.zip}...`);
+				await withRetry(() => downloadFile(`${BASE_URL}${district.zip}`, outerZip), { maxAttempts: 3 });
 
 				console.log(`  Extracting ${district.zip}...`);
 				await runCommand('unzip', ['-qo', outerZip, '-d', extractDir]);
@@ -78,31 +61,21 @@ export default defineRegion(
 					await runCommand('unzip', ['-qo', join(extractDir, innerZip), '-d', extractDir]);
 				}
 			}
-		}),
 
-		step('move-tiles', async (ctx) => {
-			for (const district of DISTRICTS) {
-				const tilesDir = join(ctx.dataDir, district.tilesDir);
-				mkdirSync(tilesDir, { recursive: true });
-
-				const extractDir = join(ctx.tempDir, district.name);
-				let imageCount = 0;
-				let worldCount = 0;
-
-				for (const ext of IMAGE_EXTS) {
-					imageCount += await moveFiles(extractDir, tilesDir, ext);
-				}
-				for (const ext of WORLD_EXTS) {
-					worldCount += await moveFiles(extractDir, tilesDir, ext);
-				}
-				// Rename .wld → .jgw for JPEG world files
-				worldCount += await moveFiles(extractDir, tilesDir, '.wld', '.jgw');
-
-				console.log(`  ${district.name}: moved ${imageCount} images + ${worldCount} world files`);
-				if (imageCount === 0) {
-					throw new Error(`No image files found in ${extractDir}`);
-				}
+			// Collect all image files, prefixed with district name to avoid collisions
+			const files = await readdir(extractDir, { recursive: true });
+			for (const file of files) {
+				const name = typeof file === 'string' ? file : String(file);
+				if (!IMAGE_EXTS.some((ext) => name.endsWith(ext))) continue;
+				const base = basename(name, basename(name).slice(basename(name).lastIndexOf('.')));
+				items.push({ id: `${district.name}_${base}`, srcPath: join(extractDir, name) });
 			}
-		}),
-	],
-);
+		}
+
+		return items;
+	},
+	download: async ({ srcPath }, { dest }) => {
+		await runVersatilesRasterConvert(srcPath, dest);
+	},
+	minFiles: 10,
+});

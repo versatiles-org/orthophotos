@@ -1,11 +1,10 @@
-import { existsSync, mkdirSync, rmSync } from 'node:fs';
-import { readdir, rename } from 'node:fs/promises';
+import { existsSync, rmSync } from 'node:fs';
+import { readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
-import { defineRegion, step } from '../lib/framework.ts';
-import { expectMinFiles } from '../lib/validators.ts';
 import { downloadFile, runCommand } from '../lib/command.ts';
-import { concurrent } from '../lib/concurrent.ts';
+import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
+import { runVersatilesRasterConvert } from '../run/commands.ts';
 
 const BASE_URL = 'https://daten-hamburg.de/geographie_geologie_geobasisdaten/digitale_orthophotos/DOP_belaubt/';
 const ZIP_FILES = [
@@ -18,9 +17,9 @@ const ZIP_FILES = [
 	'DOP2024_belaubt_Hamburg_Wandsbek.zip',
 ];
 
-export default defineRegion(
-	'de/hamburg',
-	{
+export default defineTileRegion({
+	name: 'de/hamburg',
+	meta: {
 		status: 'success',
 		notes: [
 			'No API, such as an ATOM feed, available.',
@@ -40,43 +39,34 @@ export default defineRegion(
 		},
 		date: '2024',
 	},
-	[
-		step('download-zips', async (ctx) => {
-			const tilesDir = join(ctx.dataDir, 'tiles');
-			mkdirSync(tilesDir, { recursive: true });
+	init: async (ctx) => {
+		const items: { id: string; tifPath: string }[] = [];
 
-			await concurrent(
-				ZIP_FILES,
-				2,
-				async (zipName) => {
-					const id = basename(zipName, '.zip');
-					const zipPath = join(ctx.tempDir, zipName);
-					const extractDir = join(ctx.tempDir, id);
+		for (const zipName of ZIP_FILES) {
+			const id = basename(zipName, '.zip');
+			const extractDir = join(ctx.tempDir, id);
 
-					// Skip if we already have .tif files from this zip
-					if (existsSync(extractDir)) return 'skipped';
+			if (!existsSync(extractDir)) {
+				const zipPath = join(ctx.tempDir, zipName);
+				console.log(`  Downloading ${zipName}...`);
+				await withRetry(() => downloadFile(`${BASE_URL}${zipName}`, zipPath), { maxAttempts: 3 });
+				await runCommand('unzip', ['-qo', zipPath, '-d', extractDir]);
+				rmSync(zipPath, { force: true });
+			}
 
-					await withRetry(() => downloadFile(`${BASE_URL}${zipName}`, zipPath), { maxAttempts: 3 });
-					await runCommand('unzip', ['-qo', zipPath, '-d', extractDir]);
-					rmSync(zipPath, { force: true });
+			const files = await readdir(extractDir, { recursive: true });
+			for (const file of files) {
+				const name = typeof file === 'string' ? file : String(file);
+				if (!name.endsWith('.tif')) continue;
+				items.push({ id: basename(name, '.tif'), tifPath: join(extractDir, name) });
+			}
+		}
 
-					// Move .tif files to tiles dir
-					const files = await readdir(extractDir, { recursive: true });
-					let count = 0;
-					for (const file of files) {
-						const name = typeof file === 'string' ? file : String(file);
-						if (!name.endsWith('.tif')) continue;
-						await rename(join(extractDir, name), join(tilesDir, basename(name)));
-						count++;
-					}
-
-					rmSync(extractDir, { recursive: true, force: true });
-					return 'downloaded';
-				},
-				{ labels: ['downloaded', 'skipped'] },
-			);
-
-			await expectMinFiles(tilesDir, '*.tif', 10);
-		}),
-	],
-);
+		return items;
+	},
+	downloadConcurrency: 2,
+	download: async ({ tifPath }, { dest }) => {
+		await runVersatilesRasterConvert(tifPath, dest);
+	},
+	minFiles: 10,
+});

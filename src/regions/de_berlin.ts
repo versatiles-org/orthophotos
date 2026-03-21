@@ -1,12 +1,11 @@
-import { existsSync, mkdirSync } from 'node:fs';
+import { existsSync, rmSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { XMLParser } from 'fast-xml-parser';
-import { defineRegion, step } from '../lib/framework.ts';
-import { expectMinFiles } from '../lib/validators.ts';
 import { downloadFile } from '../lib/command.ts';
-import { concurrent } from '../lib/concurrent.ts';
+import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
+import { runVersatilesRasterConvert } from '../run/commands.ts';
 
 const ATOM_URL = 'https://gdi.berlin.de/data/oi_dop2025_sommer/atom/';
 const xmlParser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
@@ -32,9 +31,9 @@ export function parseTileUrls(xml: string): string[] {
 	return urls;
 }
 
-export default defineRegion(
-	'de/berlin',
-	{
+export default defineTileRegion({
+	name: 'de/berlin',
+	meta: {
 		status: 'success',
 		notes: [
 			'Atom feed with direct .jp2 download links.',
@@ -51,56 +50,46 @@ export default defineRegion(
 		},
 		date: '2025',
 	},
-	[
-		step('fetch-feed', async (ctx) => {
-			const feedPath = join(ctx.tempDir, 'feed.xml');
-			if (!existsSync(feedPath)) {
-				console.log('  Fetching atom feed...');
-				await withRetry(() => downloadFile(ATOM_URL, join(ctx.tempDir, 'index.xml')), { maxAttempts: 3 });
+	init: async (ctx) => {
+		const feedPath = join(ctx.tempDir, 'feed.xml');
+		if (!existsSync(feedPath)) {
+			console.log('  Fetching atom feed...');
+			await withRetry(() => downloadFile(ATOM_URL, join(ctx.tempDir, 'index.xml')), { maxAttempts: 3 });
 
-				// Parse index to find the dataset feed URL
-				const indexXml = await readFile(join(ctx.tempDir, 'index.xml'), 'utf-8');
-				const parsed = xmlParser.parse(indexXml);
-				const entries: unknown[] = [parsed.feed?.entry ?? []].flat();
-				let datasetFeedUrl: string | undefined;
-				for (const entry of entries) {
-					const links: unknown[] = [(entry as Record<string, unknown>).link ?? []].flat();
-					for (const link of links) {
-						const attrs = link as Record<string, string>;
-						if (attrs['@_rel'] === 'alternate' && attrs['@_type'] === 'application/atom+xml') {
-							datasetFeedUrl = attrs['@_href'];
-						}
+			const indexXml = await readFile(join(ctx.tempDir, 'index.xml'), 'utf-8');
+			const parsed = xmlParser.parse(indexXml);
+			const entries: unknown[] = [parsed.feed?.entry ?? []].flat();
+			let datasetFeedUrl: string | undefined;
+			for (const entry of entries) {
+				const links: unknown[] = [(entry as Record<string, unknown>).link ?? []].flat();
+				for (const link of links) {
+					const attrs = link as Record<string, string>;
+					if (attrs['@_rel'] === 'alternate' && attrs['@_type'] === 'application/atom+xml') {
+						datasetFeedUrl = attrs['@_href'];
 					}
 				}
-				if (!datasetFeedUrl) throw new Error('No dataset feed URL found in atom index');
-
-				console.log(`  Fetching dataset feed: ${datasetFeedUrl}`);
-				await withRetry(() => downloadFile(datasetFeedUrl!, feedPath), { maxAttempts: 3 });
 			}
-		}),
+			if (!datasetFeedUrl) throw new Error('No dataset feed URL found in atom index');
 
-		step('download-tiles', async (ctx) => {
-			const tilesDir = join(ctx.dataDir, 'tiles');
-			mkdirSync(tilesDir, { recursive: true });
+			console.log(`  Fetching dataset feed: ${datasetFeedUrl}`);
+			await withRetry(() => downloadFile(datasetFeedUrl!, feedPath), { maxAttempts: 3 });
+		}
 
-			const feedXml = await readFile(join(ctx.tempDir, 'feed.xml'), 'utf-8');
-			const urls = parseTileUrls(feedXml);
-			console.log(`  Found ${urls.length} tiles`);
-
-			await concurrent(
-				urls,
-				8,
-				async (url) => {
-					const filename = basename(url);
-					const dest = join(tilesDir, filename);
-					if (existsSync(dest)) return 'skipped';
-					await withRetry(() => downloadFile(url, dest), { maxAttempts: 3 });
-					return 'downloaded';
-				},
-				{ labels: ['downloaded', 'skipped'] },
-			);
-
-			await expectMinFiles(tilesDir, '*.jp2', 50);
-		}),
-	],
-);
+		const feedXml = await readFile(feedPath, 'utf-8');
+		const urls = parseTileUrls(feedXml);
+		return urls.map((url) => ({ id: basename(url, '.jp2'), url }));
+	},
+	downloadConcurrency: 8,
+	download: async ({ url, id }, { dest, tempDir }) => {
+		const jp2Path = join(tempDir, `${id}.jp2`);
+		try {
+			await withRetry(() => downloadFile(url, jp2Path), { maxAttempts: 3 });
+			await runVersatilesRasterConvert(jp2Path, dest);
+		} finally {
+			try {
+				rmSync(jp2Path, { force: true });
+			} catch {}
+		}
+	},
+	minFiles: 50,
+});

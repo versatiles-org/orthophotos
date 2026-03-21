@@ -1,10 +1,17 @@
-import { bashStep, defineRegion } from '../lib/framework.ts';
-import { expectMinFiles } from '../lib/validators.ts';
-import { join } from 'node:path';
+import { existsSync, rmSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
+import { basename, join } from 'node:path';
+import { downloadFile } from '../lib/command.ts';
+import { defineTileRegion } from '../lib/process_tiles.ts';
+import { withRetry } from '../lib/retry.ts';
+import { runVersatilesRasterConvert } from '../run/commands.ts';
 
-export default defineRegion(
-	'lv',
-	{
+const INDEX_URL =
+	'https://s3.storage.pub.lvdc.gov.lv/lgia-opendata/ortofoto_rgb_v6/LGIA_OpenData_Ortofoto_rgb_v6_saites.txt';
+
+export default defineTileRegion({
+	name: 'lv',
+	meta: {
 		status: 'success',
 		notes: ['License requires attribution.'],
 		license: {
@@ -18,12 +25,42 @@ export default defineRegion(
 		},
 		date: '2016-2018',
 	},
-	[
-		bashStep('fetch', {
-			scriptFile: '1_fetch.sh',
-			validate: async (ctx) => {
-				await expectMinFiles(join(ctx.dataDir, 'tiles'), '*.jp2', 50);
-			},
-		}),
-	],
-);
+	init: async (ctx) => {
+		const indexPath = join(ctx.tempDir, 'index.txt');
+		if (!existsSync(indexPath)) {
+			console.log('  Fetching index...');
+			const tmpPath = join(ctx.tempDir, 'index.tmp');
+			await withRetry(() => downloadFile(INDEX_URL, tmpPath), { maxAttempts: 3 });
+			const content = await readFile(tmpPath, 'utf-8');
+			const { writeFile } = await import('node:fs/promises');
+			await writeFile(indexPath, content.replace(/\r/g, ''));
+			rmSync(tmpPath, { force: true });
+		}
+		const content = await readFile(indexPath, 'utf-8');
+		const urls = content
+			.trim()
+			.split('\n')
+			.filter((u) => u.endsWith('.tif'));
+		return urls.map((url) => ({
+			id: basename(url, '.tif'),
+			url,
+			tfwUrl: url.replace(/\.tif$/, '.tfw'),
+		}));
+	},
+	download: async ({ url, tfwUrl, id }, { dest, tempDir }) => {
+		const tifPath = join(tempDir, `${id}.tif`);
+		const tfwPath = join(tempDir, `${id}.tfw`);
+		try {
+			await withRetry(() => downloadFile(url as string, tifPath), { maxAttempts: 3 });
+			await withRetry(() => downloadFile(tfwUrl as string, tfwPath), { maxAttempts: 3 });
+			await runVersatilesRasterConvert(tifPath, dest);
+		} finally {
+			for (const p of [tifPath, tfwPath]) {
+				try {
+					rmSync(p, { force: true });
+				} catch {}
+			}
+		}
+	},
+	minFiles: 50,
+});

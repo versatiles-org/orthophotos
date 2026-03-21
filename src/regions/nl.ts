@@ -1,10 +1,17 @@
-import { bashStep, defineRegion } from '../lib/framework.ts';
-import { expectMinFiles } from '../lib/validators.ts';
-import { join } from 'node:path';
+import { existsSync, rmSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
+import { basename, join } from 'node:path';
+import { downloadFile } from '../lib/command.ts';
+import { defineTileRegion } from '../lib/process_tiles.ts';
+import { withRetry } from '../lib/retry.ts';
+import { runVersatilesRasterConvert } from '../run/commands.ts';
 
-export default defineRegion(
-	'nl',
-	{
+const GEOJSON_URL =
+	'https://fsn1.your-objectstorage.com/hwh-portal/20230609_tmp/links/nationaal/Nederland/BM_LRL2024O_RGB.json';
+
+export default defineTileRegion({
+	name: 'nl',
+	meta: {
 		status: 'success',
 		notes: ['License requires attribution.'],
 		license: {
@@ -18,12 +25,29 @@ export default defineRegion(
 		},
 		date: '2025',
 	},
-	[
-		bashStep('fetch', {
-			scriptFile: '1_fetch.sh',
-			validate: async (ctx) => {
-				await expectMinFiles(join(ctx.dataDir, 'tiles'), '*.jp2', 50);
-			},
-		}),
-	],
-);
+	init: async (ctx) => {
+		const geojsonPath = join(ctx.tempDir, 'features.geojson');
+		if (!existsSync(geojsonPath)) {
+			console.log('  Fetching features.geojson...');
+			await withRetry(() => downloadFile(GEOJSON_URL, geojsonPath), { maxAttempts: 3 });
+		}
+		const content = await readFile(geojsonPath, 'utf-8');
+		const data = JSON.parse(content) as {
+			features: { properties: { file: string } }[];
+		};
+		const urls = data.features.map((f) => f.properties.file);
+		return urls.map((url) => ({ id: basename(url, '.tif'), url }));
+	},
+	download: async ({ url, id }, { dest, tempDir }) => {
+		const tifPath = join(tempDir, `${id}.tif`);
+		try {
+			await withRetry(() => downloadFile(url as string, tifPath), { maxAttempts: 3 });
+			await runVersatilesRasterConvert(tifPath, dest);
+		} finally {
+			try {
+				rmSync(tifPath, { force: true });
+			} catch {}
+		}
+	},
+	minFiles: 50,
+});

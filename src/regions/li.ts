@@ -1,10 +1,15 @@
-import { bashStep, defineRegion } from '../lib/framework.ts';
-import { expectFile } from '../lib/validators.ts';
+import { rmSync } from 'node:fs';
 import { join } from 'node:path';
+import { downloadFile } from '../lib/command.ts';
+import { defineTileRegion } from '../lib/process_tiles.ts';
+import { withRetry } from '../lib/retry.ts';
+import { runVersatilesRasterConvert } from '../run/commands.ts';
 
-export default defineRegion(
-	'li',
-	{
+const DOWNLOAD_URL = 'https://service.geo.llv.li/atom/data/e77da96f-bc1c-4317-8c2f-81310812c798.tif';
+
+export default defineTileRegion({
+	name: 'li',
+	meta: {
 		status: 'success',
 		notes: ['License requires attribution.'],
 		license: {
@@ -18,12 +23,17 @@ export default defineRegion(
 		},
 		date: '2023',
 	},
-	[
-		bashStep('fetch', {
-			scriptFile: '1_fetch.sh',
-			validate: async (ctx) => {
-				await expectFile(join(ctx.dataDir, 'tiles', 'image.tif'));
-			},
-		}),
-	],
-);
+	init: () => [{ id: 'image' }],
+	download: async (_item, { dest, tempDir }) => {
+		const tifPath = join(tempDir, 'image.tif');
+		try {
+			await withRetry(() => downloadFile(DOWNLOAD_URL, tifPath), { maxAttempts: 3 });
+			await runVersatilesRasterConvert(tifPath, dest);
+		} finally {
+			try {
+				rmSync(tifPath, { force: true });
+			} catch {}
+		}
+	},
+	minFiles: 1,
+});

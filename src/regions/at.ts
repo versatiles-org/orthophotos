@@ -1,12 +1,12 @@
-import { existsSync, mkdirSync } from 'node:fs';
+import { existsSync, rmSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { XMLParser } from 'fast-xml-parser';
-import { defineRegion, step } from '../lib/framework.ts';
-import { expectMinFiles } from '../lib/validators.ts';
 import { downloadFile } from '../lib/command.ts';
 import { CONCURRENCY, concurrent } from '../lib/concurrent.ts';
+import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
+import { runVersatilesRasterConvert } from '../run/commands.ts';
 
 const ATOM_URL =
 	'https://data.bev.gv.at/geonetwork/srv/atom/describe/service?uuid=7f047345-4ebf-45cd-8900-6edf50a84638';
@@ -61,9 +61,9 @@ export function parseDatasetFeed(xml: string): string | undefined {
 	return undefined;
 }
 
-export default defineRegion(
-	'at',
-	{
+export default defineTileRegion({
+	name: 'at',
+	meta: {
 		status: 'success',
 		notes: ['License requires attribution.'],
 		license: {
@@ -77,24 +77,16 @@ export default defineRegion(
 		},
 		date: '2021-2024',
 	},
-	[
-		step('fetch-service-feed', async (ctx) => {
-			const feedPath = join(ctx.tempDir, 'service.xml');
-			if (!existsSync(feedPath)) {
-				console.log('  Fetching service atom feed...');
-				await withRetry(() => downloadFile(ATOM_URL, feedPath), { maxAttempts: 3 });
-			}
-		}),
+	init: async (ctx) => {
+		const feedPath = join(ctx.tempDir, 'service.xml');
+		if (!existsSync(feedPath)) {
+			console.log('  Fetching service atom feed...');
+			await withRetry(() => downloadFile(ATOM_URL, feedPath), { maxAttempts: 3 });
+		}
 
-		step('resolve-tile-urls', async (ctx) => {
-			const urlsPath = join(ctx.tempDir, 'tile_urls.json');
-			if (existsSync(urlsPath)) {
-				const urls: string[] = JSON.parse(await readFile(urlsPath, 'utf-8'));
-				console.log(`  ${urls.length} tile URLs already cached`);
-				return;
-			}
-
-			const feedXml = await readFile(join(ctx.tempDir, 'service.xml'), 'utf-8');
+		const urlsPath = join(ctx.tempDir, 'tile_urls.json');
+		if (!existsSync(urlsPath)) {
+			const feedXml = await readFile(feedPath, 'utf-8');
 			const datasets = parseServiceFeed(feedXml, OPERATS);
 			console.log(`  Found ${datasets.length} matching Operat entries`);
 
@@ -119,28 +111,21 @@ export default defineRegion(
 
 			await writeFile(urlsPath, JSON.stringify(tileUrls));
 			console.log(`  Resolved ${tileUrls.length} RGB tile URLs`);
-		}),
+		}
 
-		step('download-tiles', async (ctx) => {
-			const tilesDir = join(ctx.dataDir, 'tiles');
-			mkdirSync(tilesDir, { recursive: true });
-
-			const urls: string[] = JSON.parse(await readFile(join(ctx.tempDir, 'tile_urls.json'), 'utf-8'));
-
-			await concurrent(
-				urls,
-				CONCURRENCY,
-				async (url) => {
-					const filename = basename(url);
-					const dest = join(tilesDir, filename);
-					if (existsSync(dest)) return 'skipped';
-					await withRetry(() => downloadFile(url, dest), { maxAttempts: 3 });
-					return 'downloaded';
-				},
-				{ labels: ['downloaded', 'skipped'] },
-			);
-
-			await expectMinFiles(tilesDir, '*.tif', 10);
-		}),
-	],
-);
+		const urls: string[] = JSON.parse(await readFile(urlsPath, 'utf-8'));
+		return urls.map((url) => ({ id: basename(url, '.tif'), url }));
+	},
+	download: async ({ url, id }, { dest, tempDir }) => {
+		const tifPath = join(tempDir, `${id}.tif`);
+		try {
+			await withRetry(() => downloadFile(url, tifPath), { maxAttempts: 3 });
+			await runVersatilesRasterConvert(tifPath, dest);
+		} finally {
+			try {
+				rmSync(tifPath, { force: true });
+			} catch {}
+		}
+	},
+	minFiles: 10,
+});

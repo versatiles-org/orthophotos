@@ -1,12 +1,10 @@
-import { existsSync, mkdirSync } from 'node:fs';
-import { readFile, writeFile } from 'node:fs/promises';
+import { existsSync, rmSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
-import { defineRegion, step } from '../lib/framework.ts';
-import { expectMinFiles } from '../lib/validators.ts';
-import { shuffle } from '../lib/array.ts';
 import { downloadFile } from '../lib/command.ts';
-import { CONCURRENCY, concurrent } from '../lib/concurrent.ts';
+import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
+import { runVersatilesRasterConvert } from '../run/commands.ts';
 
 const GEOJSON_URL =
 	'https://arcgis-geojson.s3.eu-de.cloud-object-storage.appdomain.cloud/dop20/lgln-opengeodata-dop20.geojson';
@@ -29,9 +27,9 @@ export function parseTileUrls(geojson: string): string[] {
 	return [...byTileId.values()].map((v) => v.url);
 }
 
-export default defineRegion(
-	'de/niedersachsen',
-	{
+export default defineTileRegion({
+	name: 'de/niedersachsen',
+	meta: {
 		status: 'success',
 		notes: [
 			'License requires attribution.',
@@ -48,41 +46,26 @@ export default defineRegion(
 		},
 		date: '2025',
 	},
-	[
-		step('fetch-geojson', async (ctx) => {
-			const geojsonPath = join(ctx.tempDir, 'lgln-opengeodata-dop20.geojson');
-			if (!existsSync(geojsonPath)) {
-				console.log('  Fetching GeoJSON...');
-				await withRetry(() => downloadFile(GEOJSON_URL, geojsonPath), { maxAttempts: 3 });
-			}
-
-			const content = await readFile(geojsonPath, 'utf-8');
-			const urls = parseTileUrls(content);
-			await writeFile(join(ctx.tempDir, 'urls.json'), JSON.stringify(urls));
-			console.log(`  Found ${urls.length} unique tile URLs`);
-		}),
-
-		step('download-tiles', async (ctx) => {
-			const tilesDir = join(ctx.dataDir, 'tiles');
-			mkdirSync(tilesDir, { recursive: true });
-
-			const urls: string[] = JSON.parse(await readFile(join(ctx.tempDir, 'urls.json'), 'utf-8'));
-
-			await concurrent(
-				shuffle(urls),
-				CONCURRENCY,
-				async (url) => {
-					const filename = basename(url);
-					const dest = join(tilesDir, filename);
-					if (existsSync(dest)) return 'skipped';
-
-					await withRetry(() => downloadFile(url, dest), { maxAttempts: 3 });
-					return 'downloaded';
-				},
-				{ labels: ['downloaded', 'skipped'] },
-			);
-
-			await expectMinFiles(tilesDir, '*', 50);
-		}),
-	],
-);
+	init: async (ctx) => {
+		const geojsonPath = join(ctx.tempDir, 'lgln-opengeodata-dop20.geojson');
+		if (!existsSync(geojsonPath)) {
+			console.log('  Fetching GeoJSON...');
+			await withRetry(() => downloadFile(GEOJSON_URL, geojsonPath), { maxAttempts: 3 });
+		}
+		const content = await readFile(geojsonPath, 'utf-8');
+		const urls = parseTileUrls(content);
+		return urls.map((url) => ({ id: basename(url, '.tif'), url }));
+	},
+	download: async ({ url, id }, { dest, tempDir }) => {
+		const tmpPath = join(tempDir, `${id}.tif`);
+		try {
+			await withRetry(() => downloadFile(url, tmpPath), { maxAttempts: 3 });
+			await runVersatilesRasterConvert(tmpPath, dest);
+		} finally {
+			try {
+				rmSync(tmpPath, { force: true });
+			} catch {}
+		}
+	},
+	minFiles: 50,
+});

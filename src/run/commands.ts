@@ -3,6 +3,8 @@
  */
 
 import { spawn } from 'node:child_process';
+import { renameSync, rmSync } from 'node:fs';
+import { dirname, basename, join } from 'node:path';
 import { requireRsyncConfig } from '../config.ts';
 import { runCommand } from '../lib/command.ts';
 
@@ -141,8 +143,17 @@ export async function runVersatilesRasterConvert(
 	if (options?.quality != null) {
 		args.push('--quality', String(options.quality));
 	}
-	args.push(input, output);
-	await runCommandQuiet('versatiles', args);
+	const tmpOutput = join(dirname(output), `tmp.${basename(output)}`);
+	args.push(input, tmpOutput);
+	try {
+		await runCommandQuiet('versatiles', args);
+		renameSync(tmpOutput, output);
+	} catch (err) {
+		try {
+			rmSync(tmpOutput, { force: true });
+		} catch {}
+		throw err;
+	}
 }
 
 /**

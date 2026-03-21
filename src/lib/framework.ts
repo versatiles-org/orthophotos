@@ -38,9 +38,10 @@ export interface RegionCreator {
 export interface RegionMetadata {
 	status: 'success' | 'error';
 	notes: string[];
-	license: RegionLicense;
-	creator: RegionCreator;
-	date: string;
+	entries?: string[];
+	license?: RegionLicense;
+	creator?: RegionCreator;
+	date?: string;
 }
 
 export interface RegionPipeline {

@@ -34,6 +34,7 @@ export default defineTileRegion({
 	meta: {
 		status: 'success',
 		notes: ['License requires attribution', 'Only WMS available', 'Access requires token'],
+		entries: ['result'],
 		license: {
 			name: 'CC BY 4.0',
 			url: 'https://creativecommons.org/licenses/by/4.0/',

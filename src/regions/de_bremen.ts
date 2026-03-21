@@ -29,6 +29,7 @@ export default defineTileRegion({
 			'JPEGs with World files are provided, but not more convenient GeoTIFFs/JPEG2000.',
 			'Rather than a national mosaic, inconsistent regional mosaics with different access and formats are available instead.',
 		],
+		entries: ['result'],
 		license: {
 			name: 'CC BY 4.0',
 			url: 'https://creativecommons.org/licenses/by/4.0/',

@@ -20,6 +20,7 @@ export default defineTileRegion({
 			'Server is very, very slow.',
 			'No license information found.',
 		],
+		entries: ['result'],
 		license: {
 			name: 'CC0',
 			url: 'https://creativecommons.org/publicdomain/zero/1.0/',

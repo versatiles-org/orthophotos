@@ -47,6 +47,7 @@ export default defineTileRegion({
 			'The images have a high resolution, but they are not stored in tiled mode, which makes them extremely slow to read.',
 			'National license instead of an international standard.',
 		],
+		entries: ['result'],
 		license: {
 			name: 'LO 2.0',
 			url: 'https://www.data.gouv.fr/datasets/licence-ouverte-2-0',

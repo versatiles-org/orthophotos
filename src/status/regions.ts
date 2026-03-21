@@ -1,11 +1,13 @@
 import { relative, resolve } from 'node:path';
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
-import { readStatus, Status } from './status.ts';
+import type { Status } from './status.ts';
 import { KnownRegion, reducePrecision } from './geojson.ts';
 import type { Feature } from 'geojson';
 import { getDataDir } from '../config.ts';
 import { runCommand } from '../lib/command.ts';
+import type { RegionMetadata } from '../lib/framework.ts';
+import { getAllRegionMetadata } from '../regions/index.ts';
 
 export interface Region {
 	id: string;
@@ -34,53 +36,40 @@ function findSimilarRegionIds(id: string, knownRegions: KnownRegion[]): string[]
 	return scored.slice(0, 10).map((r) => r.id);
 }
 
-/** Recursively scans a directory for status.yml files */
-function scanDirectory(
-	directory: string,
-	baseDirectory: string,
-	knownRegionIds: Map<string, KnownRegion>,
-	knownRegions: KnownRegion[],
-	entries: Region[],
-): void {
-	const statusFilename = resolve(directory, 'status.yml');
-	if (existsSync(statusFilename)) {
-		const id = relative(baseDirectory, directory).replaceAll('\\', '/');
-		try {
-			const status = readStatus(statusFilename);
-			const region = knownRegionIds.get(id);
-			if (!region) {
-				console.log('Similar Ids:', findSimilarRegionIds(id, knownRegions));
-				throw new Error(`Unknown region ID: ${id}`);
-			}
-			entries.push({ id, status, region });
-		} catch (error) {
-			throw new Error(`Error processing region "${id}" (${statusFilename})`, {
-				cause: error,
-			});
-		}
-	} else {
-		const directoryEntries = readdirSync(directory, { withFileTypes: true });
-		const sorted = [...directoryEntries].sort((a, b) => a.name.localeCompare(b.name));
-		for (const entry of sorted) {
-			if (entry.isDirectory()) {
-				scanDirectory(resolve(directory, entry.name), baseDirectory, knownRegionIds, knownRegions, entries);
-			}
-		}
+/** Convert RegionMetadata to Status for the status-check output */
+function metadataToStatus(meta: RegionMetadata): Status {
+	if (meta.status === 'error') {
+		return { status: 'error', notes: meta.notes };
 	}
+	return {
+		status: 'success',
+		rating: 0,
+		notes: meta.notes,
+		entries: (meta.entries ?? ['result']).map((name) => ({ name, versaTilesExists: false })),
+		license: meta.license!,
+		creator: meta.creator!,
+	};
 }
 
 /**
- * Scans a directory tree for region status files and matches them with known regions.
- * @param baseDirectory - Root directory to scan for status.yml files
+ * Builds region entries from the TypeScript region registry and matches them with known regions.
  * @param knownRegions - Array of known NUTS regions to match against
  * @returns Array of regions with their status and geometry
  * @throws Error if a region ID doesn't match any known region
  */
-export function scanRegions(baseDirectory: string, knownRegions: KnownRegion[]): Region[] {
+export function scanRegions(knownRegions: KnownRegion[]): Region[] {
 	const knownRegionIds = new Map<string, KnownRegion>(knownRegions.map((r) => [r.properties.id, r]));
+	const allMetadata = getAllRegionMetadata();
 	const entries: Region[] = [];
 
-	scanDirectory(baseDirectory, baseDirectory, knownRegionIds, knownRegions, entries);
+	for (const [id, metadata] of allMetadata) {
+		const region = knownRegionIds.get(id);
+		if (!region) {
+			console.log('Similar Ids:', findSimilarRegionIds(id, knownRegions));
+			throw new Error(`Unknown region ID: ${id}`);
+		}
+		entries.push({ id, status: metadataToStatus(metadata), region });
+	}
 
 	return entries;
 }

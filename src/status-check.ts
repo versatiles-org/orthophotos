@@ -8,7 +8,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const knownRegions = loadKnownRegions(resolve(__dirname, '../data'));
 
-const regions = scanRegions(resolve(__dirname, '../regions'), knownRegions);
+const regions = scanRegions(knownRegions);
 await updateRegionEntries(regions);
 
 writeFileSync(resolve(__dirname, '../web/status.json'), JSON.stringify(regions));

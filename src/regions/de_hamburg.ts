@@ -28,6 +28,7 @@ export default defineTileRegion({
 			'National license instead of an international standard.',
 			'Rather than a national mosaic, inconsistent regional mosaics with different access and formats are available instead.',
 		],
+		entries: ['result'],
 		license: {
 			name: 'DL-DE->BY-2.0',
 			url: 'https://www.govdata.de/dl-de/by-2-0',

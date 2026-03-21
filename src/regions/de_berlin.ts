@@ -39,6 +39,7 @@ export default defineTileRegion({
 			'Atom feed with direct .jp2 download links.',
 			'It is not possible to overlay images because a mask or alpha channel is missing.',
 		],
+		entries: ['result'],
 		license: {
 			name: 'DL-DE/ZERO-2.0',
 			url: 'https://www.govdata.de/dl-de/zero-2-0',

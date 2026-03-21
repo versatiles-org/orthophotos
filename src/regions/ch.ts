@@ -33,6 +33,7 @@ export default defineTileRegion({
 			'License requires attribution.',
 			'National license instead of an international standard.',
 		],
+		entries: ['result'],
 		license: {
 			name: 'Open Government Data (OGD)',
 			url: 'https://www.swisstopo.admin.ch/de/nutzungsbedingungen-kostenlose-geodaten-und-geodienste',

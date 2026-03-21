@@ -37,7 +37,7 @@ async function main(): Promise<void> {
 
 	// Build paths
 	const rootDir = resolve(__dirname, '..');
-	const projDir = resolve(rootDir, 'regions', args.name);
+	const projDir = resolve(rootDir, 'src', 'regions');
 	const dataDir = resolve(getDataDir(), args.name);
 	const tempDir = resolve(getTempDir(), args.name);
 

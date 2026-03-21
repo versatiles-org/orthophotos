@@ -15,6 +15,7 @@ export default defineTileRegion({
 	meta: {
 		status: 'success',
 		notes: ['Only WMS found.', 'Server is very slow.', 'Full coverage only for 2015.'],
+		entries: ['result'],
 		license: {
 			name: 'CC0',
 			url: 'https://creativecommons.org/publicdomain/zero/1.0/',

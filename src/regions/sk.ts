@@ -33,6 +33,7 @@ export default defineTileRegion({
 	meta: {
 		status: 'error',
 		notes: ['Images are unnecessarily packed into container files, such as ZIP.', 'License requires attribution.'],
+		entries: ['result'],
 		license: {
 			name: 'CC BY 4.0',
 			url: 'https://creativecommons.org/licenses/by/4.0/',

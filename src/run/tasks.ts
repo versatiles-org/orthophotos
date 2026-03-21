@@ -5,7 +5,7 @@
 
 import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import { resolve, join } from 'node:path';
-import { runBashScript, runRsyncDownload, runRsyncUpload, runVersatilesRasterMerge } from './commands.ts';
+import { runRsyncDownload, runRsyncUpload, runVersatilesRasterMerge } from './commands.ts';
 import { TASK_NUMBER_TO_NAME } from './tasks.constants.ts';
 import { safeRemoveDir } from '../lib/fs.ts';
 import { getRegionPipeline } from '../regions/index.ts';
@@ -65,22 +65,15 @@ async function taskFetch(ctx: TaskContext): Promise<void> {
 	mkdirSync(ctx.tempDir, { recursive: true });
 
 	const pipeline = getRegionPipeline(ctx.name);
-	if (pipeline) {
-		await runPipeline(pipeline, {
-			name: ctx.name,
-			projDir: ctx.projDir,
-			dataDir: ctx.dataDir,
-			tempDir: ctx.tempDir,
-		});
-	} else {
-		const scriptPath = resolve(ctx.projDir, '1_fetch.sh');
-		const env = {
-			DATA: ctx.dataDir,
-			TEMP: ctx.tempDir,
-			PROJ: ctx.projDir,
-		};
-		await runBashScript(scriptPath, env, ctx.tempDir);
+	if (!pipeline) {
+		throw new Error(`No pipeline defined for region "${ctx.name}"`);
 	}
+	await runPipeline(pipeline, {
+		name: ctx.name,
+		projDir: ctx.projDir,
+		dataDir: ctx.dataDir,
+		tempDir: ctx.tempDir,
+	});
 
 	// Scan for .versatiles files and write filelist.txt
 	const versatilesFiles: string[] = [];

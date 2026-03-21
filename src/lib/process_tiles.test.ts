@@ -209,6 +209,64 @@ describe('defineTileRegion', () => {
 		expect(existsSync(join(tilesDir, 'b.versatiles'))).toBe(true);
 	});
 
+	it('handles invalid return from download callback in two-stage mode', async () => {
+		await runTileRegion(ctx, {
+			name: 'test/invalid-two-stage',
+			meta: baseMeta,
+			init: () => [{ id: 'a' }, { id: 'b' }, { id: 'c' }],
+			download: async (item) => {
+				if (item.id === 'b') return 'invalid';
+				return { value: item.id };
+			},
+			convertConcurrency: 1,
+			convert: async (data, { dest }) => {
+				writeFileSync(dest, data.value);
+			},
+			minFiles: 0,
+		});
+
+		const tilesDir = join(ctx.dataDir, 'tiles');
+		expect(existsSync(join(tilesDir, 'a.versatiles'))).toBe(true);
+		expect(existsSync(join(tilesDir, 'b.versatiles'))).toBe(false);
+		expect(existsSync(join(tilesDir, 'c.versatiles'))).toBe(true);
+	});
+
+	it('handles invalid return from download callback in single-stage mode', async () => {
+		await runTileRegion(ctx, {
+			name: 'test/invalid-single-stage',
+			meta: baseMeta,
+			init: () => [{ id: 'a' }, { id: 'b' }, { id: 'c' }],
+			download: async (item, { dest }) => {
+				if (item.id === 'b') return 'invalid';
+				writeFileSync(dest, item.id);
+			},
+			minFiles: 0,
+		});
+
+		const tilesDir = join(ctx.dataDir, 'tiles');
+		expect(existsSync(join(tilesDir, 'a.versatiles'))).toBe(true);
+		expect(existsSync(join(tilesDir, 'b.versatiles'))).toBe(false);
+		expect(existsSync(join(tilesDir, 'c.versatiles'))).toBe(true);
+	});
+
+	it('throws when errors.add() is called with invalid returns', async () => {
+		await expect(
+			runTileRegion(ctx, {
+				name: 'test/errors-throw',
+				meta: baseMeta,
+				init: () => [{ id: 'a' }, { id: 'b' }],
+				download: async (item, { dest, errors }) => {
+					if (item.id === 'b') {
+						errors.add('https://example.com/b.tif', 'b.tif');
+						return 'invalid';
+					}
+					writeFileSync(dest, item.id);
+				},
+				minFiles: 0,
+			}),
+		).rejects.toThrow('1 invalid download(s)');
+	});
+
 	it('async init receives StepContext', async () => {
 		writeFileSync(join(ctx.tempDir, 'items.json'), JSON.stringify([{ id: 'p' }, { id: 'q' }]));
 

@@ -24,7 +24,7 @@ import { shuffle } from './array.ts';
 import { CONCURRENCY } from './concurrent.ts';
 import { defineRegion, step, type RegionPipeline, type StepContext } from './framework.ts';
 import { pipeline, skip } from './pipeline.ts';
-import { expectMinFiles } from './validators.ts';
+import { DownloadErrors, expectMinFiles } from './validators.ts';
 
 /** Items must have an `id` property used to derive output and skip-file paths. */
 export interface TileItem {
@@ -42,6 +42,8 @@ export interface TileContext {
 	tempDir: string;
 	/** Directory where output tiles live */
 	tilesDir: string;
+	/** Collector for invalid download errors */
+	errors: DownloadErrors;
 }
 
 export interface TileRegionOptions<T extends TileItem, D = void> {
@@ -54,11 +56,11 @@ export interface TileRegionOptions<T extends TileItem, D = void> {
 	/** Download concurrency (default: CONCURRENCY = 4) */
 	downloadConcurrency?: number;
 	/** Download callback */
-	download: (item: T, ctx: TileContext) => Promise<D | 'empty' | void>;
+	download: (item: T, ctx: TileContext) => Promise<D | 'empty' | 'invalid' | void>;
 	/** Convert concurrency (default: Math.max(1, Math.floor(availableParallelism() / 4))) */
 	convertConcurrency?: number;
 	/** Convert callback (optional). When present, download returns D, convert receives it. */
-	convert?: (data: Exclude<D, 'empty' | void>, ctx: TileContext) => Promise<void>;
+	convert?: (data: Exclude<D, 'empty' | 'invalid' | void>, ctx: TileContext) => Promise<void>;
 	/** Minimum number of *.versatiles output files required */
 	minFiles: number;
 }
@@ -76,9 +78,9 @@ export function defineTileRegion<T extends TileItem, D>(options: TileRegionOptio
 	]);
 }
 
-const LABELS = ['converted', 'skipped', 'empty'] as const;
+const LABELS = ['converted', 'skipped', 'empty', 'invalid'] as const;
 
-type ConvertEnvelope<D> = { data: Exclude<D, 'empty' | void>; tileCtx: TileContext };
+type ConvertEnvelope<D> = { data: Exclude<D, 'empty' | 'invalid' | void>; tileCtx: TileContext };
 
 async function processTiles<T extends TileItem, D>(
 	items: T[],
@@ -89,12 +91,14 @@ async function processTiles<T extends TileItem, D>(
 	mkdirSync(tilesDir, { recursive: true });
 
 	const shuffled = shuffle([...items]);
+	const errors = new DownloadErrors();
 
 	const makeTileCtx = (item: T): TileContext => ({
 		dest: join(tilesDir, `${item.id}.versatiles`),
 		skipDest: join(tilesDir, `${item.id}.skip`),
 		tempDir: ctx.tempDir,
 		tilesDir,
+		errors,
 	});
 
 	const isSkipped = (item: T): boolean => {
@@ -113,6 +117,7 @@ async function processTiles<T extends TileItem, D>(
 				const tileCtx = makeTileCtx(item);
 				const result = await download(item, tileCtx);
 				if (result === 'empty') return skip('empty');
+				if (result === 'invalid') return skip('invalid');
 				if (result == null) return null;
 				return { data: result, tileCtx } as ConvertEnvelope<D>;
 			})
@@ -128,9 +133,11 @@ async function processTiles<T extends TileItem, D>(
 			const tileCtx = makeTileCtx(item);
 			const result = await download(item, tileCtx);
 			if (result === 'empty') return 'empty';
+			if (result === 'invalid') return 'invalid';
 			return 'converted';
 		});
 	}
 
+	errors.throwIfAny();
 	await expectMinFiles(tilesDir, '*.versatiles', options.minFiles);
 }

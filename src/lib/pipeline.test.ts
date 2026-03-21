@@ -133,6 +133,28 @@ describe('pipeline', () => {
 		expect(count).toBe(3);
 	});
 
+	it('feeder stops pumping after abort', async () => {
+		let fed = 0;
+		const items = Array.from({ length: 100 }, (_, i) => i);
+
+		await expect(
+			pipeline(items)
+				.map(1, async (n) => {
+					fed++;
+					// Slow down to let feeder build up
+					await new Promise((r) => setTimeout(r, 5));
+					if (n === 2) throw new Error('boom');
+					return n;
+				})
+				.forEach(1, async () => {
+					return 'done';
+				}),
+		).rejects.toThrow('boom');
+
+		// Feeder should have stopped well before iterating all 100 items
+		expect(fed).toBeLessThan(20);
+	});
+
 	it('handles multi-stage chain (3+ stages)', async () => {
 		const results: string[] = [];
 		await pipeline([1, 2, 3])

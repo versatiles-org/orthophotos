@@ -47,21 +47,23 @@ class BoundedChannel<T> {
 		this.capacity = Math.max(1, capacity);
 	}
 
-	async send(value: T): Promise<void> {
-		if (this.aborted) return;
+	async send(value: T): Promise<boolean> {
+		if (this.aborted) return false;
 		while (this.buffer.length >= this.capacity) {
-			if (this.aborted) return;
+			if (this.aborted) return false;
 			await new Promise<void>((resolve) => this.sendWaiters.push(resolve));
-			if (this.aborted) return;
+			if (this.aborted) return false;
 		}
 		this.buffer.push(value);
 		this.notifyOne(this.receiveWaiters);
+		return true;
 	}
 
 	async receive(): Promise<ChannelItem<T>> {
 		while (this.buffer.length === 0) {
 			if (this.aborted) return DONE;
 			await new Promise<void>((resolve) => this.receiveWaiters.push(resolve));
+			if (this.aborted) return DONE;
 		}
 		const value = this.buffer.shift()!;
 		this.notifyOne(this.sendWaiters);
@@ -164,7 +166,7 @@ class PipelineBuilder<T> {
 		const feeder = (async () => {
 			try {
 				for (const item of items) {
-					await channels[0].send(item);
+					if (!(await channels[0].send(item))) break;
 				}
 			} finally {
 				channels[0].close();

@@ -3,20 +3,29 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { StepContext } from './framework.ts';
-import { tileSteps } from './process_tiles.ts';
+import { defineTileRegion } from './process_tiles.ts';
 
-/** Helper: run tileSteps config through the generated step */
-async function runTileSteps<T extends { id: string; [k: string]: unknown }, D>(
+/** Helper: run defineTileRegion config through the generated pipeline */
+async function runTileRegion<T extends { id: string; [k: string]: unknown }, D>(
 	ctx: StepContext,
-	options: Parameters<typeof tileSteps<T, D>>[0],
-): Promise<void> {
-	const steps = tileSteps(options);
-	for (const s of steps) await s.run(ctx);
+	options: Parameters<typeof defineTileRegion<T, D>>[0],
+): Promise<ReturnType<typeof defineTileRegion>> {
+	const region = defineTileRegion(options);
+	for (const s of region.steps) await s.run(ctx);
+	return region;
 }
 
-describe('tileSteps', () => {
+describe('defineTileRegion', () => {
 	let ctx: StepContext;
 	let testDir: string;
+
+	const baseMeta = {
+		status: 'success' as const,
+		notes: [],
+		license: { name: 'test', url: 'https://example.com', requiresAttribution: false },
+		creator: { name: 'test', url: 'https://example.com' },
+		date: '2024',
+	};
 
 	beforeEach(() => {
 		testDir = join(tmpdir(), `process-tiles-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
@@ -32,24 +41,26 @@ describe('tileSteps', () => {
 		rmSync(testDir, { recursive: true, force: true });
 	});
 
-	it('returns a Step array with a download-tiles step', () => {
-		const steps = tileSteps({
+	it('returns a RegionPipeline with a download-tiles step', () => {
+		const region = defineTileRegion({
+			name: 'test/region',
+			meta: baseMeta,
 			init: () => [],
-			download: { concurrency: 1, fn: async () => {} },
+			download: async () => {},
 			minFiles: 0,
 		});
-		expect(steps).toHaveLength(1);
-		expect(steps[0].name).toBe('download-tiles');
+		expect(region.steps).toHaveLength(1);
+		expect(region.steps[0].name).toBe('download-tiles');
+		expect(region.id).toBe('test/region');
 	});
 
 	it('single-stage: downloads to dest', async () => {
-		await runTileSteps(ctx, {
+		await runTileRegion(ctx, {
+			name: 'test/single',
+			meta: baseMeta,
 			init: () => [{ id: 'a' }, { id: 'b' }, { id: 'c' }],
-			download: {
-				concurrency: 2,
-				fn: async (item, { dest }) => {
-					writeFileSync(dest, item.id);
-				},
+			download: async (item, { dest }) => {
+				writeFileSync(dest, item.id);
 			},
 			minFiles: 0,
 		});
@@ -61,19 +72,16 @@ describe('tileSteps', () => {
 	});
 
 	it('two-stage: download then convert', async () => {
-		await runTileSteps(ctx, {
+		await runTileRegion(ctx, {
+			name: 'test/two-stage',
+			meta: baseMeta,
 			init: () => [{ id: 'x' }, { id: 'y' }],
-			download: {
-				concurrency: 2,
-				fn: async (item) => {
-					return { value: item.id.toUpperCase() };
-				},
+			download: async (item) => {
+				return { value: item.id.toUpperCase() };
 			},
-			convert: {
-				concurrency: 1,
-				fn: async (data, { dest }) => {
-					writeFileSync(dest, data.value);
-				},
+			convertConcurrency: 1,
+			convert: async (data, { dest }) => {
+				writeFileSync(dest, data.value);
 			},
 			minFiles: 0,
 		});
@@ -89,14 +97,13 @@ describe('tileSteps', () => {
 		writeFileSync(join(tilesDir, 'a.versatiles'), 'existing');
 
 		let downloadCount = 0;
-		await runTileSteps(ctx, {
+		await runTileRegion(ctx, {
+			name: 'test/skip-dest',
+			meta: baseMeta,
 			init: () => [{ id: 'a' }, { id: 'b' }],
-			download: {
-				concurrency: 2,
-				fn: async (item, { dest }) => {
-					downloadCount++;
-					writeFileSync(dest, item.id);
-				},
+			download: async (item, { dest }) => {
+				downloadCount++;
+				writeFileSync(dest, item.id);
 			},
 			minFiles: 0,
 		});
@@ -111,14 +118,13 @@ describe('tileSteps', () => {
 		writeFileSync(join(tilesDir, 'a.skip'), '');
 
 		let downloadCount = 0;
-		await runTileSteps(ctx, {
+		await runTileRegion(ctx, {
+			name: 'test/skip-files',
+			meta: baseMeta,
 			init: () => [{ id: 'a' }, { id: 'b' }],
-			download: {
-				concurrency: 2,
-				fn: async (item, { dest }) => {
-					downloadCount++;
-					writeFileSync(dest, item.id);
-				},
+			download: async (item, { dest }) => {
+				downloadCount++;
+				writeFileSync(dest, item.id);
 			},
 			minFiles: 0,
 		});
@@ -127,20 +133,17 @@ describe('tileSteps', () => {
 	});
 
 	it('handles empty return from download callback in two-stage mode', async () => {
-		await runTileSteps(ctx, {
+		await runTileRegion(ctx, {
+			name: 'test/empty-two-stage',
+			meta: baseMeta,
 			init: () => [{ id: 'a' }, { id: 'b' }, { id: 'c' }],
-			download: {
-				concurrency: 2,
-				fn: async (item) => {
-					if (item.id === 'b') return 'empty';
-					return { value: item.id };
-				},
+			download: async (item) => {
+				if (item.id === 'b') return 'empty';
+				return { value: item.id };
 			},
-			convert: {
-				concurrency: 1,
-				fn: async (data, { dest }) => {
-					writeFileSync(dest, data.value);
-				},
+			convertConcurrency: 1,
+			convert: async (data, { dest }) => {
+				writeFileSync(dest, data.value);
 			},
 			minFiles: 0,
 		});
@@ -152,14 +155,13 @@ describe('tileSteps', () => {
 	});
 
 	it('handles empty return from download callback in single-stage mode', async () => {
-		await runTileSteps(ctx, {
+		await runTileRegion(ctx, {
+			name: 'test/empty-single-stage',
+			meta: baseMeta,
 			init: () => [{ id: 'a' }, { id: 'b' }, { id: 'c' }],
-			download: {
-				concurrency: 2,
-				fn: async (item, { dest }) => {
-					if (item.id === 'b') return 'empty';
-					writeFileSync(dest, item.id);
-				},
+			download: async (item, { dest }) => {
+				if (item.id === 'b') return 'empty';
+				writeFileSync(dest, item.id);
 			},
 			minFiles: 0,
 		});
@@ -174,13 +176,12 @@ describe('tileSteps', () => {
 		const tilesDir = join(ctx.dataDir, 'tiles');
 		expect(existsSync(tilesDir)).toBe(false);
 
-		await runTileSteps(ctx, {
+		await runTileRegion(ctx, {
+			name: 'test/auto-dir',
+			meta: baseMeta,
 			init: () => [{ id: 'a' }],
-			download: {
-				concurrency: 1,
-				fn: async (item, { dest }) => {
-					writeFileSync(dest, item.id);
-				},
+			download: async (item, { dest }) => {
+				writeFileSync(dest, item.id);
 			},
 			minFiles: 0,
 		});
@@ -189,17 +190,16 @@ describe('tileSteps', () => {
 	});
 
 	it('provides skipDest in context', async () => {
-		await runTileSteps(ctx, {
+		await runTileRegion(ctx, {
+			name: 'test/skip-dest-ctx',
+			meta: baseMeta,
 			init: () => [{ id: 'a' }, { id: 'b' }],
-			download: {
-				concurrency: 1,
-				fn: async (item, { dest, skipDest }) => {
-					if (item.id === 'a') {
-						writeFileSync(skipDest, '');
-						return 'empty';
-					}
-					writeFileSync(dest, item.id);
-				},
+			download: async (item, { dest, skipDest }) => {
+				if (item.id === 'a') {
+					writeFileSync(skipDest, '');
+					return 'empty';
+				}
+				writeFileSync(dest, item.id);
 			},
 			minFiles: 1,
 		});
@@ -212,18 +212,17 @@ describe('tileSteps', () => {
 	it('async init receives StepContext', async () => {
 		writeFileSync(join(ctx.tempDir, 'items.json'), JSON.stringify([{ id: 'p' }, { id: 'q' }]));
 
-		await runTileSteps(ctx, {
+		await runTileRegion(ctx, {
+			name: 'test/async-init',
+			meta: baseMeta,
 			init: async (stepCtx) => {
 				const { readFile } = await import('node:fs/promises');
 				return JSON.parse(await readFile(join(stepCtx.tempDir, 'items.json'), 'utf-8')) as {
 					id: string;
 				}[];
 			},
-			download: {
-				concurrency: 1,
-				fn: async (item, { dest }) => {
-					writeFileSync(dest, item.id);
-				},
+			download: async (item, { dest }) => {
+				writeFileSync(dest, item.id);
 			},
 			minFiles: 0,
 		});

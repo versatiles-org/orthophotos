@@ -1,10 +1,8 @@
 import { rmSync, writeFileSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { defineRegion } from '../lib/framework.ts';
 import { downloadFile, runCommand } from '../lib/command.ts';
-import { CONCURRENCY } from '../lib/concurrent.ts';
-import { tileSteps } from '../lib/process_tiles.ts';
+import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
 import { runVersatilesRasterConvert } from '../run/commands.ts';
 
@@ -18,9 +16,9 @@ export function generateCoords(): { x: number; y: number; id: string }[] {
 	return coords;
 }
 
-export default defineRegion(
-	'de/thueringen',
-	{
+export default defineTileRegion({
+	name: 'de/thueringen',
+	meta: {
 		status: 'success',
 		notes: [
 			'No API, such as an ATOM feed, available.',
@@ -42,69 +40,61 @@ export default defineRegion(
 		},
 		date: '2024',
 	},
-	tileSteps({
-		init: () => generateCoords(),
-		download: {
-			concurrency: CONCURRENCY,
-			fn: async ({ x, y, id }, { tempDir, skipDest }) => {
-				const jsonPath = join(tempDir, `${id}.json`);
-				const zipPath = join(tempDir, `${id}.zip`);
-				const extractDir = join(tempDir, id);
+	init: () => generateCoords(),
+	download: async ({ x, y, id }, { tempDir, skipDest }) => {
+		const jsonPath = join(tempDir, `${id}.json`);
+		const zipPath = join(tempDir, `${id}.zip`);
+		const extractDir = join(tempDir, id);
 
+		try {
+			const bbox = `${x * 1000}&bbox%5B%5D=${y * 1000}&bbox%5B%5D=${(x + 1) * 1000}&bbox%5B%5D=${(y + 1) * 1000}`;
+			const apiUrl = `https://geoportal.geoportal-th.de/gaialight-th/_apps/dladownload/_ajax/overview.php?crs=EPSG%3A25832&bbox%5B%5D=${bbox}&type%5B%5D=op`;
+
+			await withRetry(() => downloadFile(apiUrl, jsonPath), { maxAttempts: 3 });
+			const json = JSON.parse(await readFile(jsonPath, 'utf-8'));
+
+			// Find the GID for this tile (most recent flight)
+			const features = json.result?.features ?? [];
+			type Feature = { properties: { bildnr: string; bildflugnr: number; gid: number } };
+			const matching = (features as Feature[]).filter((f) => f.properties.bildnr === id);
+			if (matching.length === 0) {
+				writeFileSync(skipDest, '');
+				return 'empty';
+			}
+			const best = matching.reduce((a, b) => (a.properties.bildflugnr > b.properties.bildflugnr ? a : b));
+
+			const downloadUrl = `https://geoportal.geoportal-th.de/gaialight-th/_apps/dladownload/download.php?type=op&id=${best.properties.gid}`;
+			await withRetry(() => runCommand('curl', ['-sko', zipPath, downloadUrl]), {
+				maxAttempts: 3,
+			});
+
+			await runCommand('unzip', ['-qo', zipPath, '-d', extractDir]);
+
+			// Find the single .tif file
+			const files = await readdir(extractDir, { recursive: true });
+			const tifFile = files.find((f) => typeof f === 'string' && f.endsWith('.tif'));
+			if (!tifFile) {
+				writeFileSync(skipDest, '');
+				return 'empty';
+			}
+
+			return { srcTif: join(extractDir, tifFile), extractDir };
+		} finally {
+			for (const p of [jsonPath, zipPath]) {
 				try {
-					const bbox = `${x * 1000}&bbox%5B%5D=${y * 1000}&bbox%5B%5D=${(x + 1) * 1000}&bbox%5B%5D=${(y + 1) * 1000}`;
-					const apiUrl = `https://geoportal.geoportal-th.de/gaialight-th/_apps/dladownload/_ajax/overview.php?crs=EPSG%3A25832&bbox%5B%5D=${bbox}&type%5B%5D=op`;
-
-					await withRetry(() => downloadFile(apiUrl, jsonPath), { maxAttempts: 3 });
-					const json = JSON.parse(await readFile(jsonPath, 'utf-8'));
-
-					// Find the GID for this tile (most recent flight)
-					const features = json.result?.features ?? [];
-					type Feature = { properties: { bildnr: string; bildflugnr: number; gid: number } };
-					const matching = (features as Feature[]).filter((f) => f.properties.bildnr === id);
-					if (matching.length === 0) {
-						writeFileSync(skipDest, '');
-						return 'empty';
-					}
-					const best = matching.reduce((a, b) => (a.properties.bildflugnr > b.properties.bildflugnr ? a : b));
-
-					const downloadUrl = `https://geoportal.geoportal-th.de/gaialight-th/_apps/dladownload/download.php?type=op&id=${best.properties.gid}`;
-					await withRetry(() => runCommand('curl', ['-sko', zipPath, downloadUrl]), {
-						maxAttempts: 3,
-					});
-
-					await runCommand('unzip', ['-qo', zipPath, '-d', extractDir]);
-
-					// Find the single .tif file
-					const files = await readdir(extractDir, { recursive: true });
-					const tifFile = files.find((f) => typeof f === 'string' && f.endsWith('.tif'));
-					if (!tifFile) {
-						writeFileSync(skipDest, '');
-						return 'empty';
-					}
-
-					return { srcTif: join(extractDir, tifFile), extractDir };
-				} finally {
-					for (const p of [jsonPath, zipPath]) {
-						try {
-							rmSync(p, { force: true });
-						} catch {}
-					}
-				}
-			},
-		},
-		convert: {
-			concurrency: 4,
-			fn: async ({ srcTif, extractDir }, { dest }) => {
-				try {
-					await runVersatilesRasterConvert(srcTif, dest);
-				} finally {
-					try {
-						rmSync(extractDir, { recursive: true, force: true });
-					} catch {}
-				}
-			},
-		},
-		minFiles: 50,
-	}),
-);
+					rmSync(p, { force: true });
+				} catch {}
+			}
+		}
+	},
+	convert: async ({ srcTif, extractDir }, { dest }) => {
+		try {
+			await runVersatilesRasterConvert(srcTif, dest);
+		} finally {
+			try {
+				rmSync(extractDir, { recursive: true, force: true });
+			} catch {}
+		}
+	},
+	minFiles: 50,
+});

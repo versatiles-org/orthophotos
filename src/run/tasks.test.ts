@@ -12,7 +12,6 @@ const TEST_TEMP_DIR = resolve(__dirname, '../../test-data/tasks-temp');
 function createTestContext(name: string): TaskContext {
 	return {
 		name,
-		projDir: TEST_DATA_DIR,
 		dataDir: resolve(TEST_TEMP_DIR, 'data', name),
 		tempDir: resolve(TEST_TEMP_DIR, 'temp', name),
 	};

@@ -13,7 +13,6 @@ import { runPipeline } from '../lib/framework.ts';
 
 export interface TaskContext {
 	name: string; // Region identifier (e.g., "de/bw")
-	projDir: string; // Path to regions/<name>
 	dataDir: string; // Path to $dir_data/<name>
 	tempDir: string; // Path to $dir_temp/<name>
 }
@@ -70,7 +69,6 @@ async function taskFetch(ctx: TaskContext): Promise<void> {
 	}
 	await runPipeline(pipeline, {
 		name: ctx.name,
-		projDir: ctx.projDir,
 		dataDir: ctx.dataDir,
 		tempDir: ctx.tempDir,
 	});

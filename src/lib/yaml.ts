@@ -16,24 +16,3 @@ export function parseYamlFile<T>(path: string): T {
 	const text = readFileSync(path, 'utf-8');
 	return parse(text) as T;
 }
-
-interface StatusYaml {
-	status: string;
-	entries?: string[];
-}
-
-/**
- * Reads a status.yml file and returns the list of entry names.
- * Used by the run script task pipeline.
- * @param statusPath Path to the status.yml file
- * @returns Array of entry names
- */
-export function readStatusEntries(statusPath: string): string[] {
-	const yaml = parseYamlFile<StatusYaml>(statusPath);
-
-	if (!yaml.entries || !Array.isArray(yaml.entries)) {
-		return [];
-	}
-
-	return yaml.entries.filter((entry): entry is string => typeof entry === 'string');
-}

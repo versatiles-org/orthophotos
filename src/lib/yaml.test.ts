@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { parseYamlFile, readStatusEntries } from './yaml.ts';
+import { parseYamlFile } from './yaml.ts';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -43,25 +43,4 @@ test('parseYamlFile - handles nested objects and arrays', () => {
 
 test('parseYamlFile - throws on missing file', () => {
 	expect(() => parseYamlFile('/nonexistent/path/file.yml')).toThrow();
-});
-
-test('readStatusEntries - extracts entry names', () => {
-	const entries = readStatusEntries(resolve(TEST_DATA_DIR, 'status-with-entries.yml'));
-	expect(entries.length).toBe(3);
-	expect(entries[0]).toBe('entry1');
-	expect(entries[1]).toBe('entry2');
-	expect(entries[2]).toBe('entry3');
-});
-
-test('readStatusEntries - returns empty array when no entries', () => {
-	const entries = readStatusEntries(resolve(TEST_DATA_DIR, 'status-no-entries.yml'));
-	expect(entries.length).toBe(0);
-});
-
-test('readStatusEntries - filters non-string entries', () => {
-	const entries = readStatusEntries(resolve(TEST_DATA_DIR, 'status-mixed-entries.yml'));
-	// Only string entries should be returned
-	expect(entries.length).toBe(2);
-	expect(entries[0]).toBe('valid_entry');
-	expect(entries[1]).toBe('another_entry');
 });

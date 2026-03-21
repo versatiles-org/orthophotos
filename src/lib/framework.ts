@@ -1,22 +1,11 @@
 /**
- * Step-based framework for wrapping bash script execution with
- * named steps, timing, output capture, and postcondition validation.
+ * Step-based framework for region pipeline definitions.
  */
-
-import { resolve } from 'node:path';
-import { runCommand } from '../lib/command.ts';
 
 export interface StepContext {
 	name: string;
-	projDir: string;
 	dataDir: string;
 	tempDir: string;
-}
-
-export interface BashStepOptions {
-	scriptFile: string;
-	cwd?: 'data' | 'temp';
-	validate?: (ctx: StepContext) => Promise<void>;
 }
 
 export interface Step {
@@ -48,44 +37,6 @@ export interface RegionPipeline {
 	id: string;
 	metadata: RegionMetadata;
 	steps: Step[];
-}
-
-/**
- * Creates a step that runs a bash script with optional postcondition validation.
- */
-export function bashStep(name: string, options: BashStepOptions): Step {
-	return {
-		name,
-		run: async (ctx: StepContext) => {
-			const scriptPath = resolve(ctx.projDir, options.scriptFile);
-			const cwd = options.cwd === 'data' ? ctx.dataDir : ctx.tempDir;
-			const env = { DATA: ctx.dataDir, TEMP: ctx.tempDir, PROJ: ctx.projDir };
-
-			const result = await runCommand('bash', ['-c', scriptPath], {
-				cwd,
-				env,
-				stdout: 'piped',
-				stderr: 'piped',
-			});
-
-			const stdout = new TextDecoder().decode(result.stdout);
-			const stderr = new TextDecoder().decode(result.stderr);
-
-			if (stdout) process.stdout.write(stdout);
-			if (stderr) process.stderr.write(stderr);
-
-			if (options.validate) {
-				try {
-					await options.validate(ctx);
-				} catch (err) {
-					const message = err instanceof Error ? err.message : String(err);
-					throw new Error(
-						`Postcondition failed for step "${name}": ${message}` + (stderr ? `\n\nCaptured stderr:\n${stderr}` : ''),
-					);
-				}
-			}
-		},
-	};
 }
 
 /**

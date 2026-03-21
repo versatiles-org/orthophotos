@@ -3,7 +3,6 @@ import { defineRegion, runPipeline, step, type RegionMetadata, type StepContext 
 
 const dummyCtx: StepContext = {
 	name: 'test/region',
-	projDir: '/tmp/proj',
 	dataDir: '/tmp/data',
 	tempDir: '/tmp/temp',
 };

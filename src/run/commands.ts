@@ -8,8 +8,8 @@ import { dirname, basename, join } from 'node:path';
 import { requireRsyncConfig } from '../config.ts';
 import { runCommand } from '../lib/command.ts';
 
-/** Required CLI tools (excluding yq which is replaced by native YAML parsing) */
-const REQUIRED_COMMANDS = ['curl', 'gdal_translate', 'unzip', 'versatiles', 'wget'];
+/** Required CLI tools */
+const REQUIRED_COMMANDS = ['7z', 'curl', 'gdal_translate', 'gdalbuildvrt', 'unzip', 'versatiles', 'xmlstarlet'];
 
 /**
  * Checks if a command is available in PATH.
@@ -75,28 +75,6 @@ export async function runRsyncUpload(localPath: string, remotePath: string): Pro
 		`${host}:orthophoto/${remotePath}/`,
 	];
 	await runCommand('rsync', args);
-}
-
-/**
- * Runs a bash script with the specified environment variables.
- * When capture is true, stdout/stderr are piped and returned instead of inherited.
- */
-export async function runBashScript(
-	scriptPath: string,
-	env: { DATA: string; TEMP: string; PROJ: string },
-	cwd: string,
-	options?: { capture?: boolean },
-): Promise<{ stdout: string; stderr: string }> {
-	const result = await runCommand('bash', ['-c', scriptPath], {
-		cwd,
-		env,
-		stdout: options?.capture ? 'piped' : undefined,
-		stderr: options?.capture ? 'piped' : undefined,
-	});
-	return {
-		stdout: new TextDecoder().decode(result.stdout),
-		stderr: new TextDecoder().decode(result.stderr),
-	};
 }
 
 /**

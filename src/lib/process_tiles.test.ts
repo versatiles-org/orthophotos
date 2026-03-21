@@ -33,7 +33,7 @@ describe('defineTileRegion', () => {
 		const tempDir = join(testDir, 'temp');
 		mkdirSync(dataDir, { recursive: true });
 		mkdirSync(tempDir, { recursive: true });
-		ctx = { name: 'test', projDir: testDir, dataDir, tempDir };
+		ctx = { name: 'test', dataDir, tempDir };
 	});
 
 	afterEach(async () => {

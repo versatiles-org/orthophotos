@@ -8,19 +8,16 @@
  *
  * Example:
  *   npm run run -- de/bw 1        # run fetch
- *   npm run run -- de/bw 2-4      # run vrt, preview, convert
+ *   npm run run -- de/bw 2-4      # run merge, upload, delete
  *   npm run run -- de/bw all      # full pipeline
  */
 
-import { resolve, dirname } from 'node:path';
+import { resolve } from 'node:path';
 import { mkdirSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { getDataDir, getTempDir } from './config.ts';
 import { getHelpText, parseArgs } from './run/args.ts';
 import { checkRequiredCommands } from './run/commands.ts';
 import { runTask, type TaskContext } from './run/tasks.ts';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
 
 async function main(): Promise<void> {
 	// Parse command line arguments
@@ -36,8 +33,6 @@ async function main(): Promise<void> {
 	await checkRequiredCommands();
 
 	// Build paths
-	const rootDir = resolve(__dirname, '..');
-	const projDir = resolve(rootDir, 'src', 'regions');
 	const dataDir = resolve(getDataDir(), args.name);
 	const tempDir = resolve(getTempDir(), args.name);
 
@@ -47,7 +42,6 @@ async function main(): Promise<void> {
 	// Create task context
 	const ctx: TaskContext = {
 		name: args.name,
-		projDir,
 		dataDir,
 		tempDir,
 	};

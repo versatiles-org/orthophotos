@@ -61,7 +61,6 @@ export default defineRegion(
 					const jsonPath = join(ctx.tempDir, `${id}.json`);
 					const zipPath = join(ctx.tempDir, `${id}.zip`);
 					const extractDir = join(ctx.tempDir, id);
-					const tifPath = join(ctx.tempDir, `${id}.tif`);
 
 					try {
 						const bbox = `${x * 1000}&bbox%5B%5D=${y * 1000}&bbox%5B%5D=${(x + 1) * 1000}&bbox%5B%5D=${(y + 1) * 1000}`;
@@ -95,14 +94,14 @@ export default defineRegion(
 							return 'empty';
 						}
 
-						// Convert to .versatiles and delete source
+						// Convert to .versatiles (uses tmp. prefix internally)
 						const srcTif = join(extractDir, tifFile);
 						await runVersatilesRasterConvert(srcTif, destVersatiles);
 						return 'converted';
 					} catch {
 						return 'empty';
 					} finally {
-						for (const p of [jsonPath, zipPath, tifPath]) {
+						for (const p of [jsonPath, zipPath]) {
 							try {
 								rmSync(p, { force: true });
 							} catch {}

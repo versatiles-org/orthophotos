@@ -130,16 +130,15 @@ export function getHelpText(): string {
 	return `Usage: npm run run -- <name> <task>
 
 <name>  Region identifier: cc or cc/ss (e.g., de/bw)
-<task>  One or more tasks: a single step (e.g., 3 or upload),
+<task>  One or more tasks: a single step (e.g., 2 or merge),
         a comma list (e.g., 1,2,3), and/or ranges (e.g., 1-3,5)
 
 Tasks:
   0 | download   rsync pull existing data from remote
   1 | fetch      fetch + per-file versatiles raster convert
-  2 | merge      versatiles raster merge into result.versatiles
-  3 | upload     rsync push to remote
-  4 | delete     delete local data for the region
-  all            run full pipeline: 0 1 3 2 3 4
+  2 | merge      versatiles raster merge directly to remote via sftp
+  3 | delete     delete local data for the region
+  all            run full pipeline: 0 1 2 3
 
 Examples:
   npm run run -- de/bw 1

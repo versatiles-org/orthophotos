@@ -26,12 +26,11 @@ test('validateRegionName - rejects invalid formats', () => {
 test('expandTasks - single numeric task', () => {
 	expect(expandTasks('3')).toEqual([3]);
 	expect(expandTasks('0')).toEqual([0]);
-	expect(expandTasks('4')).toEqual([4]);
 });
 
 test('expandTasks - comma-separated tasks', () => {
 	expect(expandTasks('1,2,3')).toEqual([1, 2, 3]);
-	expect(expandTasks('0,3,4')).toEqual([0, 3, 4]);
+	expect(expandTasks('0,2,3')).toEqual([0, 2, 3]);
 });
 
 test('expandTasks - range ascending', () => {
@@ -47,22 +46,21 @@ test('expandTasks - named tasks', () => {
 	expect(expandTasks('fetch')).toEqual([1]);
 	expect(expandTasks('download')).toEqual([0]);
 	expect(expandTasks('merge')).toEqual([2]);
-	expect(expandTasks('upload')).toEqual([3]);
-	expect(expandTasks('delete')).toEqual([4]);
+	expect(expandTasks('delete')).toEqual([3]);
 });
 
 test('expandTasks - all', () => {
-	expect(expandTasks('all')).toEqual([0, 1, 3, 2, 3, 4]);
-	expect(expandTasks('ALL')).toEqual([0, 1, 3, 2, 3, 4]);
+	expect(expandTasks('all')).toEqual([0, 1, 2, 3]);
+	expect(expandTasks('ALL')).toEqual([0, 1, 2, 3]);
 });
 
 test('expandTasks - mixed specifications', () => {
-	expect(expandTasks('1,3-4')).toEqual([1, 3, 4]);
+	expect(expandTasks('1,2-3')).toEqual([1, 2, 3]);
 	expect(expandTasks('fetch,2-3')).toEqual([1, 2, 3]);
 });
 
 test('expandTasks - throws on invalid task number', () => {
-	expect(() => expandTasks('5')).toThrow('Invalid task number');
+	expect(() => expandTasks('4')).toThrow('Invalid task number');
 	expect(() => expandTasks('99')).toThrow('Invalid task number');
 });
 
@@ -80,10 +78,10 @@ test('parseArgs - returns null for help flag', () => {
 
 test('parseArgs - parses valid arguments', () => {
 	expect(parseArgs(['de/bw', '1'])).toEqual({ name: 'de/bw', tasks: [1] });
-	expect(parseArgs(['fr', '2-4'])).toEqual({ name: 'fr', tasks: [2, 3, 4] });
+	expect(parseArgs(['fr', '2-3'])).toEqual({ name: 'fr', tasks: [2, 3] });
 	expect(parseArgs(['de', 'all'])).toEqual({
 		name: 'de',
-		tasks: [0, 1, 3, 2, 3, 4],
+		tasks: [0, 1, 2, 3],
 	});
 });
 

@@ -8,7 +8,7 @@
  *
  * Example:
  *   npm run run -- de/bw 1        # run fetch
- *   npm run run -- de/bw 2-4      # run merge, upload, delete
+ *   npm run run -- de/bw 2-3      # run merge, delete
  *   npm run run -- de/bw all      # full pipeline
  */
 

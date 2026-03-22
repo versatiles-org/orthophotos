@@ -5,11 +5,12 @@
 
 import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import { resolve, join } from 'node:path';
-import { runRsyncDownload, runRsyncUpload, runVersatilesRasterMerge } from './commands.ts';
+import { buildSftpUrl, runRsyncDownload, runSshCommand, runVersatilesRasterMerge } from './commands.ts';
 import { TASK_NUMBER_TO_NAME } from './tasks.constants.ts';
 import { safeRemoveDir } from '../lib/fs.ts';
 import { getRegionPipeline } from '../regions/index.ts';
 import { runPipeline } from '../lib/framework.ts';
+import { requireRsyncConfig } from '../config.ts';
 
 export interface TaskContext {
 	name: string; // Region identifier (e.g., "de/bw")
@@ -35,9 +36,6 @@ export async function runTask(taskNum: number, ctx: TaskContext): Promise<void> 
 			await taskMerge(ctx);
 			break;
 		case 3:
-			await taskUpload(ctx);
-			break;
-		case 4:
 			await taskDelete(ctx);
 			break;
 		default:
@@ -98,7 +96,8 @@ async function taskFetch(ctx: TaskContext): Promise<void> {
 
 /**
  * Task 2: Merge all per-file .versatiles into one result.
- * Reads filelist.txt and runs `versatiles raster merge`.
+ * Reads filelist.txt, runs `versatiles raster merge` writing directly
+ * to remote storage via sftp://, then renames the temp file on success.
  */
 async function taskMerge(ctx: TaskContext): Promise<void> {
 	console.log('Merging .versatiles files...');
@@ -108,22 +107,26 @@ async function taskMerge(ctx: TaskContext): Promise<void> {
 		throw new Error(`filelist.txt not found in ${ctx.dataDir}. Run the fetch task first.`);
 	}
 
-	const outputPath = resolve(ctx.dataDir, 'result.versatiles');
-	await runVersatilesRasterMerge(filelistPath, outputPath);
-	console.log(`  Merged into ${outputPath}`);
+	const { host, port, id } = requireRsyncConfig();
+	const remoteDir = `orthophoto/${ctx.name}`;
+	const tmpRemote = `${remoteDir}/tmp.result.versatiles`;
+	const finalRemote = `${remoteDir}/result.versatiles`;
+	const outputUrl = buildSftpUrl(host, port, tmpRemote);
+
+	try {
+		await runVersatilesRasterMerge(filelistPath, outputUrl);
+		await runSshCommand(host, port, id, `mv '${tmpRemote}' '${finalRemote}'`);
+		console.log(`  Merged into ${finalRemote}`);
+	} catch (err) {
+		try {
+			await runSshCommand(host, port, id, `rm -f '${tmpRemote}'`);
+		} catch {}
+		throw err;
+	}
 }
 
 /**
- * Task 3: Upload data to remote server.
- * Excludes tiles/ and tiles_{*}/ directories.
- */
-async function taskUpload(ctx: TaskContext): Promise<void> {
-	console.log('Uploading data to server...');
-	await runRsyncUpload(ctx.dataDir, ctx.name);
-}
-
-/**
- * Task 4: Delete local data.
+ * Task 3: Delete local data.
  * Removes both data and temp directories.
  */
 async function taskDelete(ctx: TaskContext): Promise<void> {

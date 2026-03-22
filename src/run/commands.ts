@@ -59,22 +59,17 @@ export async function runRsyncDownload(remotePath: string, localPath: string): P
 }
 
 /**
- * Runs rsync to upload data to the remote server.
- * Excludes tiles/ and tiles_{*}/ directories.
+ * Builds an sftp:// URL for remote storage.
  */
-export async function runRsyncUpload(localPath: string, remotePath: string): Promise<void> {
-	const { host, port, id } = requireRsyncConfig();
-	const args = [
-		'-ahtW',
-		'-e',
-		`ssh -p ${port} -i ${id}`,
-		'--info=progress2',
-		'--exclude=tiles/',
-		'--exclude=tiles_*/',
-		`${localPath}/`,
-		`${host}:orthophoto/${remotePath}/`,
-	];
-	await runCommand('rsync', args);
+export function buildSftpUrl(host: string, port: string, remotePath: string): string {
+	return `sftp://${host}:${port}/${remotePath}`;
+}
+
+/**
+ * Runs a command on the remote server via SSH.
+ */
+export async function runSshCommand(host: string, port: string, keyFile: string, command: string): Promise<void> {
+	await runCommand('ssh', ['-p', port, '-i', keyFile, host, command]);
 }
 
 /**
@@ -146,15 +141,6 @@ export async function runVersatilesRasterMerge(
 	if (options?.quality != null) {
 		args.push('--quality', String(options.quality));
 	}
-	const tmpOutput = join(dirname(output), `tmp.${basename(output)}`);
-	args.push(filelistPath, tmpOutput);
-	try {
-		await runCommand('versatiles', args);
-		renameSync(tmpOutput, output);
-	} catch (err) {
-		try {
-			rmSync(tmpOutput, { force: true });
-		} catch {}
-		throw err;
-	}
+	args.push(filelistPath, output);
+	await runCommand('versatiles', args);
 }

@@ -28,21 +28,17 @@ npm run server                    # Prepare data + start server on port 8080
 
 ## Architecture
 
-### Pipeline Tasks (0-6)
+### Pipeline Tasks (1-3)
 
-Run via `npm run run -- <region> <tasks>` (e.g., `npm run run -- de/baden_wuerttemberg 1-4`):
+Run via `npm run run -- <region> <tasks>` (e.g., `npm run run -- de/baden_wuerttemberg 1-3`):
 
-| # | Name     | Description                                      |
-|---|----------|--------------------------------------------------|
-| 0 | download | Rsync pull existing data from remote              |
-| 1 | fetch    | Run region's TypeScript pipeline or `1_fetch.sh`  |
-| 2 | vrt      | Build VRT from metadata config or `2_build_vrt.sh`|
-| 3 | preview  | Create 200x200px preview TIFF via gdalwarp        |
-| 4 | convert  | Generate VPL, convert to .versatiles              |
-| 5 | upload   | Rsync push to remote                              |
-| 6 | delete   | Remove local data and temp directories            |
+| # | Name   | Description                                                |
+|---|--------|------------------------------------------------------------|
+| 1 | fetch  | Download source data + per-file versatiles raster convert  |
+| 2 | merge  | Merge .versatiles files directly to remote storage via sftp|
+| 3 | delete | Remove local data and temp directories                     |
 
-Task spec supports: numbers (`3`), names (`fetch`), ranges (`1-3`), comma lists (`fetch,2-3`), `all` (full pipeline with uploads between steps).
+Task spec supports: numbers (`2`), names (`fetch`), ranges (`1-3`), comma lists (`fetch,2-3`), `all` (full pipeline).
 
 ### Key Directories
 
@@ -67,7 +63,7 @@ Region IDs follow pattern `<cc>` or `<cc>/<name>` (e.g., `de`, `de/baden_wuertte
 Environment variables loaded from `config.env`:
 - `dir_data` - Directory for large datasets and outputs (required)
 - `dir_temp` - Directory for temporary processing files (required)
-- `rsync_host`, `rsync_port`, `rsync_id` - Remote storage connection (required for sync tasks)
+- `rsync_host`, `rsync_port`, `rsync_id` - Remote storage SSH connection (required for merge + server)
 
 ### Region Migration (Bash → TypeScript)
 
@@ -192,4 +188,4 @@ try {
 
 ### External CLI Dependencies
 
-Required tools: `7z`, `curl`, `gdal_translate`, `gdalbuildvrt`, `gdalwarp`, `htmlq`, `jq`, `parallel`, `rsync`, `unzip`, `versatiles`, `wget`, `xmlstarlet`
+Required tools: `7z`, `curl`, `gdal_translate`, `gdalbuildvrt`, `ssh`, `unzip`, `versatiles`

@@ -9,6 +9,7 @@ interface Config {
 	sshHost?: string;
 	sshPort?: string;
 	sshId?: string;
+	sshDir?: string;
 }
 
 function getRequiredEnv(name: string): string {
@@ -34,6 +35,7 @@ export function loadConfig(): Config {
 		sshHost: getOptionalEnv('ssh_host'),
 		sshPort: getOptionalEnv('ssh_port'),
 		sshId: getOptionalEnv('ssh_id'),
+		sshDir: getOptionalEnv('ssh_dir'),
 	};
 }
 
@@ -52,11 +54,13 @@ export function requireSshConfig(): {
 	host: string;
 	port: string;
 	id: string;
+	dir: string;
 } {
 	const host = getRequiredEnv('ssh_host');
 	const port = getRequiredEnv('ssh_port');
 	const id = getRequiredEnv('ssh_id');
-	return { host, port, id };
+	const dir = getRequiredEnv('ssh_dir');
+	return { host, port, id, dir };
 }
 
 /**

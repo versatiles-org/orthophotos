@@ -63,7 +63,7 @@ Region IDs follow pattern `<cc>` or `<cc>/<name>` (e.g., `de`, `de/baden_wuertte
 Environment variables loaded from `config.env`:
 - `dir_data` - Directory for large datasets and outputs (required)
 - `dir_temp` - Directory for temporary processing files (required)
-- `ssh_host`, `ssh_port`, `ssh_id` - Remote storage SSH connection (required for merge + server)
+- `ssh_host`, `ssh_port`, `ssh_id`, `ssh_dir` - Remote storage SSH connection and base path (required for merge + server)
 
 ### Region Migration (Bash → TypeScript)
 

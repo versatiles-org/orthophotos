@@ -8,7 +8,8 @@ import { runCommandWithRetry } from '../lib/command.ts';
  * Uses rsync with retry logic for resilience.
  */
 export async function downloadOrthophotos() {
-	await rsync('orthophoto', 'orthophotos');
+	const { dir } = requireSshConfig();
+	await rsync(`${dir}`, 'orthophotos');
 }
 
 /**

@@ -27,6 +27,7 @@ test('loadConfig - returns config with all values', () => {
 	process.env['ssh_host'] = 'host.example.com';
 	process.env['ssh_port'] = '22';
 	process.env['ssh_id'] = '/path/to/key';
+	process.env['ssh_dir'] = '/remote/data';
 
 	const config = loadConfig();
 	expect(config.dirData).toBe('/data');
@@ -34,6 +35,7 @@ test('loadConfig - returns config with all values', () => {
 	expect(config.sshHost).toBe('host.example.com');
 	expect(config.sshPort).toBe('22');
 	expect(config.sshId).toBe('/path/to/key');
+	expect(config.sshDir).toBe('/remote/data');
 });
 
 test('loadConfig - throws when dir_data missing', () => {
@@ -52,11 +54,13 @@ test('requireSshConfig - returns SSH config when all set', () => {
 	process.env['ssh_host'] = 'host.example.com';
 	process.env['ssh_port'] = '22';
 	process.env['ssh_id'] = '/path/to/key';
+	process.env['ssh_dir'] = '/remote/data';
 
 	const config = requireSshConfig();
 	expect(config.host).toBe('host.example.com');
 	expect(config.port).toBe('22');
 	expect(config.id).toBe('/path/to/key');
+	expect(config.dir).toBe('/remote/data');
 });
 
 test('requireSshConfig - throws when host missing', () => {

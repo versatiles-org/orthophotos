@@ -95,8 +95,8 @@ async function taskMerge(ctx: TaskContext): Promise<void> {
 		throw new Error(`filelist.txt not found in ${ctx.dataDir}. Run the fetch task first.`);
 	}
 
-	const { host, port, id } = requireSshConfig();
-	const remoteDir = `orthophoto/${ctx.name}`;
+	const { host, port, id, dir } = requireSshConfig();
+	const remoteDir = `${dir}/${ctx.name}`;
 	const tmpRemote = `${remoteDir}/tmp.result.versatiles`;
 	const finalRemote = `${remoteDir}/result.versatiles`;
 	const outputUrl = buildSftpUrl(host, port, tmpRemote);

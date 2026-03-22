@@ -2,7 +2,7 @@
  * External command execution utilities for the run script.
  */
 
-import { requireRsyncConfig } from '../config.ts';
+import { getTempDir, requireRsyncConfig } from '../config.ts';
 import { runCommand } from '../lib/command.ts';
 
 /** Required CLI tools (excluding yq which is replaced by native YAML parsing) */
@@ -137,6 +137,6 @@ export async function runGdalwarp(inputPath: string, outputPath: string, tempDir
  * Runs versatiles convert with a VPL source (inline string or file path).
  */
 export async function runVersatiles(vplSource: string, outputPath: string, cwd?: string): Promise<void> {
-	const args = ['--cache-dir', '/tmp/', 'convert', vplSource, outputPath];
+	const args = ['--cache-dir', getTempDir(), 'convert', vplSource, outputPath];
 	await runCommand('versatiles', args, { cwd });
 }

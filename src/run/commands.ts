@@ -9,7 +9,7 @@ import { requireRsyncConfig } from '../config.ts';
 import { runCommand } from '../lib/command.ts';
 
 /** Required CLI tools */
-const REQUIRED_COMMANDS = ['7z', 'curl', 'gdal_translate', 'gdalbuildvrt', 'unzip', 'versatiles', 'xmlstarlet'];
+const REQUIRED_COMMANDS = ['7z', 'curl', 'gdal_translate', 'gdalbuildvrt', 'unzip', 'versatiles'];
 
 /**
  * Checks if a command is available in PATH.

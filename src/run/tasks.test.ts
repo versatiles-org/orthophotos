@@ -64,7 +64,7 @@ test('runTask - task 3 (delete) handles non-existent directories', async () => {
 	await cleanupTestTemp();
 });
 
-// Note: Tasks 1-2 require external tools, rsync configuration, or actual region scripts.
+// Note: Tasks 1-2 require external tools, SSH configuration, or actual region scripts.
 // They would need more extensive mocking or integration test setup to test fully.
 
 test('runTask - task 2 (merge) requires filelist.txt', async () => {
@@ -78,28 +78,28 @@ test('runTask - task 2 (merge) requires filelist.txt', async () => {
 	}
 });
 
-test('runTask - task 2 (merge) requires rsync config', async () => {
+test('runTask - task 2 (merge) requires SSH config', async () => {
 	const ctx = createTestContext('merge-test');
 	mkdirSync(ctx.dataDir, { recursive: true });
 	writeFileSync(resolve(ctx.dataDir, 'filelist.txt'), 'dummy');
 
 	// Save current env
-	const savedHost = process.env['rsync_host'];
-	const savedPort = process.env['rsync_port'];
-	const savedId = process.env['rsync_id'];
+	const savedHost = process.env['ssh_host'];
+	const savedPort = process.env['ssh_port'];
+	const savedId = process.env['ssh_id'];
 
-	// Clear rsync env vars
-	delete process.env['rsync_host'];
-	delete process.env['rsync_port'];
-	delete process.env['rsync_id'];
+	// Clear SSH env vars
+	delete process.env['ssh_host'];
+	delete process.env['ssh_port'];
+	delete process.env['ssh_id'];
 
 	try {
-		await expect(runTask(2, ctx)).rejects.toThrow('rsync_host');
+		await expect(runTask(2, ctx)).rejects.toThrow('ssh_host');
 	} finally {
 		// Restore env
-		if (savedHost) process.env['rsync_host'] = savedHost;
-		if (savedPort) process.env['rsync_port'] = savedPort;
-		if (savedId) process.env['rsync_id'] = savedId;
+		if (savedHost) process.env['ssh_host'] = savedHost;
+		if (savedPort) process.env['ssh_port'] = savedPort;
+		if (savedId) process.env['ssh_id'] = savedId;
 		await cleanupTestTemp();
 	}
 });

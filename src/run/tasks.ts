@@ -10,7 +10,7 @@ import { TASK_NUMBER_TO_NAME } from './tasks.constants.ts';
 import { safeRemoveDir } from '../lib/fs.ts';
 import { getRegionPipeline } from '../regions/index.ts';
 import { runPipeline } from '../lib/framework.ts';
-import { requireRsyncConfig } from '../config.ts';
+import { requireSshConfig } from '../config.ts';
 
 export interface TaskContext {
 	name: string; // Region identifier (e.g., "de/bw")
@@ -95,7 +95,7 @@ async function taskMerge(ctx: TaskContext): Promise<void> {
 		throw new Error(`filelist.txt not found in ${ctx.dataDir}. Run the fetch task first.`);
 	}
 
-	const { host, port, id } = requireRsyncConfig();
+	const { host, port, id } = requireSshConfig();
 	const remoteDir = `orthophoto/${ctx.name}`;
 	const tmpRemote = `${remoteDir}/tmp.result.versatiles`;
 	const finalRemote = `${remoteDir}/result.versatiles`;

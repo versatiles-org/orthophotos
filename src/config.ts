@@ -6,9 +6,9 @@
 interface Config {
 	dirData: string;
 	dirTemp: string;
-	rsyncHost?: string;
-	rsyncPort?: string;
-	rsyncId?: string;
+	sshHost?: string;
+	sshPort?: string;
+	sshId?: string;
 }
 
 function getRequiredEnv(name: string): string {
@@ -31,9 +31,9 @@ export function loadConfig(): Config {
 	return {
 		dirData: getRequiredEnv('dir_data'),
 		dirTemp: getRequiredEnv('dir_temp'),
-		rsyncHost: getOptionalEnv('rsync_host'),
-		rsyncPort: getOptionalEnv('rsync_port'),
-		rsyncId: getOptionalEnv('rsync_id'),
+		sshHost: getOptionalEnv('ssh_host'),
+		sshPort: getOptionalEnv('ssh_port'),
+		sshId: getOptionalEnv('ssh_id'),
 	};
 }
 
@@ -45,17 +45,17 @@ export function getTempDir(): string {
 }
 
 /**
- * Validates that rsync-specific environment variables are set.
- * Call this before using rsync operations.
+ * Validates that SSH connection environment variables are set.
+ * Call this before using remote operations.
  */
-export function requireRsyncConfig(): {
+export function requireSshConfig(): {
 	host: string;
 	port: string;
 	id: string;
 } {
-	const host = getRequiredEnv('rsync_host');
-	const port = getRequiredEnv('rsync_port');
-	const id = getRequiredEnv('rsync_id');
+	const host = getRequiredEnv('ssh_host');
+	const port = getRequiredEnv('ssh_port');
+	const id = getRequiredEnv('ssh_id');
 	return { host, port, id };
 }
 

@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { getDataDir, getTempDir, loadConfig, requireRsyncConfig } from './config.ts';
+import { getDataDir, getTempDir, loadConfig, requireSshConfig } from './config.ts';
 
 test('getDataDir - returns env value when set', () => {
 	process.env['dir_data'] = '/test/path';
@@ -24,16 +24,16 @@ test('getTempDir - throws when not set', () => {
 test('loadConfig - returns config with all values', () => {
 	process.env['dir_data'] = '/data';
 	process.env['dir_temp'] = '/temp';
-	process.env['rsync_host'] = 'host.example.com';
-	process.env['rsync_port'] = '22';
-	process.env['rsync_id'] = '/path/to/key';
+	process.env['ssh_host'] = 'host.example.com';
+	process.env['ssh_port'] = '22';
+	process.env['ssh_id'] = '/path/to/key';
 
 	const config = loadConfig();
 	expect(config.dirData).toBe('/data');
 	expect(config.dirTemp).toBe('/temp');
-	expect(config.rsyncHost).toBe('host.example.com');
-	expect(config.rsyncPort).toBe('22');
-	expect(config.rsyncId).toBe('/path/to/key');
+	expect(config.sshHost).toBe('host.example.com');
+	expect(config.sshPort).toBe('22');
+	expect(config.sshId).toBe('/path/to/key');
 });
 
 test('loadConfig - throws when dir_data missing', () => {
@@ -48,29 +48,29 @@ test('loadConfig - throws when dir_temp missing', () => {
 	expect(() => loadConfig()).toThrow('Required environment variable "dir_temp" is not set');
 });
 
-test('requireRsyncConfig - returns rsync config when all set', () => {
-	process.env['rsync_host'] = 'host.example.com';
-	process.env['rsync_port'] = '22';
-	process.env['rsync_id'] = '/path/to/key';
+test('requireSshConfig - returns SSH config when all set', () => {
+	process.env['ssh_host'] = 'host.example.com';
+	process.env['ssh_port'] = '22';
+	process.env['ssh_id'] = '/path/to/key';
 
-	const config = requireRsyncConfig();
+	const config = requireSshConfig();
 	expect(config.host).toBe('host.example.com');
 	expect(config.port).toBe('22');
 	expect(config.id).toBe('/path/to/key');
 });
 
-test('requireRsyncConfig - throws when host missing', () => {
-	delete process.env['rsync_host'];
-	process.env['rsync_port'] = '22';
-	process.env['rsync_id'] = '/path/to/key';
+test('requireSshConfig - throws when host missing', () => {
+	delete process.env['ssh_host'];
+	process.env['ssh_port'] = '22';
+	process.env['ssh_id'] = '/path/to/key';
 
-	expect(() => requireRsyncConfig()).toThrow('Required environment variable "rsync_host" is not set');
+	expect(() => requireSshConfig()).toThrow('Required environment variable "ssh_host" is not set');
 });
 
-test('requireRsyncConfig - throws when port missing', () => {
-	process.env['rsync_host'] = 'host.example.com';
-	delete process.env['rsync_port'];
-	process.env['rsync_id'] = '/path/to/key';
+test('requireSshConfig - throws when port missing', () => {
+	process.env['ssh_host'] = 'host.example.com';
+	delete process.env['ssh_port'];
+	process.env['ssh_id'] = '/path/to/key';
 
-	expect(() => requireRsyncConfig()).toThrow('Required environment variable "rsync_port" is not set');
+	expect(() => requireSshConfig()).toThrow('Required environment variable "ssh_port" is not set');
 });

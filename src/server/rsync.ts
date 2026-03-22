@@ -1,6 +1,6 @@
 import { resolve } from 'node:path';
 import { mkdirSync } from 'node:fs';
-import { getDataDir, requireRsyncConfig } from '../config.ts';
+import { getDataDir, requireSshConfig } from '../config.ts';
 import { runCommandWithRetry } from '../lib/command.ts';
 
 /**
@@ -20,7 +20,7 @@ export async function downloadSatellite() {
 }
 
 async function rsync(srcDir: string, dstDir: string) {
-	const { host, port, id } = requireRsyncConfig();
+	const { host, port, id } = requireSshConfig();
 	const src = `${host}:${srcDir}/`;
 	const dst = resolve(getDataDir(), dstDir + '/');
 	mkdirSync(dst, { recursive: true });

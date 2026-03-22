@@ -101,6 +101,8 @@ async function taskMerge(ctx: TaskContext): Promise<void> {
 	const finalRemote = `${remoteDir}/result.versatiles`;
 	const outputUrl = buildSftpUrl(host, port, tmpRemote);
 
+	await runSshCommand(host, port, id, `mkdir -p '${remoteDir}'`);
+
 	try {
 		await runVersatilesRasterMerge(filelistPath, outputUrl);
 		await runSshCommand(host, port, id, `mv '${tmpRemote}' '${finalRemote}'`);

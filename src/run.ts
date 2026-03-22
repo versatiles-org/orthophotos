@@ -8,8 +8,8 @@
  *
  * Example:
  *   npm run run -- de/bw 1        # run fetch
- *   npm run run -- de/bw 2-3      # run merge, delete
- *   npm run run -- de/bw all      # full pipeline
+ *   npm run run -- de/bw 2        # run merge
+ *   npm run run -- de/bw all      # full pipeline (1 2 3)
  */
 
 import { resolve } from 'node:path';

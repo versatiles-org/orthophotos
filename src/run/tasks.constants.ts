@@ -10,7 +10,6 @@ export interface TaskDefinition {
 
 /** All task definitions */
 export const TASKS: TaskDefinition[] = [
-	{ number: 0, name: 'download', aliases: ['0_download'] },
 	{ number: 1, name: 'fetch', aliases: ['1_fetch'] },
 	{ number: 2, name: 'merge', aliases: ['2_merge'] },
 	{ number: 3, name: 'delete', aliases: ['3_delete'] },
@@ -29,5 +28,5 @@ export const TASK_NUMBER_TO_NAME: Record<number, string> = Object.fromEntries(
 /** Valid task numbers */
 export const VALID_TASK_NUMBERS = new Set(TASKS.map((task) => task.number));
 
-/** The full pipeline order: 0 1 2 3 */
-export const ALL_TASKS = [0, 1, 2, 3];
+/** The full pipeline order: 1 2 3 */
+export const ALL_TASKS = [1, 2, 3];

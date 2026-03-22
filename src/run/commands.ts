@@ -5,11 +5,10 @@
 import { spawn } from 'node:child_process';
 import { renameSync, rmSync } from 'node:fs';
 import { dirname, basename, join } from 'node:path';
-import { requireRsyncConfig } from '../config.ts';
 import { runCommand } from '../lib/command.ts';
 
 /** Required CLI tools */
-const REQUIRED_COMMANDS = ['7z', 'curl', 'gdal_translate', 'gdalbuildvrt', 'unzip', 'versatiles'];
+const REQUIRED_COMMANDS = ['7z', 'curl', 'gdal_translate', 'gdalbuildvrt', 'ssh', 'unzip', 'versatiles'];
 
 /**
  * Checks if a command is available in PATH.
@@ -40,22 +39,6 @@ export async function checkRequiredCommands(): Promise<void> {
 		const list = missing.map((cmd) => `  - ${cmd}`).join('\n');
 		throw new Error(`Missing required commands:\n${list}`);
 	}
-}
-
-/**
- * Runs rsync to download data from the remote server.
- */
-export async function runRsyncDownload(remotePath: string, localPath: string): Promise<void> {
-	const { host, port, id } = requireRsyncConfig();
-	const args = [
-		'-ahtW',
-		'-e',
-		`ssh -p ${port} -i ${id}`,
-		'--info=progress2',
-		`${host}:orthophoto/${remotePath}/`,
-		`${localPath}/`,
-	];
-	await runCommand('rsync', args);
 }
 
 /**

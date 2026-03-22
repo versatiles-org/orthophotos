@@ -6,7 +6,6 @@ import { runTask, type TaskContext } from './tasks.ts';
 import { safeRemoveDir } from '../lib/fs.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const TEST_DATA_DIR = resolve(__dirname, '../../test-data/tasks');
 const TEST_TEMP_DIR = resolve(__dirname, '../../test-data/tasks-temp');
 
 function createTestContext(name: string): TaskContext {
@@ -27,9 +26,9 @@ test('runTask - throws on unknown task number', async () => {
 	await cleanupTestTemp();
 });
 
-test('runTask - throws on negative task number', async () => {
+test('runTask - throws on task 0 (removed)', async () => {
 	const ctx = createTestContext('test-region');
-	await expect(runTask(-1, ctx)).rejects.toThrow('Unknown task: -1');
+	await expect(runTask(0, ctx)).rejects.toThrow('Unknown task: 0');
 	await cleanupTestTemp();
 });
 
@@ -65,31 +64,16 @@ test('runTask - task 3 (delete) handles non-existent directories', async () => {
 	await cleanupTestTemp();
 });
 
-// Note: Tasks 0-2 require external tools, rsync configuration, or actual region scripts.
+// Note: Tasks 1-2 require external tools, rsync configuration, or actual region scripts.
 // They would need more extensive mocking or integration test setup to test fully.
-// The following tests verify task routing by checking that tasks fail appropriately
-// when required resources are missing.
 
-test('runTask - task 0 (download) requires rsync config', async () => {
-	const ctx = createTestContext('download-test');
-
-	// Save current env
-	const savedHost = process.env['rsync_host'];
-	const savedPort = process.env['rsync_port'];
-	const savedId = process.env['rsync_id'];
-
-	// Clear rsync env vars
-	delete process.env['rsync_host'];
-	delete process.env['rsync_port'];
-	delete process.env['rsync_id'];
+test('runTask - task 2 (merge) requires filelist.txt', async () => {
+	const ctx = createTestContext('merge-test');
+	mkdirSync(ctx.dataDir, { recursive: true });
 
 	try {
-		await expect(runTask(0, ctx)).rejects.toThrow('rsync_host');
+		await expect(runTask(2, ctx)).rejects.toThrow('filelist.txt not found');
 	} finally {
-		// Restore env
-		if (savedHost) process.env['rsync_host'] = savedHost;
-		if (savedPort) process.env['rsync_port'] = savedPort;
-		if (savedId) process.env['rsync_id'] = savedId;
 		await cleanupTestTemp();
 	}
 });

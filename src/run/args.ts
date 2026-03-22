@@ -134,11 +134,10 @@ export function getHelpText(): string {
         a comma list (e.g., 1,2,3), and/or ranges (e.g., 1-3,5)
 
 Tasks:
-  0 | download   rsync pull existing data from remote
   1 | fetch      fetch + per-file versatiles raster convert
   2 | merge      versatiles raster merge directly to remote via sftp
   3 | delete     delete local data for the region
-  all            run full pipeline: 0 1 2 3
+  all            run full pipeline: 1 2 3
 
 Examples:
   npm run run -- de/bw 1

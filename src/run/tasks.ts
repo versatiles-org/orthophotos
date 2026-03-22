@@ -5,7 +5,7 @@
 
 import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import { resolve, join } from 'node:path';
-import { buildSftpUrl, runRsyncDownload, runSshCommand, runVersatilesRasterMerge } from './commands.ts';
+import { buildSftpUrl, runSshCommand, runVersatilesRasterMerge } from './commands.ts';
 import { TASK_NUMBER_TO_NAME } from './tasks.constants.ts';
 import { safeRemoveDir } from '../lib/fs.ts';
 import { getRegionPipeline } from '../regions/index.ts';
@@ -26,9 +26,6 @@ export async function runTask(taskNum: number, ctx: TaskContext): Promise<void> 
 	console.log(`\n=== Task ${taskNum}: ${taskName} ===`);
 
 	switch (taskNum) {
-		case 0:
-			await taskDownload(ctx);
-			break;
 		case 1:
 			await taskFetch(ctx);
 			break;
@@ -41,15 +38,6 @@ export async function runTask(taskNum: number, ctx: TaskContext): Promise<void> 
 		default:
 			throw new Error(`Unknown task: ${taskNum}`);
 	}
-}
-
-/**
- * Task 0: Download existing data from remote server.
- */
-async function taskDownload(ctx: TaskContext): Promise<void> {
-	console.log('Downloading existing data from server...');
-	mkdirSync(ctx.dataDir, { recursive: true });
-	await runRsyncDownload(ctx.name, ctx.dataDir);
 }
 
 /**

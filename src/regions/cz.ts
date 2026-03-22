@@ -134,6 +134,7 @@ export default defineTileRegion({
 			// Combine RGB + alpha into RGBA VRT
 			await runCommand('gdalbuildvrt', ['-separate', rgbaVrt, rgbVrt, alphaPath]);
 
+			throw new Error('not implemented from here');
 			// Set ColorInterp for proper band identification
 			await runCommand('xmlstarlet', [
 				'ed',

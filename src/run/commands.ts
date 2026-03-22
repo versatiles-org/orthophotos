@@ -146,6 +146,15 @@ export async function runVersatilesRasterMerge(
 	if (options?.quality != null) {
 		args.push('--quality', String(options.quality));
 	}
-	args.push(filelistPath, output);
-	await runCommand('versatiles', args);
+	const tmpOutput = join(dirname(output), `tmp.${basename(output)}`);
+	args.push(filelistPath, tmpOutput);
+	try {
+		await runCommand('versatiles', args);
+		renameSync(tmpOutput, output);
+	} catch (err) {
+		try {
+			rmSync(tmpOutput, { force: true });
+		} catch {}
+		throw err;
+	}
 }

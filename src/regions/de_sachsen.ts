@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineRegion, step } from '../lib/framework.ts';
-import { expectMinFiles } from '../lib/validators.ts';
+import { ErrorBucket, expectMinFiles, isValidRaster } from '../lib/validators.ts';
 import { shuffle } from '../lib/array.ts';
 import { downloadFile, runCommand } from '../lib/command.ts';
 import { CONCURRENCY, concurrent } from '../lib/concurrent.ts';
@@ -48,12 +48,14 @@ export default defineRegion(
 			const urls = content.trim().split('\n').filter(Boolean);
 			console.log(`  Found ${urls.length} tile URLs`);
 
+			const errors = new ErrorBucket();
+
 			await concurrent(
 				shuffle(urls),
 				CONCURRENCY,
 				async (url) => {
 					const id = parseUrlId(url);
-					if (!id) return 'empty';
+					if (!id) return 'invalid';
 
 					const destJp2 = join(tilesDir, `${id}.jp2`);
 					if (existsSync(destJp2)) return 'skipped';
@@ -64,8 +66,19 @@ export default defineRegion(
 
 					try {
 						await withRetry(() => downloadFile(url, zipPath), { maxAttempts: 3 });
-						await runCommand('unzip', ['-qo', zipPath, '-d', ctx.tempDir]);
+
+						try {
+							await runCommand('unzip', ['-qo', zipPath, '-d', ctx.tempDir]);
+						} catch {
+							errors.add(`Invalid ZIP: ${url}`);
+							return 'invalid';
+						}
 						rmSync(zipPath, { force: true });
+
+						if (!(await isValidRaster(tifPath))) {
+							errors.add(`Invalid raster: ${url}, file: ${id}_2_sn.tif`);
+							return 'invalid';
+						}
 
 						await runCommand('gdal', ['raster', 'edit', '--nodata', '255', tifPath]);
 						await runCommand('gdal_translate', [
@@ -106,9 +119,10 @@ export default defineRegion(
 						} catch {}
 					}
 				},
-				{ labels: ['converted', 'skipped', 'empty'] },
+				{ labels: ['converted', 'skipped', 'invalid'] },
 			);
 
+			errors.throwIfAny();
 			await expectMinFiles(tilesDir, '*.jp2', 50);
 		}),
 	],

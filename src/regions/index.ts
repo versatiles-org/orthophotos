@@ -10,6 +10,7 @@ import be from './be.ts';
 import bg from './bg.ts';
 import ch from './ch.ts';
 import cz from './cz.ts';
+import * as de from './de.ts';
 import dk from './dk.ts';
 import ee from './ee.ts';
 import el from './el.ts';
@@ -26,23 +27,6 @@ import ro from './ro.ts';
 import se from './se.ts';
 import sk from './sk.ts';
 
-import deBadenWuerttemberg from './de_baden_wuerttemberg.ts';
-import deBayern from './de_bayern.ts';
-import deBerlin from './de_berlin.ts';
-import deBrandenburg from './de_brandenburg.ts';
-import deBremen from './de_bremen.ts';
-import deHamburg from './de_hamburg.ts';
-import deHessen from './de_hessen.ts';
-import deMecklenburgVorpommern from './de_mecklenburg_vorpommern.ts';
-import deNiedersachsen from './de_niedersachsen.ts';
-import deNordrheinWestfalen from './de_nordrhein_westfalen.ts';
-import deRheinlandPfalz from './de_rheinland_pfalz.ts';
-import deSaarland from './de_saarland.ts';
-import deSachsen from './de_sachsen.ts';
-import deSachsenAnhalt from './de_sachsen_anhalt.ts';
-import deSchleswigHolstein from './de_schleswig_holstein.ts';
-import deThueringen from './de_thueringen.ts';
-
 const pipelines: RegionPipeline[] = [
 	al,
 	at,
@@ -50,6 +34,7 @@ const pipelines: RegionPipeline[] = [
 	bg,
 	ch,
 	cz,
+	...Object.values(de),
 	dk,
 	ee,
 	el,
@@ -65,22 +50,6 @@ const pipelines: RegionPipeline[] = [
 	ro,
 	se,
 	sk,
-	deBadenWuerttemberg,
-	deBayern,
-	deBerlin,
-	deBrandenburg,
-	deBremen,
-	deHamburg,
-	deHessen,
-	deMecklenburgVorpommern,
-	deNiedersachsen,
-	deNordrheinWestfalen,
-	deRheinlandPfalz,
-	deSaarland,
-	deSachsen,
-	deSachsenAnhalt,
-	deSchleswigHolstein,
-	deThueringen,
 ];
 
 const registry = new Map<string, RegionPipeline>();

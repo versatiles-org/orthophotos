@@ -81,5 +81,5 @@ export default defineTileRegion({
 	convert: async ({ src }, { dest }) => {
 		await runVersatilesRasterConvert(src, dest);
 	},
-	minFiles: 123456,
+	minFiles: 2,
 });

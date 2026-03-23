@@ -117,5 +117,5 @@ export default defineTileRegion({
 			} catch {}
 		}
 	},
-	minFiles: 123456,
+	minFiles: 2220,
 });

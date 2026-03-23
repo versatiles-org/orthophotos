@@ -5,7 +5,7 @@
 import { spawn } from 'node:child_process';
 import { type RetryOptions, withRetry } from './retry.ts';
 
-export interface CommandOutput {
+interface CommandOutput {
 	success: boolean;
 	code: number;
 	stdout: Uint8Array;

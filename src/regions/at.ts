@@ -3,7 +3,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { XMLParser } from 'fast-xml-parser';
 import { downloadFile } from '../lib/command.ts';
-import { CONCURRENCY, concurrent } from '../lib/concurrent.ts';
+import { pipeline } from '../lib/pipeline.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
 import { runVersatilesRasterConvert } from '../run/commands.ts';
@@ -92,9 +92,8 @@ export default defineTileRegion({
 			console.log(`  Found ${datasets.length} matching Operat entries`);
 
 			const tileUrls: string[] = [];
-			await concurrent(
-				datasets,
-				CONCURRENCY,
+			await pipeline(datasets, { progress: { labels: ['resolved', 'empty'] } }).forEach(
+				4,
 				async ({ operat, feedUrl }) => {
 					const datasetPath = join(ctx.tempDir, `dataset_${operat}.xml`);
 					await withRetry(() => downloadFile(feedUrl, datasetPath), { maxAttempts: 3 });
@@ -107,7 +106,6 @@ export default defineTileRegion({
 					console.warn(`  Operat ${operat}: no RGB mosaic found`);
 					return 'empty';
 				},
-				{ labels: ['resolved', 'empty'] },
 			);
 
 			await writeFile(urlsPath, JSON.stringify(tileUrls));

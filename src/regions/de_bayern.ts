@@ -4,7 +4,7 @@ import { basename, join } from 'node:path';
 import { XMLParser } from 'fast-xml-parser';
 import { shuffle } from '../lib/array.ts';
 import { downloadFile } from '../lib/command.ts';
-import { CONCURRENCY, concurrent } from '../lib/concurrent.ts';
+import { pipeline } from '../lib/pipeline.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
 import { isValidRaster } from '../lib/validators.ts';
@@ -68,26 +68,21 @@ export default defineTileRegion({
 			console.log(`  Found ${meta4Urls.length} gemeinde meta4 URLs`);
 
 			const allTileUrls = new Set<string>();
-			await concurrent(
-				shuffle(meta4Urls),
-				CONCURRENCY,
-				async (url) => {
-					const meta4Path = join(ctx.tempDir, basename(url));
-					try {
-						await withRetry(() => downloadFile(url, meta4Path), { maxAttempts: 3 });
-						const meta4Xml = await readFile(meta4Path, 'utf-8');
-						for (const tileUrl of parseTileUrls(meta4Xml)) {
-							allTileUrls.add(tileUrl);
-						}
-					} finally {
-						try {
-							rmSync(meta4Path, { force: true });
-						} catch {}
+			await pipeline(shuffle(meta4Urls), { progress: { labels: ['fetched'] } }).forEach(4, async (url) => {
+				const meta4Path = join(ctx.tempDir, basename(url));
+				try {
+					await withRetry(() => downloadFile(url, meta4Path), { maxAttempts: 3 });
+					const meta4Xml = await readFile(meta4Path, 'utf-8');
+					for (const tileUrl of parseTileUrls(meta4Xml)) {
+						allTileUrls.add(tileUrl);
 					}
-					return 'fetched';
-				},
-				{ labels: ['fetched'] },
-			);
+				} finally {
+					try {
+						rmSync(meta4Path, { force: true });
+					} catch {}
+				}
+				return 'fetched';
+			});
 
 			const urls = [...allTileUrls];
 			await writeFile(urlsPath, JSON.stringify(urls));

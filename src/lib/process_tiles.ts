@@ -21,7 +21,7 @@ import { existsSync, mkdirSync } from 'node:fs';
 import { availableParallelism } from 'node:os';
 import { join } from 'node:path';
 import { shuffle } from './array.ts';
-import { CONCURRENCY } from './concurrent.ts';
+const CONCURRENCY = 4;
 import type { RegionMetadata, RegionPipeline, StepContext } from './framework.ts';
 import { pipeline, skip } from './pipeline.ts';
 import { DownloadErrors, expectMinFiles } from './validators.ts';

@@ -1,6 +1,6 @@
 /**
  * Task implementations for the run script.
- * Tasks 0-4 matching the new pipeline structure.
+ * Task implementations for the pipeline (tasks 1-3).
  */
 
 import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';

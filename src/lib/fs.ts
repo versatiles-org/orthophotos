@@ -20,20 +20,6 @@ export async function safeRemoveDir(path: string): Promise<void> {
 	}
 }
 
-/**
- * Safely removes a file, ignoring NotFound errors.
- * @param path Path to the file to remove
- */
-export async function safeRemoveFile(path: string): Promise<void> {
-	try {
-		await rm(path);
-	} catch (e) {
-		if ((e as NodeJS.ErrnoException).code !== 'ENOENT') {
-			throw e;
-		}
-	}
-}
-
 export interface WalkEntry {
 	path: string;
 	name: string;

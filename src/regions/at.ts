@@ -115,6 +115,7 @@ export default defineTileRegion({
 		const urls: string[] = JSON.parse(await readFile(urlsPath, 'utf-8'));
 		return urls.map((url) => ({ id: basename(url, '.tif'), url }));
 	},
+	downloadConcurrency: 1,
 	download: async ({ url, id }, { dest, tempDir }) => {
 		const tifPath = join(tempDir, `${id}.tif`);
 		try {
@@ -123,8 +124,8 @@ export default defineTileRegion({
 		} finally {
 			try {
 				rmSync(tifPath, { force: true });
-			} catch {}
+			} catch { }
 		}
 	},
-	minFiles: 123456,
+	minFiles: 32,
 });

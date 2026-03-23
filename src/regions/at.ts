@@ -116,6 +116,7 @@ export default defineTileRegion({
 		return urls.map((url) => ({ id: basename(url, '.tif'), url }));
 	},
 	downloadConcurrency: 1,
+	convertConcurrency: 2,
 	download: async ({ url, id }, { tempDir }) => {
 		const src = join(tempDir, `${id}.tif`);
 		await withRetry(() => downloadFile(url, src), { maxAttempts: 3 });

@@ -24,5 +24,5 @@ export default defineTileRegion({
 	},
 	init: () => [],
 	download: async () => {},
-	minFiles: 0,
+	minFiles: 123456,
 });

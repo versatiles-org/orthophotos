@@ -78,5 +78,5 @@ export default defineTileRegion({
 	download: async ({ srcPath }, { dest }) => {
 		await runVersatilesRasterConvert(srcPath, dest);
 	},
-	minFiles: 10,
+	minFiles: 123456,
 });

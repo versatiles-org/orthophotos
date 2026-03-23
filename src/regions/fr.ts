@@ -138,5 +138,5 @@ export default defineTileRegion({
 	download: async ({ jp2Path }, { dest }) => {
 		await runVersatilesRasterConvert(jp2Path as string, dest);
 	},
-	minFiles: 50,
+	minFiles: 123456,
 });

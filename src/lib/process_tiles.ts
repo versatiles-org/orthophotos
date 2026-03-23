@@ -17,7 +17,8 @@
  *   });
  */
 
-import { existsSync, mkdirSync } from 'node:fs';
+import { createReadStream, existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { createInterface } from 'node:readline';
 import { availableParallelism } from 'node:os';
 import { join } from 'node:path';
 import { shuffle } from './array.ts';
@@ -74,7 +75,17 @@ export function defineTileRegion<T extends TileItem, D>(options: TileRegionOptio
 		id: options.name,
 		metadata: options.meta,
 		run: async (ctx) => {
-			const items = await options.init(ctx);
+			const itemsPath = join(ctx.dataDir, 'items.ndjson');
+			let items: T[];
+			if (existsSync(itemsPath)) {
+				console.log('  Loading cached item list...');
+				items = await readNdjson<T>(itemsPath);
+			} else {
+				items = await options.init(ctx);
+				mkdirSync(ctx.dataDir, { recursive: true });
+				writeFileSync(itemsPath, items.map((item) => JSON.stringify(item)).join('\n') + '\n');
+				console.log(`  Saved ${items.length} items to items.ndjson`);
+			}
 			await processTiles(items, ctx, options);
 		},
 	};
@@ -142,4 +153,13 @@ async function processTiles<T extends TileItem, D>(
 
 	errors.throwIfAny();
 	await expectMinFiles(tilesDir, '*.versatiles', options.minFiles);
+}
+
+async function readNdjson<T>(path: string): Promise<T[]> {
+	const items: T[] = [];
+	const rl = createInterface({ input: createReadStream(path), crlfDelay: Infinity });
+	for await (const line of rl) {
+		if (line.trim()) items.push(JSON.parse(line) as T);
+	}
+	return items;
 }

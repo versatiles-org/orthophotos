@@ -9,7 +9,6 @@ import { buildSftpUrl, runSshCommand, runVersatilesRasterMerge } from './command
 import { TASK_NUMBER_TO_NAME } from './tasks.constants.ts';
 import { safeRemoveDir } from '../lib/fs.ts';
 import { getRegionPipeline } from '../regions/index.ts';
-import { runPipeline } from '../lib/framework.ts';
 import { requireSshConfig } from '../config.ts';
 
 export interface TaskContext {
@@ -50,10 +49,10 @@ async function taskFetch(ctx: TaskContext): Promise<void> {
 	mkdirSync(ctx.tempDir, { recursive: true });
 
 	const pipeline = getRegionPipeline(ctx.name);
-	if (!pipeline) {
+	if (!pipeline?.run) {
 		throw new Error(`No pipeline defined for region "${ctx.name}"`);
 	}
-	await runPipeline(pipeline, {
+	await pipeline.run({
 		name: ctx.name,
 		dataDir: ctx.dataDir,
 		tempDir: ctx.tempDir,

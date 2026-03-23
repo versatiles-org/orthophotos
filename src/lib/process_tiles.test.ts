@@ -11,7 +11,7 @@ async function runTileRegion<T extends { id: string; [k: string]: unknown }, D>(
 	options: Parameters<typeof defineTileRegion<T, D>>[0],
 ): Promise<ReturnType<typeof defineTileRegion>> {
 	const region = defineTileRegion(options);
-	for (const s of region.steps) await s.run(ctx);
+	await region.run!(ctx);
 	return region;
 }
 
@@ -41,7 +41,7 @@ describe('defineTileRegion', () => {
 		rmSync(testDir, { recursive: true, force: true });
 	});
 
-	it('returns a RegionPipeline with a download-tiles step', () => {
+	it('returns a RegionPipeline with a run function', () => {
 		const region = defineTileRegion({
 			name: 'test/region',
 			meta: baseMeta,
@@ -49,8 +49,7 @@ describe('defineTileRegion', () => {
 			download: async () => {},
 			minFiles: 0,
 		});
-		expect(region.steps).toHaveLength(1);
-		expect(region.steps[0].name).toBe('download-tiles');
+		expect(region.run).toBeTypeOf('function');
 		expect(region.id).toBe('test/region');
 	});
 

@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { defineRegion, runPipeline, step, type RegionMetadata, type StepContext } from './framework.ts';
+import type { RegionMetadata, RegionPipeline, StepContext } from './framework.ts';
 
 const dummyCtx: StepContext = {
 	name: 'test/region',
@@ -15,72 +15,48 @@ const dummyMeta: RegionMetadata = {
 	date: '2024',
 };
 
-test('runPipeline - runs steps sequentially and completes', async () => {
-	const order: string[] = [];
-
-	const pipeline = defineRegion('test', dummyMeta, [
-		step('first', async () => {
-			order.push('first');
-		}),
-		step('second', async () => {
-			order.push('second');
-		}),
-	]);
-
-	await runPipeline(pipeline, dummyCtx);
-	expect(order).toEqual(['first', 'second']);
+test('RegionPipeline - run executes correctly', async () => {
+	let called = false;
+	const pipeline: RegionPipeline = {
+		id: 'test',
+		metadata: dummyMeta,
+		run: async () => {
+			called = true;
+		},
+	};
+	await pipeline.run!(dummyCtx);
+	expect(called).toBe(true);
 });
 
-test('runPipeline - error message includes step name and timing', async () => {
-	const pipeline = defineRegion('test', dummyMeta, [
-		step('setup', async () => {}),
-		step('download', async () => {
-			throw new Error('connection refused');
-		}),
-	]);
-
-	await expect(runPipeline(pipeline, dummyCtx)).rejects.toThrow(/Step "download" failed after \d+\.\d+s/);
+test('RegionPipeline - run is optional for stub regions', () => {
+	const pipeline: RegionPipeline = {
+		id: 'test/stub',
+		metadata: { status: 'error', notes: ['Not available'] },
+	};
+	expect(pipeline.run).toBeUndefined();
+	expect(pipeline.id).toBe('test/stub');
+	expect(pipeline.metadata.status).toBe('error');
 });
 
-test('runPipeline - error message includes original error', async () => {
-	const pipeline = defineRegion('test', dummyMeta, [
-		step('broken', async () => {
-			throw new Error('disk full');
-		}),
-	]);
-
-	await expect(runPipeline(pipeline, dummyCtx)).rejects.toThrow('disk full');
-});
-
-test('runPipeline - stops at first failure', async () => {
-	const order: string[] = [];
-
-	const pipeline = defineRegion('test', dummyMeta, [
-		step('first', async () => {
-			order.push('first');
-		}),
-		step('failing', async () => {
-			order.push('failing');
-			throw new Error('boom');
-		}),
-		step('third', async () => {
-			order.push('third');
-		}),
-	]);
-
-	await expect(runPipeline(pipeline, dummyCtx)).rejects.toThrow('boom');
-	expect(order).toEqual(['first', 'failing']);
-});
-
-test('runPipeline - empty pipeline completes', async () => {
-	const pipeline = defineRegion('test', dummyMeta, []);
-	await runPipeline(pipeline, dummyCtx);
-});
-
-test('defineRegion - stores id, metadata, and steps', () => {
-	const steps = [step('a', async () => {})];
-	const pipeline = defineRegion('de/berlin', dummyMeta, steps);
+test('RegionPipeline - stores id and metadata', () => {
+	const pipeline: RegionPipeline = {
+		id: 'de/berlin',
+		metadata: dummyMeta,
+		run: async () => {},
+	};
 	expect(pipeline.id).toBe('de/berlin');
 	expect(pipeline.metadata).toBe(dummyMeta);
-	expect(pipeline.steps).toBe(steps);
+});
+
+test('RegionPipeline - run receives context', async () => {
+	let receivedCtx: StepContext | undefined;
+	const pipeline: RegionPipeline = {
+		id: 'test',
+		metadata: dummyMeta,
+		run: async (ctx) => {
+			receivedCtx = ctx;
+		},
+	};
+	await pipeline.run!(dummyCtx);
+	expect(receivedCtx).toBe(dummyCtx);
 });

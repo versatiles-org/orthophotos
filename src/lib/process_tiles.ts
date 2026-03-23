@@ -22,7 +22,7 @@ import { availableParallelism } from 'node:os';
 import { join } from 'node:path';
 import { shuffle } from './array.ts';
 import { CONCURRENCY } from './concurrent.ts';
-import { defineRegion, step, type RegionPipeline, type StepContext } from './framework.ts';
+import type { RegionMetadata, RegionPipeline, StepContext } from './framework.ts';
 import { pipeline, skip } from './pipeline.ts';
 import { DownloadErrors, expectMinFiles } from './validators.ts';
 
@@ -50,7 +50,7 @@ export interface TileRegionOptions<T extends TileItem, D = void> {
 	/** Region identifier (e.g. 'de/thueringen') */
 	name: string;
 	/** Region metadata */
-	meta: Parameters<typeof defineRegion>[1];
+	meta: RegionMetadata;
 	/** Generate the items to process */
 	init: (ctx: StepContext) => T[] | Promise<T[]>;
 	/** Download concurrency (default: CONCURRENCY = 4) */
@@ -70,12 +70,14 @@ export interface TileRegionOptions<T extends TileItem, D = void> {
  * Returns a RegionPipeline ready for export.
  */
 export function defineTileRegion<T extends TileItem, D>(options: TileRegionOptions<T, D>): RegionPipeline {
-	return defineRegion(options.name, options.meta, [
-		step('download-tiles', async (ctx) => {
+	return {
+		id: options.name,
+		metadata: options.meta,
+		run: async (ctx) => {
 			const items = await options.init(ctx);
 			await processTiles(items, ctx, options);
-		}),
-	]);
+		},
+	};
 }
 
 const LABELS = ['converted', 'skipped', 'empty', 'invalid'] as const;

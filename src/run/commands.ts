@@ -90,7 +90,7 @@ async function runCommandQuiet(cmd: string, args: string[]): Promise<void> {
 export async function runVersatilesRasterConvert(
 	input: string,
 	output: string,
-	options?: { bands?: string; nodata?: string },
+	options?: { bands?: string; nodata?: string, cacheDirectory?: string },
 ): Promise<void> {
 	const args = ['raster', 'convert', '--max-zoom', '17', '--quality', '70,16:50,17:30'];
 	if (options?.bands) {
@@ -98,6 +98,9 @@ export async function runVersatilesRasterConvert(
 	}
 	if (options?.nodata) {
 		args.push('--nodata', options.nodata);
+	}
+	if (options?.cacheDirectory) {
+		args.push('--cache-dir', options.cacheDirectory);
 	}
 	const tmpOutput = join(dirname(output), `tmp.${basename(output)}`);
 	args.push(input, tmpOutput);

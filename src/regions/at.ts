@@ -120,7 +120,7 @@ export default defineTileRegion({
 		const tifPath = join(tempDir, `${id}.tif`);
 		try {
 			await withRetry(() => downloadFile(url, tifPath), { maxAttempts: 3 });
-			await runVersatilesRasterConvert(tifPath, dest);
+			await runVersatilesRasterConvert(tifPath, dest, { cacheDirectory: tempDir });
 		} finally {
 			try {
 				rmSync(tifPath, { force: true });

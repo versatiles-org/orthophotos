@@ -25,7 +25,7 @@ import { shuffle } from './array.ts';
 const CONCURRENCY = 4;
 import type { RegionMetadata, RegionPipeline, StepContext } from './framework.ts';
 import { pipeline, skip } from './pipeline.ts';
-import { DownloadErrors, expectMinFiles } from './validators.ts';
+import { ErrorBucket, expectMinFiles } from './validators.ts';
 
 /** Items must have an `id` property used to derive output and skip-file paths. */
 export interface TileItem {
@@ -44,7 +44,7 @@ export interface TileContext {
 	/** Directory where output tiles live */
 	tilesDir: string;
 	/** Collector for invalid download errors */
-	errors: DownloadErrors;
+	errors: ErrorBucket;
 }
 
 export interface TileRegionOptions<T extends TileItem, D> {
@@ -107,7 +107,7 @@ async function processTiles<T extends TileItem, D>(
 	mkdirSync(tilesDir, { recursive: true });
 
 	const shuffled = shuffle([...items]);
-	const errors = new DownloadErrors();
+	const errors = new ErrorBucket();
 
 	const makeTileCtx = (item: T): TileContext => ({
 		dest: join(tilesDir, `${item.id}.versatiles`),

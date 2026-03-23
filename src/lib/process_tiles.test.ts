@@ -216,7 +216,7 @@ describe('defineTileRegion', () => {
 				init: () => [{ id: 'a' }, { id: 'b' }],
 				download: async (item, { errors }) => {
 					if (item.id === 'b') {
-						errors.add('https://example.com/b.tif', 'b.tif');
+						errors.add('b.tif (https://example.com/b.tif)');
 						return 'invalid';
 					}
 					return { value: item.id };
@@ -226,7 +226,7 @@ describe('defineTileRegion', () => {
 				},
 				minFiles: 0,
 			}),
-		).rejects.toThrow('1 invalid download(s)');
+		).rejects.toThrow('1 error(s) occurred');
 	});
 
 	it('async init receives StepContext', async () => {

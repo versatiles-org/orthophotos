@@ -70,7 +70,7 @@ export default defineTileRegion({
 		try {
 			await withRetry(() => downloadFile(url, tifPath), { maxAttempts: 3 });
 			if (!(await isValidRaster(tifPath))) {
-				errors.add(url, `${id}.tif`);
+				errors.add(`${id}.tif (${url})`);
 				return 'invalid';
 			}
 			return { tifPath };

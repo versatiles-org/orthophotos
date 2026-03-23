@@ -96,7 +96,7 @@ export default defineTileRegion({
 			if (size === 46) return 'empty';
 
 			if (!(await isValidRaster(tifPath))) {
-				errors.add(url, `${id}.tif`);
+				errors.add(`${id}.tif (${url})`);
 				return 'invalid';
 			}
 

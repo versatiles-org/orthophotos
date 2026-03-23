@@ -51,14 +51,17 @@ export default defineTileRegion({
 		const filenames = parseFilenames(html);
 		return filenames.map((f) => ({ id: basename(f, '.jp2'), url: `${INDEX_URL}${f}` }));
 	},
-	download: async ({ url, id }, { dest, tempDir }) => {
-		const tmpPath = join(tempDir, `${id}.jp2`);
+	download: async ({ url, id }, { tempDir }) => {
+		const src = join(tempDir, `${id}.jp2`);
+		await withRetry(() => runCommand('curl', ['-sko', src, url]), { maxAttempts: 3 });
+		return { src };
+	},
+	convert: async ({ src }, { dest }) => {
 		try {
-			await withRetry(() => runCommand('curl', ['-sko', tmpPath, url]), { maxAttempts: 3 });
-			await runVersatilesRasterConvert(tmpPath, dest);
+			await runVersatilesRasterConvert(src, dest);
 		} finally {
 			try {
-				rmSync(tmpPath, { force: true });
+				rmSync(src, { force: true });
 			} catch {}
 		}
 	},

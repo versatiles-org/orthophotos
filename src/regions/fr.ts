@@ -135,8 +135,11 @@ export default defineTileRegion({
 		console.log(`  Total: ${items.length} JP2 tiles`);
 		return items;
 	},
-	download: async ({ jp2Path }, { dest }) => {
-		await runVersatilesRasterConvert(jp2Path as string, dest);
+	download: async ({ jp2Path }) => {
+		return { src: jp2Path as string };
+	},
+	convert: async ({ src }, { dest }) => {
+		await runVersatilesRasterConvert(src, dest);
 	},
 	minFiles: 123456,
 });

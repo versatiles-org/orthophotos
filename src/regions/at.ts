@@ -116,15 +116,18 @@ export default defineTileRegion({
 		return urls.map((url) => ({ id: basename(url, '.tif'), url }));
 	},
 	downloadConcurrency: 1,
-	download: async ({ url, id }, { dest, tempDir }) => {
-		const tifPath = join(tempDir, `${id}.tif`);
+	download: async ({ url, id }, { tempDir }) => {
+		const src = join(tempDir, `${id}.tif`);
+		await withRetry(() => downloadFile(url, src), { maxAttempts: 3 });
+		return { src };
+	},
+	convert: async ({ src }, { dest, tempDir }) => {
 		try {
-			await withRetry(() => downloadFile(url, tifPath), { maxAttempts: 3 });
-			await runVersatilesRasterConvert(tifPath, dest, { cacheDirectory: tempDir });
+			await runVersatilesRasterConvert(src, dest, { cacheDirectory: tempDir });
 		} finally {
 			try {
-				rmSync(tifPath, { force: true });
-			} catch { }
+				rmSync(src, { force: true });
+			} catch {}
 		}
 	},
 	minFiles: 32,

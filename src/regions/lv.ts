@@ -48,15 +48,18 @@ export default defineTileRegion({
 			tfwUrl: url.replace(/\.tif$/, '.tfw'),
 		}));
 	},
-	download: async ({ url, tfwUrl, id }, { dest, tempDir }) => {
-		const tifPath = join(tempDir, `${id}.tif`);
+	download: async ({ url, tfwUrl, id }, { tempDir }) => {
+		const src = join(tempDir, `${id}.tif`);
 		const tfwPath = join(tempDir, `${id}.tfw`);
+		await withRetry(() => downloadFile(url as string, src), { maxAttempts: 3 });
+		await withRetry(() => downloadFile(tfwUrl as string, tfwPath), { maxAttempts: 3 });
+		return { src, tfwPath };
+	},
+	convert: async ({ src, tfwPath }, { dest }) => {
 		try {
-			await withRetry(() => downloadFile(url as string, tifPath), { maxAttempts: 3 });
-			await withRetry(() => downloadFile(tfwUrl as string, tfwPath), { maxAttempts: 3 });
-			await runVersatilesRasterConvert(tifPath, dest);
+			await runVersatilesRasterConvert(src, dest);
 		} finally {
-			for (const p of [tifPath, tfwPath]) {
+			for (const p of [src, tfwPath]) {
 				try {
 					rmSync(p, { force: true });
 				} catch {}

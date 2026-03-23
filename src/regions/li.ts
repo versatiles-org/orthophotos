@@ -25,14 +25,17 @@ export default defineTileRegion({
 		date: '2023',
 	},
 	init: () => [{ id: 'image' }],
-	download: async (_item, { dest, tempDir }) => {
-		const tifPath = join(tempDir, 'image.tif');
+	download: async (_item, { tempDir }) => {
+		const src = join(tempDir, 'image.tif');
+		await withRetry(() => downloadFile(DOWNLOAD_URL, src), { maxAttempts: 3 });
+		return { src };
+	},
+	convert: async ({ src }, { dest }) => {
 		try {
-			await withRetry(() => downloadFile(DOWNLOAD_URL, tifPath), { maxAttempts: 3 });
-			await runVersatilesRasterConvert(tifPath, dest);
+			await runVersatilesRasterConvert(src, dest);
 		} finally {
 			try {
-				rmSync(tifPath, { force: true });
+				rmSync(src, { force: true });
 			} catch {}
 		}
 	},

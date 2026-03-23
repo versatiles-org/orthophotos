@@ -23,6 +23,7 @@ export default defineTileRegion({
 		date: '2023',
 	},
 	init: () => [],
-	download: async () => {},
+	download: async () => ({}),
+	convert: async () => {},
 	minFiles: 123456,
 });

@@ -81,14 +81,17 @@ export default defineTileRegion({
 		return urls.map((url) => ({ id: basename(url, '.jp2'), url }));
 	},
 	downloadConcurrency: 8,
-	download: async ({ url, id }, { dest, tempDir }) => {
-		const jp2Path = join(tempDir, `${id}.jp2`);
+	download: async ({ url, id }, { tempDir }) => {
+		const src = join(tempDir, `${id}.jp2`);
+		await withRetry(() => downloadFile(url, src), { maxAttempts: 3 });
+		return { src };
+	},
+	convert: async ({ src }, { dest }) => {
 		try {
-			await withRetry(() => downloadFile(url, jp2Path), { maxAttempts: 3 });
-			await runVersatilesRasterConvert(jp2Path, dest);
+			await runVersatilesRasterConvert(src, dest);
 		} finally {
 			try {
-				rmSync(jp2Path, { force: true });
+				rmSync(src, { force: true });
 			} catch {}
 		}
 	},

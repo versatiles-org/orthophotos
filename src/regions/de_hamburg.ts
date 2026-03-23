@@ -65,9 +65,11 @@ export default defineTileRegion({
 
 		return items;
 	},
-	downloadConcurrency: 2,
-	download: async ({ tifPath }, { dest }) => {
-		await runVersatilesRasterConvert(tifPath, dest);
+	download: async ({ tifPath }) => {
+		return { src: tifPath };
+	},
+	convert: async ({ src }, { dest }) => {
+		await runVersatilesRasterConvert(src, dest);
 	},
 	minFiles: 123456,
 });

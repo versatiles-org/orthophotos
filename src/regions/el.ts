@@ -1,3 +1,3 @@
-import { defineRegion } from '../lib/framework.ts';
+import type { RegionPipeline } from '../lib/framework.ts';
 
-export default defineRegion('el', { status: 'error', notes: ['No data found.'] }, []);
+export default { id: 'el', metadata: { status: 'error', notes: ['No data found.'] } } satisfies RegionPipeline;

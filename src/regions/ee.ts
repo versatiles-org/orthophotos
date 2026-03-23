@@ -1,8 +1,8 @@
-import { defineRegion } from '../lib/framework.ts';
+import type { RegionPipeline } from '../lib/framework.ts';
 
-export default defineRegion(
-	'ee',
-	{
+export default {
+	id: 'ee',
+	metadata: {
 		status: 'error',
 		notes: [
 			'No bulk download available.',
@@ -11,5 +11,4 @@ export default defineRegion(
 			'WMS server does not support EPSG:3857',
 		],
 	},
-	[],
-);
+} satisfies RegionPipeline;

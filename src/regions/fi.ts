@@ -1,3 +1,3 @@
-import { defineRegion } from '../lib/framework.ts';
+import type { RegionPipeline } from '../lib/framework.ts';
 
-export default defineRegion('fi', { status: 'error', notes: ['Access restricted'] }, []);
+export default { id: 'fi', metadata: { status: 'error', notes: ['Access restricted'] } } satisfies RegionPipeline;

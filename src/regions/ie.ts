@@ -1,7 +1,6 @@
-import { defineRegion } from '../lib/framework.ts';
+import type { RegionPipeline } from '../lib/framework.ts';
 
-export default defineRegion(
-	'ie',
-	{ status: 'error', notes: ['The only available format is the proprietary ECW format.'] },
-	[],
-);
+export default {
+	id: 'ie',
+	metadata: { status: 'error', notes: ['The only available format is the proprietary ECW format.'] },
+} satisfies RegionPipeline;

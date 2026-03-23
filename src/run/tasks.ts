@@ -83,7 +83,7 @@ async function taskFetch(ctx: TaskContext): Promise<void> {
 
 /**
  * Task 2: Merge all per-file .versatiles into one result.
- * Reads filelist.txt, runs `versatiles raster merge` writing directly
+ * Reads filelist.txt, runs `versatiles mosaic assemble` writing directly
  * to remote storage via sftp://, then renames the temp file on success.
  */
 async function taskMerge(ctx: TaskContext): Promise<void> {

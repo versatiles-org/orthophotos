@@ -134,8 +134,8 @@ export function getHelpText(): string {
         a comma list (e.g., 1,2,3), and/or ranges (e.g., 1-3,5)
 
 Tasks:
-  1 | fetch      fetch + per-file versatiles raster convert
-  2 | merge      versatiles raster merge directly to remote via sftp
+  1 | fetch      fetch + per-file versatiles mosaic tile
+  2 | merge      versatiles mosaic assemble directly to remote via sftp
   3 | delete     delete local data for the region
   all            run full pipeline: 1 2 3
 

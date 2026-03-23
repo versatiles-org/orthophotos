@@ -70,16 +70,21 @@ export function createProgress(total: number, options: ProgressOptions): Progres
 		return `  ${renderBar(done, total, barWidth)} ${done}/${total} | ${stats}${eta}`;
 	}
 
+	draw();
+
+	function draw() {
+		const line = render();
+		if (isTTY) {
+			process.stderr.write(`\r${line}`);
+		} else if (totalDone() % logInterval === 0) {
+			console.log(line);
+		}
+	}
+
 	return {
 		tick(label: string) {
 			counts.set(label, (counts.get(label) ?? 0) + 1);
-
-			const line = render();
-			if (isTTY) {
-				process.stderr.write(`\r${line}`);
-			} else if (totalDone() % logInterval === 0) {
-				console.log(line);
-			}
+			draw();
 		},
 
 		count(label: string): number {

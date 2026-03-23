@@ -1,50 +1,38 @@
-import { existsSync, rmSync, statSync } from 'node:fs';
+import { existsSync, renameSync, rmSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { XMLParser } from 'fast-xml-parser';
-import { downloadFile } from '../lib/command.ts';
+import { runCommand } from '../lib/command.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
 import { isValidRaster } from '../lib/validators.ts';
 import { runVersatilesRasterConvert } from '../run/commands.ts';
 
-const ATOM_URL = 'https://service.gdi-sh.de/SH_OpenGBD/feeds/DOP20/DOP20.xml';
-const TILE_XML_BASE = 'https://service.gdi-sh.de/SH_OpenGBD/feeds/DOP20/DOP20_';
+const GEOJSON_URL =
+	'https://geodaten.schleswig-holstein.de/gaialight-sh/_apps/dladownload/single.php?file=DOP20_SH__Massendownload.geojson&id=4';
 
-const xmlParser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
-
-export function parseTileIds(xml: string): string[] {
-	const parsed = xmlParser.parse(xml);
-	const entries: unknown[] = [parsed.feed?.entry ?? []].flat();
-	const ids: string[] = [];
-	for (const entry of entries) {
-		const links: unknown[] = [(entry as Record<string, unknown>).link ?? []].flat();
-		for (const link of links) {
-			const attrs = link as Record<string, string>;
-			if (attrs['@_rel'] !== 'alternate') continue;
-			const href = attrs['@_href'] ?? '';
-			const match = href.match(/DOP20_(dop20rgbi[^.]+)\.xml$/);
-			if (match) ids.push(match[1]);
-		}
-	}
-	return ids;
+interface TileProperties {
+	kachel: string;
+	link_data: string;
 }
 
-export function parseTileUrl(xml: string): string | undefined {
-	const parsed = xmlParser.parse(xml);
-	const entries: unknown[] = [parsed.feed?.entry ?? []].flat();
-	for (const entry of entries) {
-		const links: unknown[] = [(entry as Record<string, unknown>).link ?? []].flat();
-		for (const link of links) {
-			const attrs = link as Record<string, string>;
-			if (attrs['@_rel'] !== 'alternate') continue;
-			const href = attrs['@_href'] ?? '';
-			if (href.includes('INTERPOLATION=cubic')) {
-				return href.replace(/amp;/g, '');
-			}
-		}
-	}
-	return undefined;
+interface GeoJsonResponse {
+	features: { properties: TileProperties }[];
+}
+
+/**
+ * Downloads a file using curl with --insecure flag (needed for geodaten.schleswig-holstein.de).
+ */
+async function downloadInsecure(url: string, dest: string): Promise<void> {
+	const tmp = `${dest}.tmp`;
+	await runCommand('curl', ['-sko', tmp, url]);
+	renameSync(tmp, dest);
+}
+
+export function parseGeoJson(data: GeoJsonResponse): { id: string; url: string }[] {
+	return data.features.map((f) => ({
+		id: f.properties.kachel,
+		url: f.properties.link_data,
+	}));
 }
 
 export default defineTileRegion({
@@ -52,8 +40,8 @@ export default defineTileRegion({
 	meta: {
 		status: 'success',
 		notes: [
-			'Server is slow.',
 			'License requires attribution.',
+			'Server has an invalid SSL certificate.',
 			'Rather than a national mosaic, inconsistent regional mosaics with different access and formats are available instead.',
 		],
 		entries: ['result'],
@@ -66,52 +54,31 @@ export default defineTileRegion({
 			name: 'GeoBasis-DE/LVermGeo SH',
 			url: 'https://opendata.schleswig-holstein.de/dataset/digitale-orthophotos-dop20',
 		},
-		date: '2017-2024',
+		date: '2024',
 	},
 	init: async (ctx) => {
-		const atomPath = join(ctx.tempDir, 'atom.xml');
-		if (!existsSync(atomPath)) {
-			console.log('  Fetching atom.xml...');
-			await withRetry(() => downloadFile(ATOM_URL, atomPath), { maxAttempts: 3 });
+		const geojsonPath = join(ctx.tempDir, 'tiles.geojson');
+		if (!existsSync(geojsonPath)) {
+			console.log('  Fetching tile index...');
+			await withRetry(() => downloadInsecure(GEOJSON_URL, geojsonPath), { maxAttempts: 3 });
 		}
-		const xml = await readFile(atomPath, 'utf-8');
-		const ids = parseTileIds(xml);
-		return ids.map((id) => ({ id }));
+		const content = await readFile(geojsonPath, 'utf-8');
+		return parseGeoJson(JSON.parse(content));
 	},
-	downloadConcurrency: 1,
-	download: async ({ id }, { tempDir, errors }) => {
-		const tileXmlPath = join(tempDir, `${id}.xml`);
+	download: async ({ url, id }, { tempDir, errors }) => {
 		const tifPath = join(tempDir, `${id}.tif`);
-
 		try {
-			await withRetry(() => downloadFile(`${TILE_XML_BASE}${id}.xml`, tileXmlPath), { maxAttempts: 3 });
-
-			const tileXml = await readFile(tileXmlPath, 'utf-8');
-			const url = parseTileUrl(tileXml);
-			if (!url) return 'empty';
-
-			await withRetry(() => downloadFile(url, tifPath), { maxAttempts: 3 });
-
-			const size = statSync(tifPath).size;
-			if (size === 46) return 'empty';
-
+			await withRetry(() => downloadInsecure(url, tifPath), { maxAttempts: 3 });
 			if (!(await isValidRaster(tifPath))) {
 				errors.add(`${id}.tif (${url})`);
 				return 'invalid';
 			}
-
 			return { tifPath };
 		} catch (err) {
-			for (const p of [tileXmlPath, tifPath]) {
-				try {
-					rmSync(p, { force: true });
-				} catch {}
-			}
-			throw err;
-		} finally {
 			try {
-				rmSync(tileXmlPath, { force: true });
+				rmSync(tifPath, { force: true });
 			} catch {}
+			throw err;
 		}
 	},
 	convert: async ({ tifPath }, { dest }) => {
@@ -123,5 +90,5 @@ export default defineTileRegion({
 			} catch {}
 		}
 	},
-	minFiles: 123456,
+	minFiles: 17000,
 });

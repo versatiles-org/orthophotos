@@ -84,6 +84,9 @@ async function runCommandQuiet(cmd: string, args: string[]): Promise<void> {
 	});
 }
 
+const MAX_ZOOM = '17';
+const QUALITY = '70,16:50,17:30';
+
 /**
  * Runs `versatiles mosaic tile` to tile a single raster image into a .versatiles container.
  */
@@ -92,7 +95,7 @@ export async function runVersatilesRasterConvert(
 	output: string,
 	options?: { bands?: string; nodata?: string; cacheDirectory?: string },
 ): Promise<void> {
-	const args = ['mosaic', 'tile', '--max-zoom', '17', '--quality', '70,16:50,17:30'];
+	const args = ['mosaic', 'tile', '--max-zoom', MAX_ZOOM, '--quality', QUALITY];
 	if (options?.bands) {
 		args.push('--bands', options.bands);
 	}
@@ -110,7 +113,7 @@ export async function runVersatilesRasterConvert(
 	} catch (err) {
 		try {
 			rmSync(tmpOutput, { force: true });
-		} catch { }
+		} catch {}
 		throw err;
 	}
 }
@@ -118,12 +121,8 @@ export async function runVersatilesRasterConvert(
 /**
  * Runs `versatiles mosaic assemble` to assemble multiple tile containers into one.
  */
-export async function runVersatilesRasterMerge(
-	filelistPath: string,
-	output: string,
-	options?: {},
-): Promise<void> {
-	const args = ['mosaic', 'assemble', '--prescan', '--max-zoom', '17', '--quality', '70,16:50,17:30'];
+export async function runVersatilesRasterMerge(filelistPath: string, output: string, options?: {}): Promise<void> {
+	const args = ['mosaic', 'assemble', '--prescan', '--max-zoom', MAX_ZOOM, '--quality', QUALITY];
 	args.push(filelistPath, output);
 	await runCommand('versatiles', args);
 }

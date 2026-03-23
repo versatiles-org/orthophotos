@@ -46,31 +46,15 @@ describe('defineTileRegion', () => {
 			name: 'test/region',
 			meta: baseMeta,
 			init: () => [],
-			download: async () => {},
+			download: async () => ({}),
+			convert: async () => {},
 			minFiles: 0,
 		});
 		expect(region.run).toBeTypeOf('function');
 		expect(region.id).toBe('test/region');
 	});
 
-	it('single-stage: downloads to dest', async () => {
-		await runTileRegion(ctx, {
-			name: 'test/single',
-			meta: baseMeta,
-			init: () => [{ id: 'a' }, { id: 'b' }, { id: 'c' }],
-			download: async (item, { dest }) => {
-				writeFileSync(dest, item.id);
-			},
-			minFiles: 0,
-		});
-
-		const tilesDir = join(ctx.dataDir, 'tiles');
-		expect(readFileSync(join(tilesDir, 'a.versatiles'), 'utf-8')).toBe('a');
-		expect(readFileSync(join(tilesDir, 'b.versatiles'), 'utf-8')).toBe('b');
-		expect(readFileSync(join(tilesDir, 'c.versatiles'), 'utf-8')).toBe('c');
-	});
-
-	it('two-stage: download then convert', async () => {
+	it('download then convert', async () => {
 		await runTileRegion(ctx, {
 			name: 'test/two-stage',
 			meta: baseMeta,
@@ -100,9 +84,12 @@ describe('defineTileRegion', () => {
 			name: 'test/skip-dest',
 			meta: baseMeta,
 			init: () => [{ id: 'a' }, { id: 'b' }],
-			download: async (item, { dest }) => {
+			download: async (item) => {
 				downloadCount++;
-				writeFileSync(dest, item.id);
+				return { value: item.id };
+			},
+			convert: async (data, { dest }) => {
+				writeFileSync(dest, data.value);
 			},
 			minFiles: 0,
 		});
@@ -121,9 +108,12 @@ describe('defineTileRegion', () => {
 			name: 'test/skip-files',
 			meta: baseMeta,
 			init: () => [{ id: 'a' }, { id: 'b' }],
-			download: async (item, { dest }) => {
+			download: async (item) => {
 				downloadCount++;
-				writeFileSync(dest, item.id);
+				return { value: item.id };
+			},
+			convert: async (data, { dest }) => {
+				writeFileSync(dest, data.value);
 			},
 			minFiles: 0,
 		});
@@ -131,9 +121,9 @@ describe('defineTileRegion', () => {
 		expect(downloadCount).toBe(1);
 	});
 
-	it('handles empty return from download callback in two-stage mode', async () => {
+	it('handles empty return from download callback', async () => {
 		await runTileRegion(ctx, {
-			name: 'test/empty-two-stage',
+			name: 'test/empty',
 			meta: baseMeta,
 			init: () => [{ id: 'a' }, { id: 'b' }, { id: 'c' }],
 			download: async (item) => {
@@ -143,24 +133,6 @@ describe('defineTileRegion', () => {
 			convertConcurrency: 1,
 			convert: async (data, { dest }) => {
 				writeFileSync(dest, data.value);
-			},
-			minFiles: 0,
-		});
-
-		const tilesDir = join(ctx.dataDir, 'tiles');
-		expect(existsSync(join(tilesDir, 'a.versatiles'))).toBe(true);
-		expect(existsSync(join(tilesDir, 'b.versatiles'))).toBe(false);
-		expect(existsSync(join(tilesDir, 'c.versatiles'))).toBe(true);
-	});
-
-	it('handles empty return from download callback in single-stage mode', async () => {
-		await runTileRegion(ctx, {
-			name: 'test/empty-single-stage',
-			meta: baseMeta,
-			init: () => [{ id: 'a' }, { id: 'b' }, { id: 'c' }],
-			download: async (item, { dest }) => {
-				if (item.id === 'b') return 'empty';
-				writeFileSync(dest, item.id);
 			},
 			minFiles: 0,
 		});
@@ -179,8 +151,11 @@ describe('defineTileRegion', () => {
 			name: 'test/auto-dir',
 			meta: baseMeta,
 			init: () => [{ id: 'a' }],
-			download: async (item, { dest }) => {
-				writeFileSync(dest, item.id);
+			download: async (item) => {
+				return { value: item.id };
+			},
+			convert: async (data, { dest }) => {
+				writeFileSync(dest, data.value);
 			},
 			minFiles: 0,
 		});
@@ -193,12 +168,15 @@ describe('defineTileRegion', () => {
 			name: 'test/skip-dest-ctx',
 			meta: baseMeta,
 			init: () => [{ id: 'a' }, { id: 'b' }],
-			download: async (item, { dest, skipDest }) => {
+			download: async (item, { skipDest }) => {
 				if (item.id === 'a') {
 					writeFileSync(skipDest, '');
 					return 'empty';
 				}
-				writeFileSync(dest, item.id);
+				return { value: item.id };
+			},
+			convert: async (data, { dest }) => {
+				writeFileSync(dest, data.value);
 			},
 			minFiles: 1,
 		});
@@ -208,9 +186,9 @@ describe('defineTileRegion', () => {
 		expect(existsSync(join(tilesDir, 'b.versatiles'))).toBe(true);
 	});
 
-	it('handles invalid return from download callback in two-stage mode', async () => {
+	it('handles invalid return from download callback', async () => {
 		await runTileRegion(ctx, {
-			name: 'test/invalid-two-stage',
+			name: 'test/invalid',
 			meta: baseMeta,
 			init: () => [{ id: 'a' }, { id: 'b' }, { id: 'c' }],
 			download: async (item) => {
@@ -230,36 +208,21 @@ describe('defineTileRegion', () => {
 		expect(existsSync(join(tilesDir, 'c.versatiles'))).toBe(true);
 	});
 
-	it('handles invalid return from download callback in single-stage mode', async () => {
-		await runTileRegion(ctx, {
-			name: 'test/invalid-single-stage',
-			meta: baseMeta,
-			init: () => [{ id: 'a' }, { id: 'b' }, { id: 'c' }],
-			download: async (item, { dest }) => {
-				if (item.id === 'b') return 'invalid';
-				writeFileSync(dest, item.id);
-			},
-			minFiles: 0,
-		});
-
-		const tilesDir = join(ctx.dataDir, 'tiles');
-		expect(existsSync(join(tilesDir, 'a.versatiles'))).toBe(true);
-		expect(existsSync(join(tilesDir, 'b.versatiles'))).toBe(false);
-		expect(existsSync(join(tilesDir, 'c.versatiles'))).toBe(true);
-	});
-
 	it('throws when errors.add() is called with invalid returns', async () => {
 		await expect(
 			runTileRegion(ctx, {
 				name: 'test/errors-throw',
 				meta: baseMeta,
 				init: () => [{ id: 'a' }, { id: 'b' }],
-				download: async (item, { dest, errors }) => {
+				download: async (item, { errors }) => {
 					if (item.id === 'b') {
 						errors.add('https://example.com/b.tif', 'b.tif');
 						return 'invalid';
 					}
-					writeFileSync(dest, item.id);
+					return { value: item.id };
+				},
+				convert: async (data, { dest }) => {
+					writeFileSync(dest, data.value);
 				},
 				minFiles: 0,
 			}),
@@ -278,8 +241,11 @@ describe('defineTileRegion', () => {
 					id: string;
 				}[];
 			},
-			download: async (item, { dest }) => {
-				writeFileSync(dest, item.id);
+			download: async (item) => {
+				return { value: item.id };
+			},
+			convert: async (data, { dest }) => {
+				writeFileSync(dest, data.value);
 			},
 			minFiles: 0,
 		});

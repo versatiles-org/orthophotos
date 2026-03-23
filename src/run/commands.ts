@@ -90,7 +90,7 @@ async function runCommandQuiet(cmd: string, args: string[]): Promise<void> {
 export async function runVersatilesRasterConvert(
 	input: string,
 	output: string,
-	options?: { bands?: string; nodata?: string, cacheDirectory?: string },
+	options?: { bands?: string; nodata?: string; cacheDirectory?: string },
 ): Promise<void> {
 	const args = ['raster', 'convert', '--max-zoom', '17', '--quality', '70,16:50,17:30'];
 	if (options?.bands) {

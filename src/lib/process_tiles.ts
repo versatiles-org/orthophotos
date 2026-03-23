@@ -47,21 +47,21 @@ export interface TileContext {
 	errors: DownloadErrors;
 }
 
-export interface TileRegionOptions<T extends TileItem, D = void> {
+export interface TileRegionOptions<T extends TileItem, D> {
 	/** Region identifier (e.g. 'de/thueringen') */
 	name: string;
 	/** Region metadata */
 	meta: RegionMetadata;
 	/** Generate the items to process */
 	init: (ctx: StepContext) => T[] | Promise<T[]>;
-	/** Download concurrency (default: CONCURRENCY = 4) */
+	/** Download concurrency (default: 4) */
 	downloadConcurrency?: number;
-	/** Download callback */
+	/** Download callback — returns data for the convert stage, 'empty'/'invalid' to skip, or void */
 	download: (item: T, ctx: TileContext) => Promise<D | 'empty' | 'invalid' | void>;
 	/** Convert concurrency (default: Math.max(1, Math.floor(availableParallelism() / 4))) */
 	convertConcurrency?: number;
-	/** Convert callback (optional). When present, download returns D, convert receives it. */
-	convert?: (data: Exclude<D, 'empty' | 'invalid' | void>, ctx: TileContext) => Promise<void>;
+	/** Convert callback — receives non-empty download result, produces the final .versatiles file */
+	convert: (data: Exclude<D, 'empty' | 'invalid' | void>, ctx: TileContext) => Promise<void>;
 	/** Minimum number of *.versatiles output files required */
 	minFiles: number;
 }
@@ -125,34 +125,22 @@ async function processTiles<T extends TileItem, D>(
 	const dlConcurrency = options.downloadConcurrency ?? CONCURRENCY;
 	const cvConcurrency = options.convertConcurrency ?? Math.max(1, Math.floor(availableParallelism() / 4));
 
-	if (options.convert) {
-		const { download, convert } = options;
-		await pipeline(shuffled, { progress: { labels: [...LABELS] } })
-			.map(dlConcurrency, async (item: T) => {
-				if (isSkipped(item)) return skip('skipped');
-				const tileCtx = makeTileCtx(item);
-				const result = await download(item, tileCtx);
-				if (result === 'empty') return skip('empty');
-				if (result === 'invalid') return skip('invalid');
-				if (result == null) return null;
-				return { data: result, tileCtx } as ConvertEnvelope<D>;
-			})
-			.forEach(cvConcurrency, async (envelope) => {
-				const { data, tileCtx } = envelope as ConvertEnvelope<D>;
-				await convert(data, tileCtx);
-				return 'converted';
-			});
-	} else {
-		const { download } = options;
-		await pipeline(shuffled, { progress: { labels: [...LABELS] } }).forEach(dlConcurrency, async (item: T) => {
-			if (isSkipped(item)) return 'skipped';
+	const { download, convert } = options;
+	await pipeline(shuffled, { progress: { labels: [...LABELS] } })
+		.map(dlConcurrency, async (item: T) => {
+			if (isSkipped(item)) return skip('skipped');
 			const tileCtx = makeTileCtx(item);
 			const result = await download(item, tileCtx);
-			if (result === 'empty') return 'empty';
-			if (result === 'invalid') return 'invalid';
+			if (result === 'empty') return skip('empty');
+			if (result === 'invalid') return skip('invalid');
+			if (result == null) return null;
+			return { data: result, tileCtx } as ConvertEnvelope<D>;
+		})
+		.forEach(cvConcurrency, async (envelope) => {
+			const { data, tileCtx } = envelope as ConvertEnvelope<D>;
+			await convert(data, tileCtx);
 			return 'converted';
 		});
-	}
 
 	errors.throwIfAny();
 	await expectMinFiles(tilesDir, '*.versatiles', options.minFiles);

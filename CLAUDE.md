@@ -161,8 +161,8 @@ Region fetch implementations should follow these patterns consistently:
 
 **Download validation:** After downloading a raster file (TIF), validate it with `isValidRaster()` from `src/lib/validators.ts` before converting. This uses `gdalinfo` to verify the file is GDAL-readable. Invalid files must be reported, not silently skipped.
 
-**Error collection (not skip files):** When a downloaded image fails validation, use `DownloadErrors` from `src/lib/validators.ts`:
-1. Create `const errors = new DownloadErrors()` before the `concurrent` loop
+**Error collection (not skip files):** When a downloaded image fails validation, use `ErrorBucket` from `src/lib/validators.ts`:
+1. Create `const errors = new ErrorBucket()` before the `concurrent` loop
 2. On invalid download: delete the file, call `errors.add(url, filename)`, return `'invalid'`
 3. After the loop: call `errors.throwIfAny()` — this throws a single error listing all invalid files with their URLs
 4. Do **not** create `.skip` files for invalid downloads — the pipeline should fail loudly so the issue is investigated

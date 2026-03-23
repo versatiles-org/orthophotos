@@ -90,14 +90,14 @@ async function runCommandQuiet(cmd: string, args: string[]): Promise<void> {
 export async function runVersatilesRasterConvert(
 	input: string,
 	output: string,
-	options?: { maxZoom?: number; quality?: number },
+	options?: { bands?: string; nodata?: string },
 ): Promise<void> {
-	const args = ['raster', 'convert'];
-	if (options?.maxZoom != null) {
-		args.push('--max-zoom', String(options.maxZoom));
+	const args = ['raster', 'convert', '--max-zoom', '17', '--quality', '70,16:50,17:30'];
+	if (options?.bands) {
+		args.push('--bands', options.bands);
 	}
-	if (options?.quality != null) {
-		args.push('--quality', String(options.quality));
+	if (options?.nodata) {
+		args.push('--nodata', options.nodata);
 	}
 	const tmpOutput = join(dirname(output), `tmp.${basename(output)}`);
 	args.push(input, tmpOutput);

@@ -86,6 +86,9 @@ export function defineTileRegion<T extends TileItem, D>(options: TileRegionOptio
 				writeFileSync(itemsPath, items.map((item) => JSON.stringify(item)).join('\n') + '\n');
 				console.log(`  Saved ${items.length} items to items.ndjson`);
 			}
+			if (items.length < options.minFiles) {
+				throw new Error(`Init returned ${items.length} items, but minFiles requires at least ${options.minFiles}`);
+			}
 			await processTiles(items, ctx, options);
 		},
 	};

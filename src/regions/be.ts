@@ -94,6 +94,7 @@ export default defineTileRegion({
 			throw err;
 		}
 	},
+	convertCores: 6,
 	convert: async ({ jp2Path }, { dest }) => {
 		try {
 			await runMosaicTile(jp2Path, dest);

@@ -1,8 +1,8 @@
-import { existsSync } from 'node:fs';
+import { rmSync } from 'node:fs';
 import { readdir } from 'node:fs/promises';
-import { basename, join } from 'node:path';
+import { join } from 'node:path';
 import { downloadFile, runCommand } from '../lib/command.ts';
-import { extractZipFile } from '../lib/fs.ts';
+import { extractZipFile, safeRemoveDir } from '../lib/fs.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
 import { runVersatilesRasterConvert } from '../run/commands.ts';
@@ -13,11 +13,6 @@ const DISTRICTS = [
 	{ name: 'hb', zip: 'DOP10_RGB_JPG_HB.zip' },
 	{ name: 'bhv', zip: 'DOP10_RGB_JPG_BHV.zip' },
 ];
-
-async function findFile(dir: string, ext: string): Promise<string | undefined> {
-	const entries = await readdir(dir);
-	return entries.find((e) => e.endsWith(ext));
-}
 
 export default defineTileRegion({
 	name: 'de/bremen',
@@ -42,45 +37,58 @@ export default defineTileRegion({
 		},
 		date: '2025',
 	},
-	init: async (ctx) => {
-		const items: { id: string; srcPath: string }[] = [];
+	init: async () => {
+		return DISTRICTS.map((d) => ({
+			id: d.name,
+			url: `${BASE_URL}${d.zip}`,
+		}));
+	},
+	download: async ({ url, id }, { tempDir }) => {
+		const zipPath = join(tempDir, `${id}.zip`);
+		console.log(`  Downloading ${id}.zip...`);
+		await withRetry(() => downloadFile(url, zipPath), { maxAttempts: 3 });
+		return { zipPath };
+	},
+	convertCores: 8,
+	convert: async ({ zipPath }, { dest, tempDir }) => {
+		const extractDir = join(tempDir, `extract_${Date.now()}`);
+		const vrtPath = `${dest}.vrt`;
+		try {
+			console.log(`  Extracting ${zipPath}...`);
+			await extractZipFile(zipPath, extractDir);
 
-		for (const district of DISTRICTS) {
-			const extractDir = join(ctx.tempDir, district.name);
-
-			if (!existsSync(extractDir)) {
-				const outerZip = join(ctx.tempDir, district.zip);
-				console.log(`  Downloading ${district.zip}...`);
-				await withRetry(() => downloadFile(`${BASE_URL}${district.zip}`, outerZip), { maxAttempts: 3 });
-
-				console.log(`  Extracting ${district.zip}...`);
-				await extractZipFile(outerZip, extractDir);
-
-				// Find and extract the inner zip (name includes a date suffix that changes)
-				const innerZip = await findFile(extractDir, '.zip');
-				if (innerZip) {
-					console.log(`  Extracting inner ${innerZip}...`);
-					await runCommand('unzip', ['-qo', join(extractDir, innerZip), '-d', extractDir]);
-				}
+			// Find and extract the inner zip (name includes a date suffix that changes)
+			const outerFiles = await readdir(extractDir);
+			const innerZip = outerFiles.find((f) => f.endsWith('.zip'));
+			if (innerZip) {
+				console.log(`  Extracting inner ${innerZip}...`);
+				await runCommand('unzip', ['-qo', join(extractDir, innerZip), '-d', extractDir]);
+				rmSync(join(extractDir, innerZip), { force: true });
 			}
 
-			// Collect all image files, prefixed with district name to avoid collisions
+			// Find all image files
 			const files = await readdir(extractDir, { recursive: true });
-			for (const file of files) {
-				const name = typeof file === 'string' ? file : String(file);
-				if (!IMAGE_EXTS.some((ext) => name.endsWith(ext))) continue;
-				const base = basename(name, basename(name).slice(basename(name).lastIndexOf('.')));
-				items.push({ id: `${district.name}_${base}`, srcPath: join(extractDir, name) });
-			}
-		}
+			const imageFiles = files
+				.map((f) => (typeof f === 'string' ? f : String(f)))
+				.filter((f) => IMAGE_EXTS.some((ext) => f.endsWith(ext)))
+				.map((f) => join(extractDir, f));
 
-		return items;
-	},
-	download: async ({ srcPath }) => {
-		return { src: srcPath };
-	},
-	convert: async ({ src }, { dest }) => {
-		await runVersatilesRasterConvert(src, dest);
+			if (imageFiles.length === 0) {
+				throw new Error(`No image files found in ${extractDir}`);
+			}
+
+			// Build VRT from all images
+			await runCommand('gdalbuildvrt', [vrtPath, ...imageFiles]);
+
+			// Convert VRT to versatiles
+			await runVersatilesRasterConvert(vrtPath, dest);
+		} finally {
+			try {
+				rmSync(vrtPath, { force: true });
+				rmSync(zipPath, { force: true });
+			} catch {}
+			await safeRemoveDir(extractDir);
+		}
 	},
 	minFiles: 2,
 });

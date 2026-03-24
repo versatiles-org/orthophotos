@@ -37,7 +37,17 @@ async function main(): Promise<void> {
 	if (args.tasks.includes(2)) {
 		console.log('Checking remote server...');
 		const { host, port, id } = requireSshConfig();
-		await runCommand('ssh', ['-p', port, '-i', id, host, 'help'], { stdout: 'null', stderr: 'null' });
+		try {
+			await runCommand('ssh', ['-o', 'ConnectTimeout=10', '-p', port, '-i', id, host, 'help'], {
+				stdout: 'null',
+				stderr: 'null',
+			});
+		} catch (err) {
+			// SSH returns 255 for connection failures; other exit codes mean the connection worked
+			if (err instanceof Error && err.message.includes('Exit code: 255')) {
+				throw new Error(`Cannot connect to remote server ${host}:${port}`);
+			}
+		}
 		console.log('  Remote server is accessible.');
 	}
 

@@ -124,8 +124,15 @@ export async function runMosaicTile(
 /**
  * Runs `versatiles mosaic assemble` to assemble multiple tile containers into one.
  */
-export async function runMosaicAssemble(filelistPath: string, output: string, options?: {}): Promise<void> {
+export async function runMosaicAssemble(
+	filelistPath: string,
+	output: string,
+	options?: { lossless?: boolean },
+): Promise<void> {
 	const args = ['mosaic', 'assemble', '--prescan', '--max-zoom', MAX_ZOOM, '--quality', QUALITY];
+	if (options?.lossless) {
+		args.push('--lossless');
+	}
 	args.push(filelistPath, output);
 	await runCommand('versatiles', args);
 }

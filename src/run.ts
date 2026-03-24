@@ -14,9 +14,10 @@
 
 import { resolve } from 'node:path';
 import { mkdirSync } from 'node:fs';
+import { runCommand } from './lib/command.ts';
 import { getDataDir, getTempDir, requireSshConfig } from './config.ts';
 import { getHelpText, parseArgs } from './run/args.ts';
-import { checkRequiredCommands, runSshCommand } from './run/commands.ts';
+import { checkRequiredCommands } from './run/commands.ts';
 import { runTask, type TaskContext } from './run/tasks.ts';
 
 async function main(): Promise<void> {
@@ -36,7 +37,7 @@ async function main(): Promise<void> {
 	if (args.tasks.includes(2)) {
 		console.log('Checking remote server...');
 		const { host, port, id } = requireSshConfig();
-		await runSshCommand(host, port, id, 'help');
+		await runCommand('ssh', ['-p', port, '-i', id, host, 'help'], { stdout: 'null', stderr: 'null' });
 		console.log('  Remote server is accessible.');
 	}
 

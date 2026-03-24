@@ -36,7 +36,7 @@ async function main(): Promise<void> {
 	if (args.tasks.includes(2)) {
 		console.log('Checking remote server...');
 		const { host, port, id } = requireSshConfig();
-		await runSshCommand(host, port, id, 'true');
+		await runSshCommand(host, port, id, 'help');
 		console.log('  Remote server is accessible.');
 	}
 

@@ -80,7 +80,6 @@ export default defineTileRegion({
 		const urls = parseTileUrls(feedXml);
 		return urls.map((url) => ({ id: basename(url, '.jp2'), url }));
 	},
-	downloadConcurrency: 8,
 	download: async ({ url, id }, { tempDir }) => {
 		const src = join(tempDir, `${id}.jp2`);
 		await withRetry(() => downloadFile(url, src), { maxAttempts: 3 });

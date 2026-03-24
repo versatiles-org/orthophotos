@@ -22,7 +22,6 @@ import { createInterface } from 'node:readline';
 import { availableParallelism } from 'node:os';
 import { join } from 'node:path';
 import { shuffle } from './array.ts';
-const CONCURRENCY = 4;
 import type { RegionMetadata, RegionPipeline, StepContext } from './framework.ts';
 import { pipeline, skip } from './pipeline.ts';
 import { ErrorBucket, expectMinFiles } from './validators.ts';
@@ -122,7 +121,7 @@ async function processTiles<T extends TileItem, D>(
 		return existsSync(tileCtx.dest) || existsSync(tileCtx.skipDest);
 	};
 
-	const dlConcurrency = options.downloadConcurrency ?? CONCURRENCY;
+	const dlConcurrency = options.downloadConcurrency ?? 4;
 	const cvConcurrency = options.convertConcurrency ?? Math.max(1, Math.floor(availableParallelism() / 4));
 
 	const { download, convert } = options;

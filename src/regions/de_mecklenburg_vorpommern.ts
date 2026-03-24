@@ -53,7 +53,6 @@ export default defineTileRegion({
 		const xml = await readFile(atomPath, 'utf-8');
 		return parseTileUrls(xml);
 	},
-	downloadConcurrency: 8,
 	download: async ({ url, id }, { tempDir, errors }) => {
 		const tifPath = join(tempDir, `${id}.tif`);
 		try {

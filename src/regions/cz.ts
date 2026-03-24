@@ -2,7 +2,7 @@ import { existsSync, rmSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { XMLParser } from 'fast-xml-parser';
-import { downloadFile } from '../lib/command.ts';
+import { downloadFile, runCommand } from '../lib/command.ts';
 import { extractZipFile, safeRemoveDir } from '../lib/fs.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
@@ -87,7 +87,8 @@ export default defineTileRegion({
 	},
 	convert: async ({ jp2Path, extractDir }, { dest }) => {
 		try {
-			// JP2 has no embedded CRS; worldfile provides coordinates in EPSG:3045.
+			// JP2 has no embedded CRS; assign EPSG:3045 (coordinates come from .j2w worldfile)
+			await runCommand('gdal', ['raster', 'edit', '--crs', 'EPSG:3045', jp2Path]);
 			// White borders (255,255,255) are treated as transparent via --nodata.
 			await runVersatilesRasterConvert(jp2Path, dest, { nodata: '255,255,255' });
 		} finally {

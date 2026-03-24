@@ -15,7 +15,6 @@ export interface Creator {
 
 export interface Entry {
 	name: string;
-	versaTilesExists: boolean;
 	geoJSON?: Feature;
 }
 

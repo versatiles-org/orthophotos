@@ -1,10 +1,5 @@
-import { relative, resolve } from 'node:path';
-import { existsSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
 import type { Status } from './status.ts';
-import { KnownRegion, reducePrecision } from './geojson.ts';
-import type { Feature } from 'geojson';
-import { getDataDir } from '../config.ts';
+import { KnownRegion } from './geojson.ts';
 import { runCommand } from '../lib/command.ts';
 import type { RegionMetadata } from '../lib/framework.ts';
 import { getAllRegionMetadata } from '../regions/index.ts';
@@ -43,7 +38,7 @@ function metadataToStatus(meta: RegionMetadata): Status {
 			status: 'success',
 			rating: 0,
 			notes: meta.notes,
-			entries: (meta.entries ?? ['result']).map((name) => ({ name, versaTilesExists: false })),
+			entries: (meta.entries ?? ['result']).map((name) => ({ name })),
 			license: meta.license!,
 			creator: meta.creator!,
 		};
@@ -78,46 +73,4 @@ export function scanRegions(knownRegions: KnownRegion[]): Region[] {
 async function createGeoJsonOutline(versaTilesFilename: string, geoJsonFilename: string): Promise<void> {
 	console.log(`Creating GeoJSON for ${versaTilesFilename}`);
 	await runCommand('versatiles', ['dev', 'export-outline', versaTilesFilename, geoJsonFilename]);
-}
-
-/**
- * Updates region entries with VersaTiles existence status and GeoJSON outlines.
- * Creates GeoJSON outline files for existing VersaTiles containers if they don't exist.
- * @param regions - Array of regions to update
- */
-export async function updateRegionEntries(regions: Region[]): Promise<void> {
-	const orthophotosPath = resolve(getDataDir(), 'orthophotos/');
-
-	for (const region of regions) {
-		if (region.status.status !== 'success') continue;
-
-		for (const entry of region.status.entries) {
-			const versaTilesFilename = resolve(orthophotosPath, region.id, `${entry.name}.versatiles`);
-
-			entry.versaTilesExists = existsSync(versaTilesFilename);
-
-			if (!entry.versaTilesExists) {
-				console.warn(`Warning: Missing ${relative(orthophotosPath, versaTilesFilename)}`);
-				continue;
-			}
-
-			const geoJsonFilename = resolve(orthophotosPath, region.id, `${entry.name}.geojson`);
-
-			if (!existsSync(geoJsonFilename)) {
-				await createGeoJsonOutline(versaTilesFilename, geoJsonFilename);
-			}
-
-			if (!existsSync(geoJsonFilename)) {
-				throw new Error(`Failed to create ${geoJsonFilename}`);
-			}
-
-			const geoJSON = JSON.parse(await readFile(geoJsonFilename, 'utf-8')) as Feature;
-			reducePrecision(geoJSON);
-			entry.geoJSON = {
-				type: 'Feature',
-				geometry: geoJSON.geometry,
-				properties: {},
-			};
-		}
-	}
 }

@@ -1,7 +1,7 @@
 import { resolve, dirname } from 'node:path';
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { scanRegions, updateRegionEntries } from './status/regions.ts';
+import { scanRegions } from './status/regions.ts';
 import { loadKnownRegions } from './status/geojson.ts';
 import { getAllRegionMetadata } from './regions/index.ts';
 import { generateStatusPage } from './status/html.ts';
@@ -11,7 +11,6 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const knownRegions = loadKnownRegions(resolve(__dirname, '../data'));
 
 const regions = scanRegions(knownRegions);
-await updateRegionEntries(regions);
 
 writeFileSync(resolve(__dirname, '../web/status.json'), JSON.stringify(regions));
 console.log(`Wrote ${regions.length} regions to web/status.json`);

@@ -10,8 +10,12 @@ import { getAllRegionMetadata } from '../regions/index.ts';
  */
 export function generateVPL(filename: string) {
 	const dataDir = resolve(getDataDir());
-	const satelliteDir = resolve(dataDir, 'satellite');
 	const { host, port, dir } = requireSshConfig();
+
+	function sftpUrl(remotePath: string): string {
+		const cleaned = remotePath.replace(/\/\/+/g, '/');
+		return `sftp://${host}:${port}${cleaned.startsWith('/') ? '' : '/'}${cleaned}`;
+	}
 
 	const layers: string[] = [];
 
@@ -22,16 +26,14 @@ export function generateVPL(filename: string) {
 
 		const entries = meta.entries ?? ['result'];
 		for (const entry of entries) {
-			const remotePath = `${dir}/${id}/${entry}.versatiles`.replace(/\/\/+/g, '/');
-			const sftpUrl = `sftp://${host}:${port}${remotePath.startsWith('/') ? '' : '/'}${remotePath}`;
-			layers.push(`from_container filename="${sftpUrl}" | filter level_min=11`);
+			layers.push(`from_container filename="${sftpUrl(`${dir}/${id}/${entry}.versatiles`)}" | filter level_min=11`);
 		}
 	}
 
-	// Add satellite base layers (local files)
-	layers.push(`from_container filename="${satelliteDir}/s2gm/s2gm_overview.versatiles"`);
+	// Add satellite base layers via sftp
+	layers.push(`from_container filename="${sftpUrl('satellite/s2gm/s2gm_overview.versatiles')}"`);
 	layers.push(
-		`from_container filename="${satelliteDir}/bluemarble/bluemarble.versatiles" | raster_levels gamma=0.8 brightness=0.2 contrast=0.8`,
+		`from_container filename="${sftpUrl('satellite/bluemarble/bluemarble.versatiles')}" | raster_levels gamma=0.8 brightness=0.2 contrast=0.8`,
 	);
 
 	const vpl = `from_stacked_raster auto_overscale=true [

@@ -13,10 +13,7 @@ function setupEnv(base: string) {
 	process.env['ssh_port'] = '22';
 	process.env['ssh_id'] = '/tmp/id';
 	process.env['ssh_dir'] = '/data/ortho';
-	mkdirSync(resolve(base, 'satellite/s2gm'), { recursive: true });
-	mkdirSync(resolve(base, 'satellite/bluemarble'), { recursive: true });
-	writeFileSync(resolve(base, 'satellite/s2gm/s2gm_overview.versatiles'), '');
-	writeFileSync(resolve(base, 'satellite/bluemarble/bluemarble.versatiles'), '');
+	mkdirSync(base, { recursive: true });
 }
 
 test('generateVPL - creates valid VPL with sftp orthophoto layers', () => {
@@ -33,14 +30,14 @@ test('generateVPL - creates valid VPL with sftp orthophoto layers', () => {
 	expect(vpl).toContain('bluemarble.versatiles');
 });
 
-test('generateVPL - includes satellite layers', () => {
+test('generateVPL - includes satellite layers via sftp', () => {
 	setupEnv(TEST_DIR);
 
 	generateVPL('sat.vpl');
 	const vpl = readFileSync(resolve(TEST_DIR, 'sat.vpl'), 'utf-8');
 
-	expect(vpl).toContain('s2gm_overview.versatiles');
-	expect(vpl).toContain('bluemarble.versatiles');
+	expect(vpl).toContain('sftp://example.com:22/satellite/s2gm/s2gm_overview.versatiles');
+	expect(vpl).toContain('sftp://example.com:22/satellite/bluemarble/bluemarble.versatiles');
 });
 
 test('generateVPL - applies gamma/brightness/contrast to bluemarble', () => {

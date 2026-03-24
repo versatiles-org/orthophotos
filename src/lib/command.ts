@@ -17,30 +17,24 @@ export interface CommandOptions {
 	env?: Record<string, string>;
 	stdout?: 'inherit' | 'piped' | 'null';
 	stderr?: 'inherit' | 'piped' | 'null';
-}
-
-function mapStdio(mode: 'inherit' | 'piped' | 'null' | undefined): 'inherit' | 'pipe' | 'ignore' {
-	switch (mode) {
-		case 'piped':
-			return 'pipe';
-		case 'null':
-			return 'ignore';
-		default:
-			return 'inherit';
-	}
+	/** Suppress stdout/stderr during execution (still captured for error messages). Default: false */
+	quiet?: boolean;
+	/** Suppress stdout/stderr even in error messages. Default: false */
+	quietOnError?: boolean;
 }
 
 /**
  * Generic command runner with configurable output handling.
  * @param cmd The command to execute
  * @param args Command arguments
- * @param options Command options (cwd, env, stdout, stderr)
+ * @param options Command options (cwd, env, stdout, stderr, quiet, quietOnError)
  * @throws Error if the command fails
  */
 export async function runCommand(cmd: string, args: string[], options?: CommandOptions): Promise<CommandOutput> {
 	return new Promise((resolve, reject) => {
-		const stdoutMode = options?.stdout ?? 'inherit';
-		const stderrMode = options?.stderr ?? 'inherit';
+		const quiet = options?.quiet ?? false;
+		const stdoutMode = quiet ? 'piped' : (options?.stdout ?? 'inherit');
+		const stderrMode = quiet ? 'piped' : (options?.stderr ?? 'inherit');
 		const child = spawn(cmd, args, {
 			cwd: options?.cwd,
 			env: options?.env ? { ...process.env, ...options.env } : undefined,
@@ -70,11 +64,13 @@ export async function runCommand(cmd: string, args: string[], options?: CommandO
 				stderr: new Uint8Array(Buffer.concat(stderrChunks)),
 			};
 			if (!result.success) {
-				const stdout = Buffer.concat(stdoutChunks).toString().trim();
-				const stderr = Buffer.concat(stderrChunks).toString().trim();
 				const parts = [`Command failed: ${cmd} ${args.join(' ')}`, `Exit code: ${exitCode}`];
-				if (stdout) parts.push(`stdout:\n${stdout}`);
-				if (stderr) parts.push(`stderr:\n${stderr}`);
+				if (!options?.quietOnError) {
+					const stdout = Buffer.concat(stdoutChunks).toString().trim();
+					const stderr = Buffer.concat(stderrChunks).toString().trim();
+					if (stdout) parts.push(`stdout:\n${stdout}`);
+					if (stderr) parts.push(`stderr:\n${stderr}`);
+				}
 				reject(new Error(parts.join('\n')));
 			} else {
 				resolve(result);
@@ -85,12 +81,6 @@ export async function runCommand(cmd: string, args: string[], options?: CommandO
 
 /**
  * Executes a command with retry logic.
- * @param cmd The command to execute
- * @param args Command arguments
- * @param retryOptions Retry configuration options
- * @param cmdOptions Command options (cwd, env, stdout, stderr)
- * @returns The command output
- * @throws If the command fails after all retry attempts
  */
 export function runCommandWithRetry(
 	cmd: string,

@@ -2,7 +2,6 @@
  * External command execution utilities for the run script.
  */
 
-import { spawn } from 'node:child_process';
 import { renameSync, rmSync } from 'node:fs';
 import { dirname, basename, join } from 'node:path';
 import { runCommand } from '../lib/command.ts';
@@ -76,35 +75,6 @@ export async function runScpUpload(localPath: string, remotePath: string): Promi
 	await runCommand('scp', [...scpArgs, localPath, `${host}:${remotePath}`]);
 }
 
-/**
- * Runs a command with stdout/stderr suppressed. On failure, prints captured output before throwing.
- */
-async function runCommandQuiet(cmd: string, args: string[]): Promise<void> {
-	return new Promise((resolve, reject) => {
-		const child = spawn(cmd, args, { stdio: ['inherit', 'pipe', 'pipe'] });
-
-		const stdoutChunks: Buffer[] = [];
-		const stderrChunks: Buffer[] = [];
-
-		child.stdout.on('data', (chunk: Buffer) => stdoutChunks.push(chunk));
-		child.stderr.on('data', (chunk: Buffer) => stderrChunks.push(chunk));
-
-		child.on('error', reject);
-
-		child.on('close', (code) => {
-			if (code === 0) {
-				resolve();
-			} else {
-				const stdout = Buffer.concat(stdoutChunks).toString();
-				const stderr = Buffer.concat(stderrChunks).toString();
-				if (stdout) process.stdout.write(stdout);
-				if (stderr) process.stderr.write(stderr);
-				reject(new Error(`Command "${cmd}" exited with code ${code}`));
-			}
-		});
-	});
-}
-
 const MAX_ZOOM = '17';
 const QUALITY = '70,16:50,17:30';
 
@@ -132,7 +102,7 @@ export async function runMosaicTile(
 	const tmpOutput = join(dirname(output), `tmp.${basename(output)}`);
 	args.push(input, tmpOutput);
 	try {
-		await runCommandQuiet('versatiles', args);
+		await runCommand('versatiles', args, { quiet: true });
 		renameSync(tmpOutput, output);
 	} catch (err) {
 		try {
@@ -155,5 +125,5 @@ export async function runMosaicAssemble(
 		args.push('--lossless');
 	}
 	args.push(filelistPath, output);
-	await runCommand('versatiles', args);
+	await runCommand('versatiles', args, { quiet: true });
 }

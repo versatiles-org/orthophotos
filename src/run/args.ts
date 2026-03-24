@@ -108,7 +108,7 @@ export function parseArgs(args: string[]): ParsedArgs | null {
 	}
 
 	if (args.length < 2) {
-		throw new Error('Missing arguments. Usage: npm run run -- <name> <task>');
+		throw new Error(`Missing arguments. Usage: ${getCommand()} <name> <task>`);
 	}
 
 	const [name, taskSpec] = args;
@@ -124,25 +124,35 @@ export function parseArgs(args: string[]): ParsedArgs | null {
 }
 
 /**
+ * Detects how the script was invoked and returns the appropriate command prefix.
+ */
+function getCommand(): string {
+	const scriptPath = process.argv[1] ?? '';
+	if (scriptPath.endsWith('run.sh')) return './run.sh';
+	return 'npm run run --';
+}
+
+/**
  * Returns the help text for the run script.
  */
 export function getHelpText(): string {
-	return `Usage: npm run run -- <name> <task>
+	const cmd = getCommand();
+	return `Usage: ${cmd} <name> <task>
 
-<name>  Region identifier: cc or cc/ss (e.g., de/bw)
+<name>  Region identifier: cc or cc/name (e.g., de or de/berlin)
 <task>  One or more tasks: a single step (e.g., 2 or merge),
-        a comma list (e.g., 1,2,3), and/or ranges (e.g., 1-3,5)
+        a comma list (e.g., 1,2,3), and/or ranges (e.g., 1-3)
 
 Tasks:
   1 | fetch      fetch + per-file versatiles mosaic tile
-  2 | merge      versatiles mosaic assemble directly to remote via sftp
+  2 | merge      versatiles mosaic assemble + upload to remote
   3 | delete     delete local data for the region
   all            run full pipeline: 1 2 3
 
 Examples:
-  npm run run -- de/bw 1
-  npm run run -- fr 1-2
-  npm run run -- de/bw 1,2
-  npm run run -- de/bw all
+  ${cmd} de/berlin 1
+  ${cmd} fr 1-2
+  ${cmd} de/berlin 1,2
+  ${cmd} de/berlin all
 `;
 }

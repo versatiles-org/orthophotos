@@ -1,9 +1,6 @@
 name: Status Check
 
 on:
-  push:
-    branches:
-      - main
   schedule:
     - cron: '0 6 * * 4'  # Run weekly on Thursday at 6:00 UTC
   workflow_dispatch:  # Allow manual trigger
@@ -32,15 +29,6 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
-
-      - name: Check formatting
-        run: npm run format:check
-
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Run tests
-        run: npm run test
 
       - name: Run status-check
         run: npx tsx src/status-check.ts

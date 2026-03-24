@@ -1,11 +1,12 @@
-import { rmSync } from 'node:fs';
+import { rmSync, writeFileSync } from 'node:fs';
 import { readdir } from 'node:fs/promises';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { downloadFile, runCommand } from '../lib/command.ts';
 import { extractZipFile, safeRemoveDir } from '../lib/fs.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
-import { runMosaicTile } from '../run/commands.ts';
+import { runMosaicAssemble, runMosaicTile } from '../run/commands.ts';
+import { pipeline } from '../lib/pipeline.ts';
 
 const BASE_URL = 'https://gdi2.geo.bremen.de/inspire/download/DOP/data/';
 const IMAGE_EXTS = ['.jpg', '.tif', '.jp2'];
@@ -52,10 +53,11 @@ export default defineTileRegion({
 	convertCores: 8,
 	convert: async ({ zipPath }, { dest, tempDir }) => {
 		const extractDir = join(tempDir, `extract_${Date.now()}`);
-		const vrtPath = `${dest}.vrt`;
+		const tilesDir = join(tempDir, `tiles_${Date.now()}`);
 		try {
-			console.log(`  Extracting ${zipPath}...`);
+			console.log(`  Extracting ${basename(zipPath)}...`);
 			await extractZipFile(zipPath, extractDir);
+			rmSync(zipPath, { force: true });
 
 			// Find and extract the inner zip (name includes a date suffix that changes)
 			const outerFiles = await readdir(extractDir);
@@ -77,17 +79,31 @@ export default defineTileRegion({
 				throw new Error(`No image files found in ${extractDir}`);
 			}
 
-			// Build VRT from all images
-			await runCommand('gdalbuildvrt', [vrtPath, ...imageFiles]);
+			// Convert each image file to a .versatiles container individually
+			const { mkdirSync } = await import('node:fs');
+			mkdirSync(tilesDir, { recursive: true });
 
-			// Convert VRT to versatiles
-			await runMosaicTile(vrtPath, dest, { crs: '25832' });
+			console.log(`  Converting ${imageFiles.length} image files...`);
+			const versatilesFiles: string[] = [];
+			await pipeline(imageFiles, { progress: { labels: ['converted'] } }).forEach(4, async (imgPath) => {
+				const tileName = basename(imgPath).replace(/\.[^.]+$/, '.versatiles');
+				const tilePath = join(tilesDir, tileName);
+				await runMosaicTile(imgPath, tilePath, { crs: '25832' });
+				versatilesFiles.push(tilePath);
+				return 'converted';
+			});
+
+			// Write filelist and assemble into final output
+			const filelistPath = join(tempDir, 'filelist.txt');
+			writeFileSync(filelistPath, versatilesFiles.join('\n'));
+			await runMosaicAssemble(filelistPath, dest, { lossless: true });
+			rmSync(filelistPath, { force: true });
 		} finally {
 			try {
-				rmSync(vrtPath, { force: true });
 				rmSync(zipPath, { force: true });
 			} catch {}
 			await safeRemoveDir(extractDir);
+			await safeRemoveDir(tilesDir);
 		}
 	},
 	minFiles: 2,

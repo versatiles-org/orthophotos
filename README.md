@@ -1,58 +1,92 @@
+[![Code coverage](https://codecov.io/gh/versatiles-org/orthophotos/branch/main/graph/badge.svg)](https://app.codecov.io/github/versatiles-org/orthophotos)
+[![CI status](https://img.shields.io/github/actions/workflow/status/versatiles-org/orthophotos/ci.yml)](https://github.com/versatiles-org/orthophotos/actions/workflows/ci.yml)
+
 # Orthophotos
 
-This repository contains scripts and tools to fetch, process, and serve raster tiles generated from orthophotos. It provides automated workflows for downloading raw orthophoto data, processing it into `*.versatiles` containers, and preparing a server to preview them.
-
-> [!WARNING]
-> This project is a jumble of experimental, loosely structured glue code. Please watch your step and be careful.
+This repository contains scripts and tools to fetch, process, and serve raster tiles generated from orthophotos. It provides automated workflows for downloading raw orthophoto data from European national agencies, processing it into `*.versatiles` containers, and preparing a server to preview them.
 
 ## Contents
 
-- **`/regions/`**: Bash scripts to download and generate raster tiles for various countries and regions.
-- **`/src/`**: Deno scripts for data validation, metadata processing, overview generation, and other processing tasks.
+- **`/src/regions/`**: TypeScript region definitions — each file defines metadata and a pipeline for fetching + converting orthophoto data.
+- **`/src/`**: TypeScript source code for the pipeline, utilities, status checking, and server preparation.
 - **`/web/`**: HTML and related files used to run a test server that previews all processed orthophoto data.
+- **`/data/`**: NUTS TopoJSON reference data for region matching.
 
-## Add `config.env`
+## Setup
 
-Create a `config.env` file to configure paths and connection settings:
+### Prerequisites
 
-```bash
-dir_data=/mnt/volume/      # Directory for storing large datasets and final outputs.
-dir_temp=/root/temp/       # Directory used for temporary files during processing.
-rsync_host=your.rsync.host # Hostname or IP address for long-term storage via rsync.
-rsync_port=23              # Port number for the rsync connection.
-rsync_id=/root/.ssh/id     # Path to the SSH private key used for rsync authentication.
-```
+- Node.js >= 22
+- External CLI tools: `7z`, `curl`, `gdal_translate`, `gdalbuildvrt`, `ssh`, `unzip`, `versatiles`
 
-## Running `run.sh`
-
-The `run.sh` script orchestrates the main processing tasks, including downloading data, generating tiles, and uploading results. Usage:
+Install CLI dependencies (macOS or Linux):
 
 ```bash
-./run.sh [task] [options]
+./install-dependencies.sh
 ```
 
-### Common tasks:
+Install Node.js dependencies:
 
-- `0`/`download` download existing data from the long-term storage 
-- `1`/`fetch` fetch new raw orthophoto data
-- `2`/`vrt` build a vrt file
-- `3`/`preview` build a preview image
-- `4`/`convert` convert to VersaTiles tiles
-- `5`/`upload` upload to the long-term storage 
-- `6`/`delete` delete all local files
+```bash
+npm install
+```
+
+### Configuration
+
+Create a `config.env` file:
+
+```bash
+dir_data=/mnt/volume/        # Directory for storing large datasets and final outputs
+dir_temp=/root/temp/          # Directory used for temporary files during processing
+ssh_host=your.ssh.host        # Hostname for remote storage
+ssh_port=22                   # SSH port
+ssh_id=/root/.ssh/id           # Path to SSH private key
+ssh_dir=/path/to/remote/data   # Remote base directory for uploads
+```
+
+## Running the Pipeline
+
+```bash
+./run.sh <region> <task>
+```
+
+### Tasks
+
+| # | Name   | Description                                                         |
+|---|--------|---------------------------------------------------------------------|
+| 1 | fetch  | Download source data + per-file versatiles mosaic tile              |
+| 2 | merge  | Merge .versatiles files + upload to remote                          |
+| 3 | delete | Remove local data and temp directories                              |
+
+Task spec supports: numbers (`2`), names (`fetch`), ranges (`1-3`), comma lists (`fetch,2-3`), `all` (full pipeline).
 
 ### Examples
 
 ```bash
-./run.sh de/by download
-./run.sh fr 0-2,5,4,5
+./run.sh de/berlin 1         # Fetch orthophoto data for Berlin
+./run.sh de/berlin 1-2       # Fetch and merge
+./run.sh de/berlin all       # Full pipeline: fetch, merge, delete
 ```
-
-Refer to the script’s help output for additional options and detailed usage.
 
 ## Preview Server
 
-The preview server is a VersaTiles server showing all the processed orthophoto data. It works by downloading all `.versatiles` containers from long-term storage and using Deno to build a `.vpl` (VersaTiles Pipeline Language) file. This `.vpl` file defines a raster source onto which satellite data is overlaid with the processed orthophotos. The demo is publicly accessible at [versatiles.org/satellite_demo/](https://versatiles.org/satellite_demo/). Its primary purpose is to facilitate debugging and quality control by displaying orthophotos at all zoom levels, which makes it easier to identify problems and defects. The final product, which will be available at [download.versatiles.org](https://download.versatiles.org/), will display orthophotos at the appropriate zoom levels, beginning at zoom levels 11 or 12.
+The preview server shows all processed orthophoto data using VersaTiles. It downloads all `.versatiles` containers from remote storage and builds a `.vpl` (VersaTiles Pipeline Language) file that layers orthophotos over satellite imagery.
+
+```bash
+npm run server
+```
+
+The demo is publicly accessible at [versatiles.org/satellite_demo/](https://versatiles.org/satellite_demo/).
+
+## Development
+
+```bash
+npm run check          # Format check + typecheck + tests
+npm run test           # Run tests (vitest)
+npm run coverage       # Run tests with coverage
+npm run typecheck      # TypeScript type checking
+npm run format         # Auto-format with Prettier
+```
 
 ## Notes
 

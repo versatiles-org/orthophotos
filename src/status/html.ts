@@ -25,14 +25,7 @@ export function generateStatusPage(
 ): string {
 	const rows: string[] = [];
 
-	// Sort: released first, then scraping, planned, blocked; within each group alphabetically
-	const statusOrder: RegionStatus[] = ['released', 'scraping', 'planned', 'blocked'];
-	const sorted = [...allMetadata.entries()].sort((a, b) => {
-		const sa = statusOrder.indexOf(a[1].status);
-		const sb = statusOrder.indexOf(b[1].status);
-		if (sa !== sb) return sa - sb;
-		return a[0].localeCompare(b[0]);
-	});
+	const sorted = [...allMetadata.entries()].sort((a, b) => a[0].localeCompare(b[0]));
 
 	const counts: Record<RegionStatus, number> = { released: 0, scraping: 0, planned: 0, blocked: 0 };
 
@@ -45,7 +38,11 @@ export function generateStatusPage(
 		const creator = meta.creator
 			? `<a href="${escapeHtml(meta.creator.url)}">${escapeHtml(meta.creator.name)}</a>`
 			: '';
-		const notes = meta.notes.map((n) => escapeHtml(n)).join('<br>');
+		let notesHtml = '';
+		if (meta.notes.length > 0) {
+			const list = meta.notes.map((n) => `<li>${escapeHtml(n)}</li>`).join('');
+			notesHtml = `<details><summary>${meta.notes.length} note${meta.notes.length > 1 ? 's' : ''}</summary><ul>${list}</ul></details>`;
+		}
 
 		rows.push(`<tr>
 			<td>${escapeHtml(id)}</td>
@@ -54,11 +51,12 @@ export function generateStatusPage(
 			<td>${meta.date ?? ''}</td>
 			<td>${license}</td>
 			<td>${creator}</td>
-			<td class="notes">${notes}</td>
+			<td class="notes">${notesHtml}</td>
 		</tr>`);
 	}
 
-	const summary = statusOrder
+	const statuses: RegionStatus[] = ['released', 'scraping', 'planned', 'blocked'];
+	const summary = statuses
 		.filter((s) => counts[s] > 0)
 		.map((s) => `<span style="color:${STATUS_COLORS[s]};font-weight:bold">${counts[s]} ${STATUS_LABELS[s]}</span>`)
 		.join(' &middot; ');
@@ -80,6 +78,9 @@ export function generateStatusPage(
 	a { color: #58a6ff; text-decoration: none; }
 	a:hover { text-decoration: underline; }
 	td.notes { font-size: 12px; color: #8b949e; max-width: 400px; }
+	td.notes details summary { cursor: pointer; color: #8b949e; }
+	td.notes details summary:hover { color: #e6edf3; }
+	td.notes ul { margin: 4px 0 0; padding-left: 18px; }
 </style>
 </head>
 <body>

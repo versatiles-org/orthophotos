@@ -14,9 +14,9 @@
 
 import { resolve } from 'node:path';
 import { mkdirSync } from 'node:fs';
-import { getDataDir, getTempDir } from './config.ts';
+import { getDataDir, getTempDir, requireSshConfig } from './config.ts';
 import { getHelpText, parseArgs } from './run/args.ts';
-import { checkRequiredCommands } from './run/commands.ts';
+import { checkRequiredCommands, runSshCommand } from './run/commands.ts';
 import { runTask, type TaskContext } from './run/tasks.ts';
 
 async function main(): Promise<void> {
@@ -31,6 +31,14 @@ async function main(): Promise<void> {
 	// Check required commands
 	console.log('Checking required commands...');
 	await checkRequiredCommands();
+
+	// If merge task is requested, verify remote is accessible before starting
+	if (args.tasks.includes(2)) {
+		console.log('Checking remote server...');
+		const { host, port, id } = requireSshConfig();
+		await runSshCommand(host, port, id, 'true');
+		console.log('  Remote server is accessible.');
+	}
 
 	// Build paths
 	const dataDir = resolve(getDataDir(), args.name);

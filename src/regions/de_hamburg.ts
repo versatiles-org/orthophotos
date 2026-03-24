@@ -2,10 +2,10 @@ import { existsSync, rmSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { downloadFile, runCommand } from '../lib/command.ts';
+import { extractZipFile, safeRemoveDir } from '../lib/fs.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
 import { runVersatilesRasterConvert } from '../run/commands.ts';
-import { safeRemoveDir } from '../lib/fs.ts';
 
 const CKAN_API_URL =
 	'https://suche.transparenz.hamburg.de/api/3/action/package_show?id=luftbilder-hamburg-dop-zeitreihe-belaubt2';
@@ -71,7 +71,7 @@ export default defineTileRegion({
 		const vrtPath = `${dest}.vrt`;
 		try {
 			console.log(`  Extracting ${basename(zipPath)}...`);
-			await runCommand('unzip', ['-qo', zipPath, '-d', extractDir]);
+			await extractZipFile(zipPath, extractDir);
 
 			// Find all .tif files in the extracted directory
 			const files = await readdir(extractDir, { recursive: true });

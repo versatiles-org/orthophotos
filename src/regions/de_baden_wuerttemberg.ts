@@ -2,6 +2,7 @@ import { rmSync, statSync, writeFileSync } from 'node:fs';
 import { readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { downloadFile, runCommand } from '../lib/command.ts';
+import { extractZipFile } from '../lib/fs.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
 import { runVersatilesRasterConvert } from '../run/commands.ts';
@@ -59,7 +60,7 @@ export default defineTileRegion({
 				return 'empty';
 			}
 
-			await runCommand('unzip', ['-qo', zipPath, '-d', extractDir]);
+			await extractZipFile(zipPath, extractDir);
 
 			const tifDir = join(extractDir, `dop20rgb_32_${id}_2_bw`);
 			const tifFiles = (await readdir(tifDir)).filter((f) => f.endsWith('.tif'));

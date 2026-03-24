@@ -1,4 +1,4 @@
-import { existsSync, rmSync } from 'node:fs';
+import { existsSync, renameSync, rmSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { downloadFile, runCommand } from '../lib/command.ts';
@@ -79,6 +79,10 @@ export default defineTileRegion({
 			// Check if this group has already been extracted (look for JP2 files)
 			if (!existsSync(groupDir)) {
 				console.log(`  Processing group ${groupName} (${groupUrls.length} files)...`);
+				const tmpGroupDir = `${groupDir}.tmp`;
+				try {
+					rmSync(tmpGroupDir, { recursive: true, force: true });
+				} catch {}
 
 				// Download all files for this group
 				for (const url of groupUrls) {
@@ -103,15 +107,17 @@ export default defineTileRegion({
 					const allArchives = tmpFiles.filter((f) => f.endsWith('.7z') || f.endsWith('.7z.001'));
 					if (allArchives.length > 0) {
 						const mainFile = join(ctx.tempDir, allArchives[0]);
-						await runCommand('7z', ['e', `-o${groupDir}`, '-bb0', '-aoa', mainFile]);
+						await runCommand('7z', ['e', `-o${tmpGroupDir}`, '-bb0', '-aoa', mainFile]);
 					} else {
 						console.warn(`  No .7z archive found for group ${groupName}`);
 						continue;
 					}
 				} else {
 					const mainFile = join(ctx.tempDir, archiveFiles[0]);
-					await runCommand('7z', ['e', `-o${groupDir}`, '-bb0', '-aoa', mainFile]);
+					await runCommand('7z', ['e', `-o${tmpGroupDir}`, '-bb0', '-aoa', mainFile]);
 				}
+
+				renameSync(tmpGroupDir, groupDir);
 
 				// Clean up downloaded archive files
 				for (const url of groupUrls) {

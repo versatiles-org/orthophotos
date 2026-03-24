@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { XMLParser } from 'fast-xml-parser';
 import { downloadFile, runCommand } from '../lib/command.ts';
+import { extractZipFile } from '../lib/fs.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
 import { runVersatilesRasterConvert } from '../run/commands.ts';
@@ -74,7 +75,7 @@ export default defineTileRegion({
 			if (!zipUrl) return 'empty';
 
 			await withRetry(() => downloadFile(zipUrl, zipPath), { maxAttempts: 3 });
-			await runCommand('unzip', ['-qo', zipPath, '-d', extractDir]);
+			await extractZipFile(zipPath, extractDir);
 			rmSync(zipPath, { force: true });
 
 			const jp2Path = join(extractDir, `${id}.jp2`);

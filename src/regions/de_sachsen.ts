@@ -2,7 +2,8 @@ import { rmSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { downloadFile, runCommand } from '../lib/command.ts';
+import { downloadFile } from '../lib/command.ts';
+import { extractZipFile } from '../lib/fs.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
 import { runVersatilesRasterConvert } from '../run/commands.ts';
@@ -47,7 +48,7 @@ export default defineTileRegion({
 
 		try {
 			await withRetry(() => downloadFile(url, zipPath), { maxAttempts: 3 });
-			await runCommand('unzip', ['-qo', zipPath, '-d', extractDir]);
+			await extractZipFile(zipPath, extractDir);
 			rmSync(zipPath, { force: true });
 
 			// Find the TIF file

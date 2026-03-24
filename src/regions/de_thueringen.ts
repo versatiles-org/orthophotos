@@ -2,6 +2,7 @@ import { rmSync, writeFileSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { downloadFile, runCommand } from '../lib/command.ts';
+import { extractZipFile } from '../lib/fs.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
 import { runVersatilesRasterConvert } from '../run/commands.ts';
@@ -69,7 +70,7 @@ export default defineTileRegion({
 				maxAttempts: 3,
 			});
 
-			await runCommand('unzip', ['-qo', zipPath, '-d', extractDir]);
+			await extractZipFile(zipPath, extractDir);
 
 			// Find the single .tif file
 			const files = await readdir(extractDir, { recursive: true });

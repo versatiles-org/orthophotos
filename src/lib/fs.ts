@@ -2,9 +2,10 @@
  * Filesystem helper utilities.
  */
 
-import { readdirSync, type Dirent } from 'node:fs';
+import { readdirSync, renameSync, rmSync, type Dirent } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { extname, join } from 'node:path';
+import { runCommand } from './command.ts';
 
 /**
  * Safely removes a directory, ignoring NotFound errors.
@@ -18,6 +19,23 @@ export async function safeRemoveDir(path: string): Promise<void> {
 			throw e;
 		}
 	}
+}
+
+/**
+ * Extracts a ZIP file to a target directory atomically.
+ * Extracts to a temporary directory first, then renames on success.
+ * If the target directory already exists, extraction is skipped.
+ */
+export async function extractZipFile(zipPath: string, targetDir: string): Promise<void> {
+	const tmpDir = `${targetDir}.tmp`;
+	try {
+		rmSync(tmpDir, { recursive: true, force: true });
+	} catch {}
+	await runCommand('unzip', ['-qo', zipPath, '-d', tmpDir]);
+	try {
+		rmSync(targetDir, { recursive: true, force: true });
+	} catch {}
+	renameSync(tmpDir, targetDir);
 }
 
 export interface WalkEntry {

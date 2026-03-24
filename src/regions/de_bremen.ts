@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { downloadFile, runCommand } from '../lib/command.ts';
+import { extractZipFile } from '../lib/fs.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
 import { runVersatilesRasterConvert } from '../run/commands.ts';
@@ -53,7 +54,7 @@ export default defineTileRegion({
 				await withRetry(() => downloadFile(`${BASE_URL}${district.zip}`, outerZip), { maxAttempts: 3 });
 
 				console.log(`  Extracting ${district.zip}...`);
-				await runCommand('unzip', ['-qo', outerZip, '-d', extractDir]);
+				await extractZipFile(outerZip, extractDir);
 
 				// Find and extract the inner zip (name includes a date suffix that changes)
 				const innerZip = await findFile(extractDir, '.zip');

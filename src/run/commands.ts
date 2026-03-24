@@ -93,7 +93,7 @@ const QUALITY = '70,16:50,17:30';
 export async function runMosaicTile(
 	input: string,
 	output: string,
-	options?: { bands?: string; nodata?: string; cacheDirectory?: string },
+	options?: { bands?: string; nodata?: string; crs?: string; cacheDirectory?: string },
 ): Promise<void> {
 	const args = ['mosaic', 'tile', '--max-zoom', MAX_ZOOM, '--quality', QUALITY];
 	if (options?.bands) {
@@ -101,6 +101,9 @@ export async function runMosaicTile(
 	}
 	if (options?.nodata) {
 		args.push('--nodata', options.nodata);
+	}
+	if (options?.crs) {
+		args.push('--crs', options.crs);
 	}
 	if (options?.cacheDirectory) {
 		args.push('--cache-dir', options.cacheDirectory);

@@ -2,7 +2,7 @@ import { existsSync, rmSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { XMLParser } from 'fast-xml-parser';
-import { downloadFile, runCommand } from '../lib/command.ts';
+import { downloadFile } from '../lib/command.ts';
 import { extractZipFile } from '../lib/fs.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
@@ -75,8 +75,6 @@ export default defineTileRegion({
 				const name = typeof file === 'string' ? file : String(file);
 				if (!name.endsWith('.tif')) continue;
 				const tifPath = join(extractDir, name);
-				// Set CRS as the original script does
-				await runCommand('gdal', ['raster', 'edit', '--crs', 'EPSG:3046', tifPath]);
 				items.push({ id: basename(name, '.tif'), tifPath });
 			}
 		}
@@ -87,7 +85,7 @@ export default defineTileRegion({
 		return { src: tifPath as string };
 	},
 	convert: async ({ src }, { dest }) => {
-		await runMosaicTile(src, dest);
+		await runMosaicTile(src, dest, { crs: '3046' });
 	},
 	minFiles: 123456,
 });

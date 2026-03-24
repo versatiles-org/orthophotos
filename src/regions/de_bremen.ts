@@ -81,7 +81,7 @@ export default defineTileRegion({
 			await runCommand('gdalbuildvrt', [vrtPath, ...imageFiles]);
 
 			// Convert VRT to versatiles
-			await runMosaicTile(vrtPath, dest);
+			await runMosaicTile(vrtPath, dest, { crs: '25832' });
 		} finally {
 			try {
 				rmSync(vrtPath, { force: true });

@@ -103,7 +103,7 @@ export default defineTileRegion({
     },
     convert: async ({ tifPath }, { dest }) => {
         try {
-            await runVersatilesRasterConvert(tifPath, dest);
+            await runMosaicTile(tifPath, dest);
         } finally {
             try { rmSync(tifPath, { force: true }); } catch {}
         }
@@ -164,7 +164,9 @@ The project uses the `versatiles` CLI tool with the `mosaic` subcommand:
 - `versatiles mosaic tile <input> <output>` — tile a single raster into a `.versatiles` container
 - `versatiles mosaic assemble <filelist> <output>` — assemble multiple containers into one
 
-These are wrapped in `src/run/commands.ts` as `runVersatilesRasterConvert()` and `runVersatilesRasterMerge()`. Quality and max-zoom settings are defined as constants (`MAX_ZOOM`, `QUALITY`) in that file.
+These are wrapped in `src/run/commands.ts` as `runMosaicTile()` and `runMosaicAssemble()`. Quality and max-zoom settings are defined as constants (`MAX_ZOOM`, `QUALITY`) in that file.
+
+`runMosaicTile()` supports options: `bands`, `nodata`, `crs`, `cacheDirectory`. Use `crs` to override the source CRS (e.g., `{ crs: '3045' }` for EPSG:3045) — this avoids needing `gdal raster edit` to assign CRS before conversion. Use `nodata` to treat specific pixel values as transparent (e.g., `{ nodata: '255,255,255' }` for white borders).
 
 ### External CLI Dependencies
 

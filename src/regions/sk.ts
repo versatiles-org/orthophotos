@@ -6,7 +6,7 @@ import { downloadFile, runCommand } from '../lib/command.ts';
 import { extractZipFile } from '../lib/fs.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
-import { runVersatilesRasterConvert } from '../run/commands.ts';
+import { runMosaicTile } from '../run/commands.ts';
 
 const ATOM_URL = 'https://inspirews.skgeodesy.sk/atom/7efad194-3006-408f-9e6c-c06dc79703bd_dataFeed.atom';
 
@@ -87,7 +87,7 @@ export default defineTileRegion({
 		return { src: tifPath as string };
 	},
 	convert: async ({ src }, { dest }) => {
-		await runVersatilesRasterConvert(src, dest);
+		await runMosaicTile(src, dest);
 	},
 	minFiles: 123456,
 });

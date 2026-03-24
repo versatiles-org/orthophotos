@@ -6,7 +6,7 @@ import { downloadFile } from '../lib/command.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
 import { isValidRaster } from '../lib/validators.ts';
-import { runVersatilesRasterConvert } from '../run/commands.ts';
+import { runMosaicTile } from '../run/commands.ts';
 
 const ATOM_URL =
 	'https://www.geoportal.hessen.de/mapbender/php/mod_inspireDownloadFeed.php?id=0b30f537-3bd0-44d4-83b0-e3c1542ca265&type=DATASET&generateFrom=wmslayer&layerid=54936';
@@ -80,7 +80,7 @@ export default defineTileRegion({
 	},
 	convert: async ({ tifPath }, { dest }) => {
 		try {
-			await runVersatilesRasterConvert(tifPath, dest);
+			await runMosaicTile(tifPath, dest);
 		} finally {
 			try {
 				rmSync(tifPath, { force: true });

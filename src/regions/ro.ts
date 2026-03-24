@@ -6,7 +6,7 @@ import { downloadFile, runCommand } from '../lib/command.ts';
 import { extractZipFile } from '../lib/fs.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
-import { runVersatilesRasterConvert } from '../run/commands.ts';
+import { runMosaicTile } from '../run/commands.ts';
 
 const ATOM_URL =
 	'https://inspire.geomil.ro/network/rest/directories/arcgisforinspire/INSPIRE/OI_Download_MapServer/OI_Dataset.xml';
@@ -86,7 +86,7 @@ export default defineTileRegion({
 	},
 	convert: async ({ vrtPath, extractDir }, { dest }) => {
 		try {
-			await runVersatilesRasterConvert(vrtPath, dest);
+			await runMosaicTile(vrtPath, dest);
 		} finally {
 			try {
 				rmSync(vrtPath, { force: true });

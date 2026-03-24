@@ -4,7 +4,7 @@ import { basename, join } from 'node:path';
 import { downloadFile } from '../lib/command.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
-import { runVersatilesRasterConvert } from '../run/commands.ts';
+import { runMosaicTile } from '../run/commands.ts';
 
 const INDEX_URL = 'https://www.opengeodata.nrw.de/produkte/geobasis/lusat/akt/dop/dop_jp2_f10/';
 
@@ -55,7 +55,7 @@ export default defineTileRegion({
 	},
 	convert: async ({ src }, { dest }) => {
 		try {
-			await runVersatilesRasterConvert(src, dest);
+			await runMosaicTile(src, dest);
 		} finally {
 			try {
 				rmSync(src, { force: true });

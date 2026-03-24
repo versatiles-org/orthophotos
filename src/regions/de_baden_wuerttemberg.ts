@@ -5,7 +5,7 @@ import { downloadFile, runCommand } from '../lib/command.ts';
 import { extractZipFile } from '../lib/fs.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
-import { runVersatilesRasterConvert } from '../run/commands.ts';
+import { runMosaicTile } from '../run/commands.ts';
 
 const BASE_URL = 'https://opengeodata.lgl-bw.de/data/dop20/';
 
@@ -97,7 +97,7 @@ export default defineTileRegion({
 	},
 	convert: async ({ vrtPath, extractDir }, { dest }) => {
 		try {
-			await runVersatilesRasterConvert(vrtPath, dest);
+			await runMosaicTile(vrtPath, dest);
 		} finally {
 			try {
 				rmSync(vrtPath, { force: true });

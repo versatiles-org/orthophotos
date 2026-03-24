@@ -5,7 +5,7 @@ import { downloadFile, runCommand } from '../lib/command.ts';
 import { extractZipFile, safeRemoveDir } from '../lib/fs.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
-import { runVersatilesRasterConvert } from '../run/commands.ts';
+import { runMosaicTile } from '../run/commands.ts';
 
 const BASE_URL = 'https://gdi2.geo.bremen.de/inspire/download/DOP/data/';
 const IMAGE_EXTS = ['.jpg', '.tif', '.jp2'];
@@ -81,7 +81,7 @@ export default defineTileRegion({
 			await runCommand('gdalbuildvrt', [vrtPath, ...imageFiles]);
 
 			// Convert VRT to versatiles
-			await runVersatilesRasterConvert(vrtPath, dest);
+			await runMosaicTile(vrtPath, dest);
 		} finally {
 			try {
 				rmSync(vrtPath, { force: true });

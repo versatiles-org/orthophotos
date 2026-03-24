@@ -5,7 +5,7 @@ import { downloadFile, runCommand } from '../lib/command.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
 import { computeWmsBlocks, generateWmsXml, parseWmsCapabilities } from '../lib/wms.ts';
-import { runVersatilesRasterConvert } from '../run/commands.ts';
+import { runMosaicTile } from '../run/commands.ts';
 
 const LAYER = 'orto_foraar_12_5';
 const ZOOM = 17;
@@ -130,7 +130,7 @@ export default defineTileRegion({
 	},
 	convert: async ({ srcPath }, { dest }) => {
 		try {
-			await runVersatilesRasterConvert(srcPath as string, dest);
+			await runMosaicTile(srcPath as string, dest);
 		} finally {
 			try {
 				rmSync(srcPath as string, { force: true });

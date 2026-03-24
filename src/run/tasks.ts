@@ -6,7 +6,7 @@
 import { existsSync, mkdirSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { runCommand } from '../lib/command.ts';
-import { runSshCommand, runVersatilesRasterMerge } from './commands.ts';
+import { runSshCommand, runMosaicAssemble } from './commands.ts';
 import { TASK_NUMBER_TO_NAME } from './tasks.constants.ts';
 import { safeRemoveDir } from '../lib/fs.ts';
 import { getRegionPipeline } from '../regions/index.ts';
@@ -99,7 +99,7 @@ async function taskMerge(ctx: TaskContext): Promise<void> {
 	const localFinal = resolve(ctx.dataDir, 'result.versatiles');
 
 	try {
-		await runVersatilesRasterMerge(filelistPath, localTmp);
+		await runMosaicAssemble(filelistPath, localTmp);
 		renameSync(localTmp, localFinal);
 		console.log(`  Merged into ${localFinal}`);
 	} catch (err) {

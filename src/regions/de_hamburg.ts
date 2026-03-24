@@ -5,7 +5,7 @@ import { downloadFile, runCommand } from '../lib/command.ts';
 import { extractZipFile, safeRemoveDir } from '../lib/fs.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
-import { runVersatilesRasterConvert } from '../run/commands.ts';
+import { runMosaicTile } from '../run/commands.ts';
 
 const CKAN_API_URL =
 	'https://suche.transparenz.hamburg.de/api/3/action/package_show?id=luftbilder-hamburg-dop-zeitreihe-belaubt2';
@@ -89,7 +89,7 @@ export default defineTileRegion({
 			await runCommand('gdalbuildvrt', [vrtPath, ...tifFiles]);
 
 			// Convert VRT to versatiles
-			await runVersatilesRasterConvert(vrtPath, dest);
+			await runMosaicTile(vrtPath, dest);
 		} finally {
 			try {
 				rmSync(vrtPath, { force: true });

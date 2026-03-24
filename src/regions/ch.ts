@@ -4,7 +4,7 @@ import { basename, join } from 'node:path';
 import { downloadFile } from '../lib/command.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
-import { runVersatilesRasterConvert } from '../run/commands.ts';
+import { runMosaicTile } from '../run/commands.ts';
 
 const SEARCH_URL =
 	'https://ogd.swisstopo.admin.ch/services/swiseld/services/assets/ch.swisstopo.swissimage-dop10/search?format=image%2Ftiff%3B%20application%3Dgeotiff%3B%20profile%3Dcloud-optimized&resolution=0.1&srid=2056&state=current&csv=true';
@@ -68,7 +68,7 @@ export default defineTileRegion({
 	},
 	convert: async ({ src }, { dest }) => {
 		try {
-			await runVersatilesRasterConvert(src, dest);
+			await runMosaicTile(src, dest);
 		} finally {
 			try {
 				rmSync(src, { force: true });

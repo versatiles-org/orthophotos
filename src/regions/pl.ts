@@ -6,7 +6,7 @@ import { downloadFile, runCommand } from '../lib/command.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
 import { isValidRaster } from '../lib/validators.ts';
-import { runVersatilesRasterConvert } from '../run/commands.ts';
+import { runMosaicTile } from '../run/commands.ts';
 
 const DATASET_FEED_URL =
 	'https://mapy.geoportal.gov.pl/wss/service/ATOM/httpauth/atom/OI?spatial_dataset_identifier_code=OI&spatial_dataset_identifier_namespace=PL.PZGiK.203';
@@ -150,7 +150,7 @@ export default defineTileRegion({
 	},
 	convert: async ({ tifPath }, { dest }) => {
 		try {
-			await runVersatilesRasterConvert(tifPath, dest);
+			await runMosaicTile(tifPath, dest);
 		} finally {
 			try {
 				rmSync(tifPath, { force: true });

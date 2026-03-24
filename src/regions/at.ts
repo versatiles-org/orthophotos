@@ -6,7 +6,7 @@ import { downloadFile } from '../lib/command.ts';
 import { pipeline } from '../lib/pipeline.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
-import { runVersatilesRasterConvert } from '../run/commands.ts';
+import { runMosaicTile } from '../run/commands.ts';
 
 const ATOM_URL =
 	'https://data.bev.gv.at/geonetwork/srv/atom/describe/service?uuid=7f047345-4ebf-45cd-8900-6edf50a84638';
@@ -124,7 +124,7 @@ export default defineTileRegion({
 	convertCores: 8,
 	convert: async ({ src }, { dest, tempDir }) => {
 		try {
-			await runVersatilesRasterConvert(src, dest, { cacheDirectory: tempDir });
+			await runMosaicTile(src, dest, { cacheDirectory: tempDir });
 		} finally {
 			try {
 				rmSync(src, { force: true });

@@ -4,7 +4,7 @@ import { basename, join } from 'node:path';
 import { downloadFile } from '../lib/command.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
-import { runVersatilesRasterConvert } from '../run/commands.ts';
+import { runMosaicTile } from '../run/commands.ts';
 
 const INDEX_URL =
 	'https://s3.storage.pub.lvdc.gov.lv/lgia-opendata/ortofoto_rgb_v6/LGIA_OpenData_Ortofoto_rgb_v6_saites.txt';
@@ -57,7 +57,7 @@ export default defineTileRegion({
 	},
 	convert: async ({ src, tfwPath }, { dest }) => {
 		try {
-			await runVersatilesRasterConvert(src, dest);
+			await runMosaicTile(src, dest);
 		} finally {
 			for (const p of [src, tfwPath]) {
 				try {

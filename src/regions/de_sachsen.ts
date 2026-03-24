@@ -6,7 +6,7 @@ import { downloadFile } from '../lib/command.ts';
 import { extractZipFile } from '../lib/fs.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
-import { runVersatilesRasterConvert } from '../run/commands.ts';
+import { runMosaicTile } from '../run/commands.ts';
 
 export function parseUrlId(url: string): string {
 	const match = url.match(/\/(dop20rgb_[^/]+?)_2_sn_tiff\.zip$/);
@@ -69,7 +69,7 @@ export default defineTileRegion({
 	},
 	convert: async ({ tifPath, extractDir }, { dest }) => {
 		try {
-			await runVersatilesRasterConvert(tifPath, dest);
+			await runMosaicTile(tifPath, dest);
 		} finally {
 			try {
 				rmSync(extractDir, { recursive: true, force: true });

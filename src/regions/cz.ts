@@ -6,7 +6,7 @@ import { downloadFile, runCommand } from '../lib/command.ts';
 import { extractZipFile, safeRemoveDir } from '../lib/fs.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
-import { runVersatilesRasterConvert } from '../run/commands.ts';
+import { runMosaicTile } from '../run/commands.ts';
 
 const ATOM_URL = 'https://atom.cuzk.gov.cz/OI/OI.xml';
 const ZIP_BASE_URL = 'https://openzu.cuzk.gov.cz/opendata/OI/';
@@ -90,7 +90,7 @@ export default defineTileRegion({
 			// JP2 has no embedded CRS; assign EPSG:3045 (coordinates come from .j2w worldfile)
 			await runCommand('gdal', ['raster', 'edit', '--crs', 'EPSG:3045', jp2Path]);
 			// White borders (255,255,255) are treated as transparent via --nodata.
-			await runVersatilesRasterConvert(jp2Path, dest, { nodata: '255,255,255' });
+			await runMosaicTile(jp2Path, dest, { nodata: '255,255,255' });
 		} finally {
 			await safeRemoveDir(extractDir);
 		}

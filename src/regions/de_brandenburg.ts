@@ -5,7 +5,7 @@ import { downloadFile } from '../lib/command.ts';
 import { extractZipFile } from '../lib/fs.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
-import { runVersatilesRasterConvert } from '../run/commands.ts';
+import { runMosaicTile } from '../run/commands.ts';
 
 const BASE_URL = 'https://data.geobasis-bb.de/geobasis/daten/dop/rgb_jpg/';
 
@@ -81,7 +81,7 @@ export default defineTileRegion({
 	},
 	convert: async ({ jpgPath, extractDir }, { dest }) => {
 		try {
-			await runVersatilesRasterConvert(jpgPath, dest);
+			await runMosaicTile(jpgPath, dest);
 		} finally {
 			try {
 				rmSync(extractDir, { recursive: true, force: true });

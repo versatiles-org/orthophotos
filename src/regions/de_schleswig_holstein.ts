@@ -5,7 +5,7 @@ import { runCommand } from '../lib/command.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
 import { isValidRaster } from '../lib/validators.ts';
-import { runVersatilesRasterConvert } from '../run/commands.ts';
+import { runMosaicTile } from '../run/commands.ts';
 
 const GEOJSON_URL =
 	'https://geodaten.schleswig-holstein.de/gaialight-sh/_apps/dladownload/single.php?file=DOP20_SH__Massendownload.geojson&id=4';
@@ -88,7 +88,7 @@ export default defineTileRegion({
 	},
 	convert: async ({ tifPath }, { dest }) => {
 		try {
-			await runVersatilesRasterConvert(tifPath, dest);
+			await runMosaicTile(tifPath, dest);
 		} finally {
 			try {
 				rmSync(tifPath, { force: true });

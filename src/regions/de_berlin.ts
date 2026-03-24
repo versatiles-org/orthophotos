@@ -5,7 +5,7 @@ import { XMLParser } from 'fast-xml-parser';
 import { downloadFile } from '../lib/command.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
-import { runVersatilesRasterConvert } from '../run/commands.ts';
+import { runMosaicTile } from '../run/commands.ts';
 
 const ATOM_URL = 'https://gdi.berlin.de/data/oi_dop2025_sommer/atom/';
 const xmlParser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
@@ -84,7 +84,7 @@ export default defineTileRegion({
 	},
 	convert: async ({ src }, { dest }) => {
 		try {
-			await runVersatilesRasterConvert(src, dest);
+			await runMosaicTile(src, dest);
 		} finally {
 			try {
 				rmSync(src, { force: true });

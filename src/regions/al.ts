@@ -4,7 +4,7 @@ import { downloadFile, runCommand } from '../lib/command.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
 import { computeWmsBlocks, generateWmsXml, parseWmsCapabilities } from '../lib/wms.ts';
-import { runVersatilesRasterConvert } from '../run/commands.ts';
+import { runMosaicTile } from '../run/commands.ts';
 
 const WMS_URL = 'https://geoportal.asig.gov.al/service/wms';
 const LAYER = 'orthophoto_2015:OrthoImagery_20cm';
@@ -109,7 +109,7 @@ export default defineTileRegion({
 	},
 	convert: async ({ srcPath }, { dest }) => {
 		try {
-			await runVersatilesRasterConvert(srcPath as string, dest);
+			await runMosaicTile(srcPath as string, dest);
 		} finally {
 			try {
 				rmSync(srcPath as string, { force: true });

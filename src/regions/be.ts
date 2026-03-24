@@ -5,7 +5,7 @@ import { downloadFile, runCommand } from '../lib/command.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
 import { isValidRaster } from '../lib/validators.ts';
-import { runVersatilesRasterConvert } from '../run/commands.ts';
+import { runMosaicTile } from '../run/commands.ts';
 
 const OPEN_ACCESS_URL = 'https://ac.ngi.be/catalogue/getopenaccess/ngi-standard-open';
 const INDEX_PATH = 'ngi-standard-open/Rasterdata/Orthos/Y2024/JP2';
@@ -96,7 +96,7 @@ export default defineTileRegion({
 	},
 	convert: async ({ jp2Path }, { dest }) => {
 		try {
-			await runVersatilesRasterConvert(jp2Path, dest);
+			await runMosaicTile(jp2Path, dest);
 		} finally {
 			try {
 				rmSync(jp2Path, { force: true });

@@ -4,7 +4,7 @@ import { basename, join } from 'node:path';
 import { runCommand } from '../lib/command.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
-import { runVersatilesRasterConvert } from '../run/commands.ts';
+import { runMosaicTile } from '../run/commands.ts';
 
 const INDEX_URL = 'https://geobasis-rlp.de/data/dop20rgb/current/jp2/';
 
@@ -58,7 +58,7 @@ export default defineTileRegion({
 	},
 	convert: async ({ src }, { dest }) => {
 		try {
-			await runVersatilesRasterConvert(src, dest);
+			await runMosaicTile(src, dest);
 		} finally {
 			try {
 				rmSync(src, { force: true });

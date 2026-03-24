@@ -4,7 +4,7 @@ import { downloadFile, runCommand } from '../lib/command.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
 import { computeWmsBlocks, generateWmsXml, parseWmsCapabilities } from '../lib/wms.ts';
-import { runVersatilesRasterConvert } from '../run/commands.ts';
+import { runMosaicTile } from '../run/commands.ts';
 
 const WMS_URL = 'http://www.geoportal.lt/arcgis/services/NZT/ORT10LT_Web_Mercator_102100/MapServer/WMSServer';
 const LAYER = '0';
@@ -91,7 +91,7 @@ export default defineTileRegion({
 	},
 	convert: async ({ srcPath }, { dest }) => {
 		try {
-			await runVersatilesRasterConvert(srcPath as string, dest);
+			await runMosaicTile(srcPath as string, dest);
 		} finally {
 			try {
 				rmSync(srcPath as string, { force: true });

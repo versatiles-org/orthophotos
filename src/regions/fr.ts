@@ -4,7 +4,7 @@ import { basename, join } from 'node:path';
 import { downloadFile, runCommand } from '../lib/command.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
-import { runVersatilesRasterConvert } from '../run/commands.ts';
+import { runMosaicTile } from '../run/commands.ts';
 
 const INDEX_URL = 'https://geoservices.ign.fr/bdortho';
 
@@ -145,7 +145,7 @@ export default defineTileRegion({
 		return { src: jp2Path as string };
 	},
 	convert: async ({ src }, { dest }) => {
-		await runVersatilesRasterConvert(src, dest);
+		await runMosaicTile(src, dest);
 	},
 	minFiles: 123456,
 });

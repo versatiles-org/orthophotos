@@ -14,20 +14,20 @@ export default defineTileRegion({
 		notes: ['License requires attribution.'],
 		entries: ['result'],
 		license: {
-			name: 'CC BY 4.0',
-			url: 'https://creativecommons.org/licenses/by/4.0/',
+			name: 'Opendata BY',
+			url: 'https://www.opendata.li/de/nutzungsbedingungen',
 			requiresAttribution: true,
 		},
 		creator: {
-			name: 'Amt für Tiefbau und Geoinformation',
-			url: 'https://www.opendata.li/de/daten#esc_entry=159&esc_context=24',
+			name: 'Liechtensteinische Landesverwaltung',
+			url: 'https://www.opendata.li/de/daten',
 		},
-		date: '2023',
+		date: '2022',
 	},
-	init: () => [{ id: 'image' }],
-	download: async (_item, { tempDir }) => {
+	init: () => [{ id: 'image', url: DOWNLOAD_URL }],
+	download: async ({ url }, { tempDir }) => {
 		const src = join(tempDir, 'image.tif');
-		await withRetry(() => downloadFile(DOWNLOAD_URL, src), { maxAttempts: 3 });
+		await withRetry(() => downloadFile(url, src), { maxAttempts: 3 });
 		return { src };
 	},
 	convert: async ({ src }, { dest }) => {
@@ -39,5 +39,5 @@ export default defineTileRegion({
 			} catch {}
 		}
 	},
-	minFiles: 123456,
+	minFiles: 1,
 });

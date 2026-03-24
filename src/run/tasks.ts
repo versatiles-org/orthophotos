@@ -63,10 +63,7 @@ async function taskFetch(ctx: TaskContext): Promise<void> {
 			dataDir: ctx.dataDir,
 			tempDir: ctx.tempDir,
 		});
-	} finally {
-		// Clean up temp directory regardless of success or failure
-		await safeRemoveDir(ctx.tempDir);
-	}
+	} catch {}
 
 	// Scan for .versatiles files and write filelist.txt
 	const versatilesFiles: string[] = [];

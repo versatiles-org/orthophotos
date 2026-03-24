@@ -76,8 +76,10 @@ export default defineTileRegion({
 		const content = await readFile(indexPath, 'utf-8');
 		return parseIndex(JSON.parse(content));
 	},
+	downloadConcurrency: 8,
 	download: async ({ path, id }, { tempDir, errors }) => {
 		const jp2Path = join(tempDir, `${id}.jp2`);
+		const tifPath = join(tempDir, `${id}.tif`);
 		try {
 			const accessCode = await getAccessCode();
 			const url = `https://ac.ngi.be/client-open/${accessCode}/${path}`;
@@ -86,20 +88,8 @@ export default defineTileRegion({
 				errors.add(`${id}.jp2 (${url})`);
 				return 'invalid';
 			}
-			return { jp2Path };
-		} catch (err) {
-			try {
-				rmSync(jp2Path, { force: true });
-			} catch {}
-			throw err;
-		}
-	},
-	convertCores: 5,
-	convert: async ({ jp2Path }, { dest, tempDir }) => {
-		const tifPath = jp2Path.replace(/\.jp2$/, '.tif');
-		try {
-			// Convert JP2 to GeoTIFF first — versatiles crashes reading JP2 directly.
-			// LZW is lossless and fast to read with multi-threaded decoding.
+			// Convert JP2 to uncompressed tiled GeoTIFF — versatiles crashes reading JP2 directly.
+			// Uncompressed is fastest since the bottleneck is single-threaded JP2 decoding (OpenJPEG).
 			await runCommand('gdal_translate', [
 				'-q',
 				'-of',
@@ -116,13 +106,24 @@ export default defineTileRegion({
 				tifPath,
 			]);
 			rmSync(jp2Path, { force: true });
-			await runMosaicTile(tifPath, dest, { cacheDirectory: tempDir });
-		} finally {
+			return { tifPath };
+		} catch (err) {
 			for (const p of [jp2Path, tifPath]) {
 				try {
 					rmSync(p, { force: true });
 				} catch {}
 			}
+			throw err;
+		}
+	},
+	convertCores: 8,
+	convert: async ({ tifPath }, { dest, tempDir }) => {
+		try {
+			await runMosaicTile(tifPath, dest, { cacheDirectory: tempDir });
+		} finally {
+			try {
+				rmSync(tifPath, { force: true });
+			} catch {}
 		}
 	},
 	minFiles: 720,

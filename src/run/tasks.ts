@@ -98,7 +98,6 @@ async function taskMerge(ctx: TaskContext): Promise<void> {
 	const localTmp = resolve(ctx.dataDir, 'tmp.result.versatiles');
 	const localFinal = resolve(ctx.dataDir, 'result.versatiles');
 
-	// Merge to local disk
 	try {
 		await runVersatilesRasterMerge(filelistPath, localTmp);
 		renameSync(localTmp, localFinal);
@@ -110,17 +109,24 @@ async function taskMerge(ctx: TaskContext): Promise<void> {
 		throw err;
 	}
 
-	// Upload to remote server
+	await uploadToRemote(localFinal, ctx.name, 'result.versatiles');
+}
+
+/**
+ * Uploads a local file to the remote server via scp.
+ * Writes to a temp file first, then atomically renames on success.
+ */
+async function uploadToRemote(localPath: string, regionName: string, filename: string): Promise<void> {
 	const { host, port, id, dir } = requireSshConfig();
-	const remoteDir = `${dir}/${ctx.name}`;
-	const tmpRemote = `${remoteDir}/tmp.result.versatiles`;
-	const finalRemote = `${remoteDir}/result.versatiles`;
+	const remoteDir = `${dir}/${regionName}`;
+	const finalRemote = `${remoteDir}/${filename}`;
+	const tmpRemote = `${finalRemote}.tmp`;
 
 	await runSshCommand(host, port, id, `mkdir -p '${remoteDir}'`);
 
 	console.log(`  Uploading to ${finalRemote}...`);
 	try {
-		await runCommand('scp', ['-P', port, '-i', id, localFinal, `${host}:${tmpRemote}`]);
+		await runCommand('scp', ['-P', port, '-i', id, localPath, `${host}:${tmpRemote}`]);
 		await runSshCommand(host, port, id, `mv '${tmpRemote}' '${finalRemote}'`);
 		console.log(`  Upload complete.`);
 	} catch (err) {

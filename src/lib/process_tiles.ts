@@ -57,8 +57,8 @@ export interface TileRegionOptions<T extends TileItem, D> {
 	downloadConcurrency?: number;
 	/** Download callback — returns data for the convert stage, 'empty'/'invalid' to skip, or void */
 	download: (item: T, ctx: TileContext) => Promise<D | 'empty' | 'invalid' | void>;
-	/** Convert concurrency (default: Math.max(1, Math.floor(availableParallelism() / 4))) */
-	convertConcurrency?: number;
+	/** Number of CPU cores each convert instance uses (default: 4). Concurrency is derived as availableParallelism() / convertCores. */
+	convertCores?: number;
 	/** Convert callback — receives non-empty download result, produces the final .versatiles file */
 	convert: (data: Exclude<D, 'empty' | 'invalid' | void>, ctx: TileContext) => Promise<void>;
 	/** Minimum number of *.versatiles output files required */
@@ -122,7 +122,8 @@ async function processTiles<T extends TileItem, D>(
 	};
 
 	const dlConcurrency = options.downloadConcurrency ?? 4;
-	const cvConcurrency = options.convertConcurrency ?? Math.max(1, Math.floor(availableParallelism() / 4));
+	const coresPerConvert = options.convertCores ?? 4;
+	const cvConcurrency = Math.max(1, Math.floor(availableParallelism() / coresPerConvert));
 
 	const { download, convert } = options;
 	await pipeline(shuffled, { progress: { labels: [...LABELS] } })

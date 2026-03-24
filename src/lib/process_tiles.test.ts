@@ -62,7 +62,7 @@ describe('defineTileRegion', () => {
 			download: async (item) => {
 				return { value: item.id.toUpperCase() };
 			},
-			convertConcurrency: 1,
+			convertCores: 1024,
 			convert: async (data, { dest }) => {
 				writeFileSync(dest, data.value);
 			},
@@ -130,7 +130,7 @@ describe('defineTileRegion', () => {
 				if (item.id === 'b') return 'empty';
 				return { value: item.id };
 			},
-			convertConcurrency: 1,
+			convertCores: 1024,
 			convert: async (data, { dest }) => {
 				writeFileSync(dest, data.value);
 			},
@@ -195,7 +195,7 @@ describe('defineTileRegion', () => {
 				if (item.id === 'b') return 'invalid';
 				return { value: item.id };
 			},
-			convertConcurrency: 1,
+			convertCores: 1024,
 			convert: async (data, { dest }) => {
 				writeFileSync(dest, data.value);
 			},

@@ -47,17 +47,25 @@ export async function runTask(taskNum: number, ctx: TaskContext): Promise<void> 
  */
 async function taskFetch(ctx: TaskContext): Promise<void> {
 	console.log('Fetching new data...');
+
+	// Clean up any leftover temp files from a previous interrupted run
+	await safeRemoveDir(ctx.tempDir);
 	mkdirSync(ctx.tempDir, { recursive: true });
 
 	const pipeline = getRegionPipeline(ctx.name);
 	if (!pipeline?.run) {
 		throw new Error(`No pipeline defined for region "${ctx.name}"`);
 	}
-	await pipeline.run({
-		name: ctx.name,
-		dataDir: ctx.dataDir,
-		tempDir: ctx.tempDir,
-	});
+	try {
+		await pipeline.run({
+			name: ctx.name,
+			dataDir: ctx.dataDir,
+			tempDir: ctx.tempDir,
+		});
+	} finally {
+		// Clean up temp directory regardless of success or failure
+		await safeRemoveDir(ctx.tempDir);
+	}
 
 	// Scan for .versatiles files and write filelist.txt
 	const versatilesFiles: string[] = [];
@@ -77,9 +85,6 @@ async function taskFetch(ctx: TaskContext): Promise<void> {
 	const filelistPath = resolve(ctx.dataDir, 'filelist.txt');
 	writeFileSync(filelistPath, versatilesFiles.join('\n'));
 	console.log(`  Wrote filelist.txt with ${versatilesFiles.length} entries.`);
-
-	// Clean up temp directory after successful completion
-	await safeRemoveDir(ctx.tempDir);
 }
 
 /**

@@ -3,9 +3,10 @@
  * Task implementations for the pipeline (tasks 1-3).
  */
 
-import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { resolve, join } from 'node:path';
-import { buildSftpUrl, runSshCommand, runVersatilesRasterMerge } from './commands.ts';
+import { runCommand } from '../lib/command.ts';
+import { runSshCommand, runVersatilesRasterMerge } from './commands.ts';
 import { TASK_NUMBER_TO_NAME } from './tasks.constants.ts';
 import { safeRemoveDir } from '../lib/fs.ts';
 import { getRegionPipeline } from '../regions/index.ts';
@@ -82,9 +83,9 @@ async function taskFetch(ctx: TaskContext): Promise<void> {
 }
 
 /**
- * Task 2: Merge all per-file .versatiles into one result.
- * Reads filelist.txt, runs `versatiles mosaic assemble` writing directly
- * to remote storage via sftp://, then renames the temp file on success.
+ * Task 2: Merge all per-file .versatiles into one result, then upload.
+ * Reads filelist.txt, runs `versatiles mosaic assemble` to write a local file,
+ * then uploads it to the remote server via scp.
  */
 async function taskMerge(ctx: TaskContext): Promise<void> {
 	console.log('Merging .versatiles files...');
@@ -94,18 +95,34 @@ async function taskMerge(ctx: TaskContext): Promise<void> {
 		throw new Error(`filelist.txt not found in ${ctx.dataDir}. Run the fetch task first.`);
 	}
 
+	const localTmp = resolve(ctx.dataDir, 'tmp.result.versatiles');
+	const localFinal = resolve(ctx.dataDir, 'result.versatiles');
+
+	// Merge to local disk
+	try {
+		await runVersatilesRasterMerge(filelistPath, localTmp);
+		renameSync(localTmp, localFinal);
+		console.log(`  Merged into ${localFinal}`);
+	} catch (err) {
+		try {
+			rmSync(localTmp, { force: true });
+		} catch {}
+		throw err;
+	}
+
+	// Upload to remote server
 	const { host, port, id, dir } = requireSshConfig();
 	const remoteDir = `${dir}/${ctx.name}`;
 	const tmpRemote = `${remoteDir}/tmp.result.versatiles`;
 	const finalRemote = `${remoteDir}/result.versatiles`;
-	const outputUrl = buildSftpUrl(host, port, tmpRemote);
 
 	await runSshCommand(host, port, id, `mkdir -p '${remoteDir}'`);
 
+	console.log(`  Uploading to ${finalRemote}...`);
 	try {
-		await runVersatilesRasterMerge(filelistPath, outputUrl);
+		await runCommand('scp', ['-P', port, '-i', id, localFinal, `${host}:${tmpRemote}`]);
 		await runSshCommand(host, port, id, `mv '${tmpRemote}' '${finalRemote}'`);
-		console.log(`  Merged into ${finalRemote}`);
+		console.log(`  Upload complete.`);
 	} catch (err) {
 		try {
 			await runSshCommand(host, port, id, `rm -f '${tmpRemote}'`);

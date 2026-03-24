@@ -78,28 +78,15 @@ test('runTask - task 2 (merge) requires filelist.txt', async () => {
 	}
 });
 
-test('runTask - task 2 (merge) requires SSH config', async () => {
+test('runTask - task 2 (merge) fails when versatiles or filelist is invalid', async () => {
 	const ctx = createTestContext('merge-test');
 	mkdirSync(ctx.dataDir, { recursive: true });
 	writeFileSync(resolve(ctx.dataDir, 'filelist.txt'), 'dummy');
 
-	// Save current env
-	const savedHost = process.env['ssh_host'];
-	const savedPort = process.env['ssh_port'];
-	const savedId = process.env['ssh_id'];
-
-	// Clear SSH env vars
-	delete process.env['ssh_host'];
-	delete process.env['ssh_port'];
-	delete process.env['ssh_id'];
-
 	try {
-		await expect(runTask(2, ctx)).rejects.toThrow('ssh_host');
+		// Should fail during the local merge step (versatiles command)
+		await expect(runTask(2, ctx)).rejects.toThrow();
 	} finally {
-		// Restore env
-		if (savedHost) process.env['ssh_host'] = savedHost;
-		if (savedPort) process.env['ssh_port'] = savedPort;
-		if (savedId) process.env['ssh_id'] = savedId;
 		await cleanupTestTemp();
 	}
 });

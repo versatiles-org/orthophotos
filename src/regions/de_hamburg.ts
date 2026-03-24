@@ -1,28 +1,39 @@
 import { existsSync, rmSync } from 'node:fs';
-import { readdir } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { downloadFile, runCommand } from '../lib/command.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
 import { runVersatilesRasterConvert } from '../run/commands.ts';
+import { safeRemoveDir } from '../lib/fs.ts';
 
-const BASE_URL = 'https://daten-hamburg.de/geographie_geologie_geobasisdaten/digitale_orthophotos/DOP_belaubt/';
-const ZIP_FILES = [
-	'DOP2024_belaubt_Hamburg_Altona.zip',
-	'DOP2024_belaubt_Hamburg_Bergedorf.zip',
-	'DOP2024_belaubt_Hamburg_Eimsbuettel.zip',
-	'DOP2024_belaubt_Hamburg_Hamburg-Mitte.zip',
-	'DOP2024_belaubt_Hamburg_Hamburg-Nord.zip',
-	'DOP2024_belaubt_Hamburg_Harburg.zip',
-	'DOP2024_belaubt_Hamburg_Wandsbek.zip',
-];
+const CKAN_API_URL =
+	'https://suche.transparenz.hamburg.de/api/3/action/package_show?id=luftbilder-hamburg-dop-zeitreihe-belaubt2';
+
+interface CkanResponse {
+	result: {
+		resources: {
+			url: string;
+			name: string;
+			format: string;
+		}[];
+	};
+}
+
+export function parseResources(data: CkanResponse): { id: string; url: string }[] {
+	return data.result.resources
+		.filter((r) => r.format === 'GEOTIFF' && r.url.endsWith('.zip'))
+		.map((r) => ({
+			id: basename(r.url, '.zip'),
+			url: r.url,
+		}));
+}
 
 export default defineTileRegion({
 	name: 'de/hamburg',
 	meta: {
 		status: 'success',
 		notes: [
-			'No API, such as an ATOM feed, available.',
 			'Images are unnecessarily packed into container files, such as ZIP.',
 			'License requires attribution.',
 			'National license instead of an international standard.',
@@ -40,36 +51,51 @@ export default defineTileRegion({
 		},
 		date: '2024',
 	},
-	init: async (ctx) => {
-		const items: { id: string; tifPath: string }[] = [];
-
-		for (const zipName of ZIP_FILES) {
-			const id = basename(zipName, '.zip');
-			const extractDir = join(ctx.tempDir, id);
-
-			if (!existsSync(extractDir)) {
-				const zipPath = join(ctx.tempDir, zipName);
-				console.log(`  Downloading ${zipName}...`);
-				await withRetry(() => downloadFile(`${BASE_URL}${zipName}`, zipPath), { maxAttempts: 3 });
-				await runCommand('unzip', ['-qo', zipPath, '-d', extractDir]);
-				rmSync(zipPath, { force: true });
-			}
-
-			const files = await readdir(extractDir, { recursive: true });
-			for (const file of files) {
-				const name = typeof file === 'string' ? file : String(file);
-				if (!name.endsWith('.tif')) continue;
-				items.push({ id: basename(name, '.tif'), tifPath: join(extractDir, name) });
-			}
+	init: async ({ tempDir }) => {
+		const apiPath = join(tempDir, 'ckan.json');
+		if (!existsSync(apiPath)) {
+			console.log('  Fetching dataset metadata from CKAN API...');
+			await withRetry(() => downloadFile(CKAN_API_URL, apiPath), { maxAttempts: 3 });
 		}
+		const content = await readFile(apiPath, 'utf-8');
+		return parseResources(JSON.parse(content));
+	},
+	download: async ({ url, id }, { tempDir }) => {
+		const zipPath = join(tempDir, `${id}.zip`);
+		console.log(`  Downloading ${id}.zip...`);
+		await withRetry(() => downloadFile(url, zipPath), { maxAttempts: 3 });
+		return { zipPath };
+	},
+	convert: async ({ zipPath }, { dest, tempDir }) => {
+		const extractDir = join(tempDir, basename(zipPath, '.zip'));
+		const vrtPath = `${dest}.vrt`;
+		try {
+			console.log(`  Extracting ${basename(zipPath)}...`);
+			await runCommand('unzip', ['-qo', zipPath, '-d', extractDir]);
 
-		return items;
+			// Find all .tif files in the extracted directory
+			const files = await readdir(extractDir, { recursive: true });
+			const tifFiles = files
+				.map((f) => (typeof f === 'string' ? f : String(f)))
+				.filter((f) => f.endsWith('.tif'))
+				.map((f) => join(extractDir, f));
+
+			if (tifFiles.length === 0) {
+				throw new Error(`No .tif files found in ${extractDir}`);
+			}
+
+			// Build VRT from all TIFs
+			await runCommand('gdalbuildvrt', [vrtPath, ...tifFiles]);
+
+			// Convert VRT to versatiles
+			await runVersatilesRasterConvert(vrtPath, dest);
+		} finally {
+			try {
+				rmSync(vrtPath, { force: true });
+				rmSync(zipPath, { force: true });
+			} catch {}
+			await safeRemoveDir(extractDir);
+		}
 	},
-	download: async ({ tifPath }) => {
-		return { src: tifPath };
-	},
-	convert: async ({ src }, { dest }) => {
-		await runVersatilesRasterConvert(src, dest);
-	},
-	minFiles: 1,
+	minFiles: 7,
 });

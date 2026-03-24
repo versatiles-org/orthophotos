@@ -35,10 +35,7 @@ export default defineTileRegion({
 	name: 'de/berlin',
 	meta: {
 		status: 'success',
-		notes: [
-			'Atom feed with direct .jp2 download links.',
-			'It is not possible to overlay images because a mask or alpha channel is missing.',
-		],
+		notes: ['Atom feed with direct .jp2 download links.'],
 		entries: ['result'],
 		license: {
 			name: 'DL-DE/ZERO-2.0',

@@ -6,6 +6,7 @@ import { spawn } from 'node:child_process';
 import { renameSync, rmSync } from 'node:fs';
 import { dirname, basename, join } from 'node:path';
 import { runCommand } from '../lib/command.ts';
+import { config } from '../config.ts';
 
 /** Required CLI tools */
 const REQUIRED_COMMANDS = ['7z', 'curl', 'gdal_translate', 'gdalbuildvrt', 'ssh', 'unzip', 'versatiles'];
@@ -51,8 +52,28 @@ export function buildSftpUrl(host: string, port: string, remotePath: string): st
 /**
  * Runs a command on the remote server via SSH.
  */
-export async function runSshCommand(host: string, port: string, keyFile: string, command: string): Promise<void> {
-	await runCommand('ssh', ['-p', port, '-i', keyFile, host, command]);
+export async function runSshCommand(command: string): Promise<void> {
+	const sshConfig = config.ssh;
+	if (!sshConfig) {
+		throw new Error('SSH configuration is missing in config.ts');
+	}
+	const { host, port, keyFile } = sshConfig;
+	const sshArgs = [];
+	if (port) sshArgs.push('-p', port);
+	if (keyFile) sshArgs.push('-i', keyFile);
+	await runCommand('ssh', [...sshArgs, host, command]);
+}
+
+export async function runScpUpload(localPath: string, remotePath: string): Promise<void> {
+	const sshConfig = config.ssh;
+	if (!sshConfig) {
+		throw new Error('SSH configuration is missing in config.ts');
+	}
+	const { host, port, keyFile } = sshConfig;
+	const scpArgs = [];
+	if (port) scpArgs.push('-P', port);
+	if (keyFile) scpArgs.push('-i', keyFile);
+	await runCommand('scp', [...scpArgs, localPath, `${host}:${remotePath}`]);
 }
 
 /**

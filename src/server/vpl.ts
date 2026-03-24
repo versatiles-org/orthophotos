@@ -1,6 +1,6 @@
 import { resolve } from 'node:path';
 import { writeFileSync } from 'node:fs';
-import { getDataDir, requireSshConfig } from '../config.ts';
+import { config } from '../config.ts';
 import { getAllRegionMetadata } from '../regions/index.ts';
 
 /**
@@ -9,8 +9,7 @@ import { getAllRegionMetadata } from '../regions/index.ts';
  * @param filename - Output filename for the VPL file (relative to data directory)
  */
 export function generateVPL(filename: string) {
-	const dataDir = resolve(getDataDir());
-	const { host, port, dir } = requireSshConfig();
+	const { host, port, dir } = config.ssh!;
 
 	function sftpUrl(remotePath: string): string {
 		const cleaned = remotePath.replace(/\/\/+/g, '/');
@@ -45,6 +44,6 @@ export function generateVPL(filename: string) {
   attribution="<a href='https://versatiles.org/sources/'>VersaTiles sources</a>"
 `;
 
-	writeFileSync(resolve(dataDir, filename), vpl);
+	writeFileSync(resolve(config.dirData, filename), vpl);
 	console.log(`Wrote VPL with ${layers.length - 2} orthophoto layers to ${filename}`);
 }

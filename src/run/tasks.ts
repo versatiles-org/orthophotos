@@ -7,11 +7,11 @@ import { existsSync, mkdirSync, readdirSync, renameSync, rmSync, writeFileSync }
 import { createInterface } from 'node:readline';
 import { resolve, join } from 'node:path';
 import { runCommand } from '../lib/command.ts';
-import { runSshCommand, runMosaicAssemble } from './commands.ts';
+import { runSshCommand, runMosaicAssemble, runScpUpload } from './commands.ts';
 import { TASK_NUMBER_TO_NAME } from './tasks.constants.ts';
 import { safeRemoveDir } from '../lib/fs.ts';
 import { getRegionPipeline } from '../regions/index.ts';
-import { requireSshConfig } from '../config.ts';
+import { config } from '../config.ts';
 
 export interface TaskContext {
 	name: string; // Region identifier (e.g., "de/bw")
@@ -120,21 +120,21 @@ async function taskMerge(ctx: TaskContext): Promise<void> {
  * Writes to a temp file first, then atomically renames on success.
  */
 async function uploadToRemote(localPath: string, regionName: string, filename: string): Promise<void> {
-	const { host, port, id, dir } = requireSshConfig();
+	const { dir } = config.ssh!;
 	const remoteDir = `${dir}/${regionName}`;
 	const finalRemote = `${remoteDir}/${filename}`;
 	const tmpRemote = `${finalRemote}.tmp`;
 
-	await runSshCommand(host, port, id, `mkdir -p '${remoteDir}'`);
+	await runSshCommand(`mkdir -p '${remoteDir}'`);
 
 	console.log(`  Uploading to ${finalRemote}...`);
 	try {
-		await runCommand('scp', ['-P', port, '-i', id, localPath, `${host}:${tmpRemote}`]);
-		await runSshCommand(host, port, id, `mv '${tmpRemote}' '${finalRemote}'`);
+		await runScpUpload(localPath, tmpRemote);
+		await runSshCommand(`mv '${tmpRemote}' '${finalRemote}'`);
 		console.log(`  Upload complete.`);
 	} catch (err) {
 		try {
-			await runSshCommand(host, port, id, `rm -f '${tmpRemote}'`);
+			await runSshCommand(`rm -f '${tmpRemote}'`);
 		} catch {}
 		throw err;
 	}

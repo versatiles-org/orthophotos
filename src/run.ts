@@ -15,23 +15,19 @@
 import { resolve } from 'node:path';
 import { mkdirSync } from 'node:fs';
 import { runCommand } from './lib/command.ts';
-import { getDataDir, getTempDir, requireSshConfig } from './config.ts';
+import { config } from './config.ts';
 import { getHelpText, parseArgs } from './run/args.ts';
-import { checkRequiredCommands } from './run/commands.ts';
+import { checkRequiredCommands, runSshCommand } from './run/commands.ts';
 import { runTask, type TaskContext } from './run/tasks.ts';
 
 async function checkRemoteServer(): Promise<void> {
 	console.log('Checking remote server...');
-	const { host, port, id } = requireSshConfig();
 	try {
-		await runCommand('ssh', ['-o', 'ConnectTimeout=10', '-p', port, '-i', id, host, 'help'], {
-			stdout: 'null',
-			stderr: 'null',
-		});
+		await runSshCommand('exit');
 	} catch (err) {
 		// SSH returns 255 for connection failures; other exit codes mean the connection worked
 		if (err instanceof Error && err.message.includes('Exit code: 255')) {
-			throw new Error(`Cannot connect to remote server ${host}:${port}`);
+			throw new Error(`Cannot connect to remote server`);
 		}
 	}
 	console.log('  Remote server is accessible.');
@@ -56,8 +52,8 @@ async function main(): Promise<void> {
 	}
 
 	// Build paths
-	const dataDir = resolve(getDataDir(), args.name);
-	const tempDir = resolve(getTempDir(), args.name);
+	const dataDir = resolve(config.dirData, args.name);
+	const tempDir = resolve(config.dirTemp, args.name);
 
 	// Ensure data directory exists
 	mkdirSync(dataDir, { recursive: true });

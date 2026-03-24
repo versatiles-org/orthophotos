@@ -76,7 +76,7 @@ export default defineTileRegion({
 		const content = await readFile(indexPath, 'utf-8');
 		return parseIndex(JSON.parse(content));
 	},
-	downloadConcurrency: 8,
+	downloadConcurrency: 4,
 	download: async ({ path, id }, { tempDir, errors }) => {
 		const jp2Path = join(tempDir, `${id}.jp2`);
 		const tifPath = join(tempDir, `${id}.tif`);

@@ -94,10 +94,9 @@ export default defineTileRegion({
 			throw err;
 		}
 	},
-	convertCores: 6,
-	convert: async ({ jp2Path }, { dest }) => {
+	convert: async ({ jp2Path }, { dest, tempDir }) => {
 		try {
-			await runMosaicTile(jp2Path, dest);
+			await runMosaicTile(jp2Path, dest, { cacheDirectory: tempDir });
 		} finally {
 			try {
 				rmSync(jp2Path, { force: true });

@@ -20,6 +20,23 @@ import { getHelpText, parseArgs } from './run/args.ts';
 import { checkRequiredCommands } from './run/commands.ts';
 import { runTask, type TaskContext } from './run/tasks.ts';
 
+async function checkRemoteServer(): Promise<void> {
+	console.log('Checking remote server...');
+	const { host, port, id } = requireSshConfig();
+	try {
+		await runCommand('ssh', ['-o', 'ConnectTimeout=10', '-p', port, '-i', id, host, 'help'], {
+			stdout: 'null',
+			stderr: 'null',
+		});
+	} catch (err) {
+		// SSH returns 255 for connection failures; other exit codes mean the connection worked
+		if (err instanceof Error && err.message.includes('Exit code: 255')) {
+			throw new Error(`Cannot connect to remote server ${host}:${port}`);
+		}
+	}
+	console.log('  Remote server is accessible.');
+}
+
 async function main(): Promise<void> {
 	// Parse command line arguments
 	const args = parseArgs(process.argv.slice(2));
@@ -35,20 +52,7 @@ async function main(): Promise<void> {
 
 	// If merge task is requested, verify remote is accessible before starting
 	if (args.tasks.includes(2)) {
-		console.log('Checking remote server...');
-		const { host, port, id } = requireSshConfig();
-		try {
-			await runCommand('ssh', ['-o', 'ConnectTimeout=10', '-p', port, '-i', id, host, 'help'], {
-				stdout: 'null',
-				stderr: 'null',
-			});
-		} catch (err) {
-			// SSH returns 255 for connection failures; other exit codes mean the connection worked
-			if (err instanceof Error && err.message.includes('Exit code: 255')) {
-				throw new Error(`Cannot connect to remote server ${host}:${port}`);
-			}
-		}
-		console.log('  Remote server is accessible.');
+		await checkRemoteServer();
 	}
 
 	// Build paths

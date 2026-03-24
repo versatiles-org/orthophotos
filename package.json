@@ -20,6 +20,9 @@
 		"fast-xml-parser": "^5.5.8",
 		"topojson-client": "^3.1.0"
 	},
+	"engines": {
+		"node": ">=22"
+	},
 	"devDependencies": {
 		"@types/geojson": "^7946.0.16",
 		"@types/node": "^25.5.0",

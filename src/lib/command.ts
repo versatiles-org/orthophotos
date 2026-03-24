@@ -39,21 +39,21 @@ function mapStdio(mode: 'inherit' | 'piped' | 'null' | undefined): 'inherit' | '
  */
 export async function runCommand(cmd: string, args: string[], options?: CommandOptions): Promise<CommandOutput> {
 	return new Promise((resolve, reject) => {
+		const stdoutMode = options?.stdout ?? 'inherit';
 		const stderrMode = options?.stderr ?? 'inherit';
 		const child = spawn(cmd, args, {
 			cwd: options?.cwd,
 			env: options?.env ? { ...process.env, ...options.env } : undefined,
-			stdio: [
-				'inherit',
-				mapStdio(options?.stdout ?? 'inherit'),
-				stderrMode === 'inherit' ? 'pipe' : mapStdio(stderrMode),
-			],
+			stdio: ['inherit', stdoutMode === 'null' ? 'ignore' : 'pipe', stderrMode === 'null' ? 'ignore' : 'pipe'],
 		});
 
 		const stdoutChunks: Buffer[] = [];
 		const stderrChunks: Buffer[] = [];
 
-		child.stdout?.on('data', (chunk: Buffer) => stdoutChunks.push(chunk));
+		child.stdout?.on('data', (chunk: Buffer) => {
+			stdoutChunks.push(chunk);
+			if (stdoutMode === 'inherit') process.stdout.write(chunk);
+		});
 		child.stderr?.on('data', (chunk: Buffer) => {
 			stderrChunks.push(chunk);
 			if (stderrMode === 'inherit') process.stderr.write(chunk);
@@ -70,11 +70,12 @@ export async function runCommand(cmd: string, args: string[], options?: CommandO
 				stderr: new Uint8Array(Buffer.concat(stderrChunks)),
 			};
 			if (!result.success) {
+				const stdout = Buffer.concat(stdoutChunks).toString().trim();
 				const stderr = Buffer.concat(stderrChunks).toString().trim();
-				const msg = stderr
-					? `Command "${cmd}" exited with code ${exitCode}:\n${stderr}`
-					: `Command "${cmd}" exited with code ${exitCode}`;
-				reject(new Error(msg));
+				const parts = [`Command failed: ${cmd} ${args.join(' ')}`, `Exit code: ${exitCode}`];
+				if (stdout) parts.push(`stdout:\n${stdout}`);
+				if (stderr) parts.push(`stderr:\n${stderr}`);
+				reject(new Error(parts.join('\n')));
 			} else {
 				resolve(result);
 			}

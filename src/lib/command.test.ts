@@ -14,7 +14,7 @@ test('runCommand - captures stdout when piped', async () => {
 });
 
 test('runCommand - throws on non-zero exit code', async () => {
-	await expect(runCommand('false', [])).rejects.toThrow('exited with code');
+	await expect(runCommand('false', [])).rejects.toThrow('Command failed');
 });
 
 test('runCommand - respects cwd option', async () => {
@@ -54,6 +54,6 @@ test('runCommandWithRetry - succeeds on first attempt', async () => {
 
 test('runCommandWithRetry - throws after max attempts on persistent failure', async () => {
 	await expect(runCommandWithRetry('false', [], { maxAttempts: 2, initialDelayMs: 10 })).rejects.toThrow(
-		'exited with code',
+		'Command failed',
 	);
 });

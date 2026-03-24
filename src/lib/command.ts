@@ -39,17 +39,25 @@ function mapStdio(mode: 'inherit' | 'piped' | 'null' | undefined): 'inherit' | '
  */
 export async function runCommand(cmd: string, args: string[], options?: CommandOptions): Promise<CommandOutput> {
 	return new Promise((resolve, reject) => {
+		const stderrMode = options?.stderr ?? 'inherit';
 		const child = spawn(cmd, args, {
 			cwd: options?.cwd,
 			env: options?.env ? { ...process.env, ...options.env } : undefined,
-			stdio: ['inherit', mapStdio(options?.stdout ?? 'inherit'), mapStdio(options?.stderr ?? 'inherit')],
+			stdio: [
+				'inherit',
+				mapStdio(options?.stdout ?? 'inherit'),
+				stderrMode === 'inherit' ? 'pipe' : mapStdio(stderrMode),
+			],
 		});
 
 		const stdoutChunks: Buffer[] = [];
 		const stderrChunks: Buffer[] = [];
 
 		child.stdout?.on('data', (chunk: Buffer) => stdoutChunks.push(chunk));
-		child.stderr?.on('data', (chunk: Buffer) => stderrChunks.push(chunk));
+		child.stderr?.on('data', (chunk: Buffer) => {
+			stderrChunks.push(chunk);
+			if (stderrMode === 'inherit') process.stderr.write(chunk);
+		});
 
 		child.on('error', reject);
 
@@ -62,7 +70,11 @@ export async function runCommand(cmd: string, args: string[], options?: CommandO
 				stderr: new Uint8Array(Buffer.concat(stderrChunks)),
 			};
 			if (!result.success) {
-				reject(new Error(`Command "${cmd}" exited with code ${exitCode}`));
+				const stderr = Buffer.concat(stderrChunks).toString().trim();
+				const msg = stderr
+					? `Command "${cmd}" exited with code ${exitCode}:\n${stderr}`
+					: `Command "${cmd}" exited with code ${exitCode}`;
+				reject(new Error(msg));
 			} else {
 				resolve(result);
 			}

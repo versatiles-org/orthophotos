@@ -1,10 +1,9 @@
 import type { RegionPipeline } from '../lib/framework.ts';
 
-// https://ogcapi.dgterritorio.gov.pt/collections/ortos-rgb
 export default {
-	id: 'pt',
+	id: 'si',
 	metadata: {
 		status: 'planned',
-		notes: ['Data source identified but scraper not yet implemented.'],
+		notes: ['Data source not yet investigated.'],
 	},
 } satisfies RegionPipeline;

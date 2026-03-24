@@ -66,6 +66,7 @@ export default defineTileRegion({
 		await withRetry(() => downloadFile(url, zipPath), { maxAttempts: 3 });
 		return { zipPath };
 	},
+	convertCores: 8,
 	convert: async ({ zipPath }, { dest, tempDir }) => {
 		const extractDir = join(tempDir, basename(zipPath, '.zip'));
 		const vrtPath = `${dest}.vrt`;

@@ -32,7 +32,7 @@ async function extractToken(tempDir: string): Promise<string> {
 export default defineTileRegion({
 	name: 'dk',
 	meta: {
-		status: 'success',
+		status: 'planned',
 		notes: ['License requires attribution', 'Only WMS available', 'Access requires token'],
 		entries: ['result'],
 		license: {

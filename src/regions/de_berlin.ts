@@ -34,7 +34,7 @@ export function parseTileUrls(xml: string): string[] {
 export default defineTileRegion({
 	name: 'de/berlin',
 	meta: {
-		status: 'success',
+		status: 'released',
 		notes: ['Atom feed with direct .jp2 download links.'],
 		entries: ['result'],
 		license: {

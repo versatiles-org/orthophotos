@@ -20,7 +20,7 @@ export function generateCoords(): { x: number; y: number; id: string }[] {
 export default defineTileRegion({
 	name: 'de/thueringen',
 	meta: {
-		status: 'success',
+		status: 'released',
 		notes: [
 			'No API, such as an ATOM feed, available.',
 			'Parsing JSON or hardcoded IDs are required.',

@@ -19,8 +19,17 @@ export interface RegionCreator {
 	url: string;
 }
 
+/**
+ * Region status:
+ * - 'planned'  — data source identified, scraper not yet implemented
+ * - 'scraping' — scraper implemented but result not yet released
+ * - 'released' — scraper works and result is published on the server
+ * - 'blocked'  — cannot proceed (access restricted, proprietary format, etc.)
+ */
+export type RegionStatus = 'planned' | 'scraping' | 'released' | 'blocked';
+
 export interface RegionMetadata {
-	status: 'success' | 'error';
+	status: RegionStatus;
 	notes: string[];
 	entries?: string[];
 	license?: RegionLicense;

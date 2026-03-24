@@ -30,7 +30,7 @@ export function parseTileUrls(geojson: string): string[] {
 export default defineTileRegion({
 	name: 'de/niedersachsen',
 	meta: {
-		status: 'success',
+		status: 'released',
 		notes: [
 			'License requires attribution.',
 			'Rather than a national mosaic, inconsistent regional mosaics with different access and formats are available instead.',

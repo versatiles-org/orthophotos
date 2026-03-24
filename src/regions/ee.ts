@@ -3,7 +3,7 @@ import type { RegionPipeline } from '../lib/framework.ts';
 export default {
 	id: 'ee',
 	metadata: {
-		status: 'error',
+		status: 'blocked',
 		notes: [
 			'No bulk download available.',
 			'Only WMS available.',

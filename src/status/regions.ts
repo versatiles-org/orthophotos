@@ -38,17 +38,17 @@ function findSimilarRegionIds(id: string, knownRegions: KnownRegion[]): string[]
 
 /** Convert RegionMetadata to Status for the status-check output */
 function metadataToStatus(meta: RegionMetadata): Status {
-	if (meta.status === 'error') {
-		return { status: 'error', notes: meta.notes };
+	if (meta.status === 'released') {
+		return {
+			status: 'success',
+			rating: 0,
+			notes: meta.notes,
+			entries: (meta.entries ?? ['result']).map((name) => ({ name, versaTilesExists: false })),
+			license: meta.license!,
+			creator: meta.creator!,
+		};
 	}
-	return {
-		status: 'success',
-		rating: 0,
-		notes: meta.notes,
-		entries: (meta.entries ?? ['result']).map((name) => ({ name, versaTilesExists: false })),
-		license: meta.license!,
-		creator: meta.creator!,
-	};
+	return { status: 'error', notes: meta.notes };
 }
 
 /**

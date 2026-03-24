@@ -41,7 +41,7 @@ export function parseTileIds(xml: string): { id: string; url: string }[] {
 export default defineTileRegion({
 	name: 'cz',
 	meta: {
-		status: 'success',
+		status: 'released',
 		notes: ['License requires attribution.', 'JP2 files have no embedded CRS; worldfile + EPSG:3045 assumed.'],
 		entries: ['result'],
 		license: {

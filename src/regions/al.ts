@@ -13,7 +13,7 @@ const ZOOM = 17;
 export default defineTileRegion({
 	name: 'al',
 	meta: {
-		status: 'success',
+		status: 'released',
 		notes: ['Only WMS found.', 'Server is very slow.', 'Full coverage only for 2015.'],
 		entries: ['result'],
 		license: {

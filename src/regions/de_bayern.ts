@@ -35,7 +35,7 @@ export function parseTileUrls(meta4Xml: string): string[] {
 export default defineTileRegion({
 	name: 'de/bayern',
 	meta: {
-		status: 'success',
+		status: 'released',
 		notes: [
 			'No API, such as an ATOM feed, available.',
 			'A hacky solution is required: Parse gemeinde.kml in the hope that it is up to date and references all images.',

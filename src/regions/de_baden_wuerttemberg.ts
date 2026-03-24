@@ -22,7 +22,7 @@ export function generateTileIds(): string[] {
 export default defineTileRegion({
 	name: 'de/baden_wuerttemberg',
 	meta: {
-		status: 'success',
+		status: 'released',
 		notes: [
 			'No API, such as an ATOM feed, available.',
 			'Hacky solution is required: Guessing filenames since there is no official index.',

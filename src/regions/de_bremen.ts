@@ -17,7 +17,7 @@ const DISTRICTS = [
 export default defineTileRegion({
 	name: 'de/bremen',
 	meta: {
-		status: 'success',
+		status: 'released',
 		notes: [
 			'No API, such as an ATOM feed, available.',
 			'Images are unnecessarily packed into container files, such as ZIP.',

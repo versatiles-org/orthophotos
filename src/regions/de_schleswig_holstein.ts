@@ -38,7 +38,7 @@ export function parseGeoJson(data: GeoJsonResponse): { id: string; url: string }
 export default defineTileRegion({
 	name: 'de/schleswig_holstein',
 	meta: {
-		status: 'success',
+		status: 'released',
 		notes: [
 			'License requires attribution.',
 			'Server has an invalid SSL certificate.',

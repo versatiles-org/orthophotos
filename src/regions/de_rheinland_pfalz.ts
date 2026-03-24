@@ -21,7 +21,7 @@ export function parseFilenames(html: string): string[] {
 export default defineTileRegion({
 	name: 'de/rheinland_pfalz',
 	meta: {
-		status: 'success',
+		status: 'released',
 		notes: [
 			'No API, such as an ATOM feed, available.',
 			'Parsing HTML is required.',

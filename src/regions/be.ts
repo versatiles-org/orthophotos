@@ -50,7 +50,7 @@ export function parseIndex(data: IndexResponse): { id: string; path: string }[] 
 export default defineTileRegion({
 	name: 'be',
 	meta: {
-		status: 'success',
+		status: 'scraping',
 		notes: ['License requires attribution.'],
 		entries: ['result'],
 		license: {

@@ -80,7 +80,7 @@ function extractGridRef(url: string): string {
 export default defineTileRegion({
 	name: 'pl',
 	meta: {
-		status: 'success',
+		status: 'scraping',
 		notes: ['No access restrictions.', 'Atom feed provides GML per year; each GML lists individual GeoTIFF URLs.'],
 		entries: ['result'],
 		license: {

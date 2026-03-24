@@ -12,7 +12,7 @@ const INDEX_URL =
 export default defineTileRegion({
 	name: 'lv',
 	meta: {
-		status: 'success',
+		status: 'released',
 		notes: ['License requires attribution.'],
 		entries: ['result'],
 		license: {

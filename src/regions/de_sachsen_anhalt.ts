@@ -37,7 +37,7 @@ export function parseTileIds(xml: string): string[] {
 export default defineTileRegion({
 	name: 'de/sachsen_anhalt',
 	meta: {
-		status: 'success',
+		status: 'released',
 		notes: [
 			'License requires attribution.',
 			'National license instead of an international standard.',

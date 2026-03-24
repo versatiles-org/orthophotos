@@ -16,7 +16,7 @@ export function parseUrlId(url: string): string {
 export default defineTileRegion({
 	name: 'de/sachsen',
 	meta: {
-		status: 'success',
+		status: 'released',
 		notes: [
 			'The URLs in the Atom feed point to old files that no longer exist.',
 			'Images are unnecessarily packed into container files, such as ZIP.',

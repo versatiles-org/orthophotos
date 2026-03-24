@@ -36,7 +36,7 @@ export function parseAtomEntries(xml: string): { url: string; id: string }[] {
 export default defineTileRegion({
 	name: 'de/saarland',
 	meta: {
-		status: 'success',
+		status: 'released',
 		notes: [
 			'Server is slow.',
 			'License requires attribution.',

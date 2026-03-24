@@ -13,7 +13,7 @@ const ZOOM = 17;
 export default defineTileRegion({
 	name: 'lt',
 	meta: {
-		status: 'success',
+		status: 'released',
 		notes: [
 			'Atom feed provides only proprietary data formats.',
 			'Only WMS is usable.',

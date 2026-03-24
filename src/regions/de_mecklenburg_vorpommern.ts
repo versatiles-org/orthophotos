@@ -26,7 +26,7 @@ export function parseTileUrls(xml: string): { url: string; id: string }[] {
 export default defineTileRegion({
 	name: 'de/mecklenburg_vorpommern',
 	meta: {
-		status: 'success',
+		status: 'released',
 		notes: [
 			'Server is slow.',
 			'License requires attribution.',

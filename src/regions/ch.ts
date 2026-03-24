@@ -27,7 +27,7 @@ export function deduplicateByCoord(urls: string[]): string[] {
 export default defineTileRegion({
 	name: 'ch',
 	meta: {
-		status: 'success',
+		status: 'released',
 		notes: [
 			'You have to use an undocumented API to get a constantly changing URL for a CSV file that contains the URLs for the actual tiles.',
 			'License requires attribution.',

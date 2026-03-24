@@ -10,7 +10,7 @@ const DOWNLOAD_URL = 'https://service.geo.llv.li/atom/data/e77da96f-bc1c-4317-8c
 export default defineTileRegion({
 	name: 'li',
 	meta: {
-		status: 'success',
+		status: 'released',
 		notes: ['License requires attribution.'],
 		entries: ['result'],
 		license: {

@@ -32,7 +32,7 @@ export function parseResources(data: CkanResponse): { id: string; url: string }[
 export default defineTileRegion({
 	name: 'de/hamburg',
 	meta: {
-		status: 'success',
+		status: 'released',
 		notes: [
 			'Images are unnecessarily packed into container files, such as ZIP.',
 			'License requires attribution.',

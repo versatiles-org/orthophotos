@@ -32,7 +32,7 @@ export function parseZipUrls(xml: string): { url: string; id: string }[] {
 export default defineTileRegion({
 	name: 'sk',
 	meta: {
-		status: 'error',
+		status: 'scraping',
 		notes: ['Images are unnecessarily packed into container files, such as ZIP.', 'License requires attribution.'],
 		entries: ['result'],
 		license: {

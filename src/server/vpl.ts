@@ -22,7 +22,7 @@ export function generateVPL(filename: string) {
 	// Add orthophoto layers for all successful regions via sftp
 	const allMetadata = getAllRegionMetadata();
 	for (const [id, meta] of allMetadata) {
-		if (meta.status !== 'success') continue;
+		if (meta.status !== 'released') continue;
 
 		const entries = meta.entries ?? ['result'];
 		for (const entry of entries) {

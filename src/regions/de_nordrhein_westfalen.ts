@@ -21,7 +21,7 @@ export function parseFilenames(html: string): string[] {
 export default defineTileRegion({
 	name: 'de/nordrhein_westfalen',
 	meta: {
-		status: 'success',
+		status: 'released',
 		notes: [
 			'National license instead of an international standard.',
 			'Rather than a national mosaic, inconsistent regional mosaics with different access and formats are available instead.',

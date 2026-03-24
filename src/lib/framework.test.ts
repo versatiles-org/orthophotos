@@ -8,7 +8,7 @@ const dummyCtx: StepContext = {
 };
 
 const dummyMeta: RegionMetadata = {
-	status: 'success',
+	status: 'released',
 	notes: [],
 	license: { name: 'CC0', url: 'https://creativecommons.org/publicdomain/zero/1.0/', requiresAttribution: false },
 	creator: { name: 'Test', url: 'https://example.com' },
@@ -31,11 +31,11 @@ test('RegionPipeline - run executes correctly', async () => {
 test('RegionPipeline - run is optional for stub regions', () => {
 	const pipeline: RegionPipeline = {
 		id: 'test/stub',
-		metadata: { status: 'error', notes: ['Not available'] },
+		metadata: { status: 'blocked', notes: ['Not available'] },
 	};
 	expect(pipeline.run).toBeUndefined();
 	expect(pipeline.id).toBe('test/stub');
-	expect(pipeline.metadata.status).toBe('error');
+	expect(pipeline.metadata.status).toBe('blocked');
 });
 
 test('RegionPipeline - stores id and metadata', () => {

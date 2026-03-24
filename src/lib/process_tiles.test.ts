@@ -20,7 +20,7 @@ describe('defineTileRegion', () => {
 	let testDir: string;
 
 	const baseMeta = {
-		status: 'success' as const,
+		status: 'released' as const,
 		notes: [],
 		license: { name: 'test', url: 'https://example.com', requiresAttribution: false },
 		creator: { name: 'test', url: 'https://example.com' },

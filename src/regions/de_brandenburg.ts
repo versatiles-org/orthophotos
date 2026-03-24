@@ -22,7 +22,7 @@ export function parseZipFilenames(html: string): string[] {
 export default defineTileRegion({
 	name: 'de/brandenburg',
 	meta: {
-		status: 'success',
+		status: 'released',
 		notes: [
 			'No API, such as an ATOM feed, available.',
 			'Parsing HTML is required.',

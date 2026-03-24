@@ -5,7 +5,7 @@
 	"scripts": {
 		"check": "npm run format:check && npm run typecheck && npm run test",
 		"format:check": "prettier --check 'src/**/*.ts'",
-		"format": "prettier --write 'src/**/*.ts'",
+		"format": "prettier --log-level warn --write 'src/**/*.ts'",
 		"run": "node --env-file=config.env --import tsx/esm src/run.ts",
 		"server-prepare": "node --env-file=config.env --import tsx/esm src/server-prepare.ts",
 		"server-start": "./server.sh",

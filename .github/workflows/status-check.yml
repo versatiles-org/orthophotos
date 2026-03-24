@@ -1,9 +1,12 @@
 name: Status Check
 
 on:
+  push:
+    branches:
+      - main
   schedule:
     - cron: '0 6 * * 4'  # Run weekly on Thursday at 6:00 UTC
-  workflow_dispatch:  # Allow manual trigger
+  workflow_dispatch:
 
 permissions:
   contents: read

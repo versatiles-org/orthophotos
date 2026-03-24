@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - '**'
+    tags:
+      - '!**'
+  pull_request:
+  workflow_dispatch:
+
+env:
+  FORCE_COLOR: 1
+
+jobs:
+  lint-test:
+    name: Lint and test (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20, 22, 24]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+  coverage:
+    name: Test coverage
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate test coverage
+        run: npm run coverage
+
+      - name: Upload test coverage
+        uses: codecov/codecov-action@v5
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

@@ -34,7 +34,9 @@ export function generateStatusPage(
 		const region = knownRegions.get(id);
 		const name = region?.properties.fullname ?? id;
 		const color = STATUS_COLORS[meta.status];
-		const license = meta.license ? escapeHtml(meta.license.name) : '';
+		const license = meta.license
+			? `<a href="${escapeHtml(meta.license.url)}">${escapeHtml(meta.license.name)}</a>`
+			: '';
 		const creator = meta.creator
 			? `<a href="${escapeHtml(meta.creator.url)}">${escapeHtml(meta.creator.name)}</a>`
 			: '';
@@ -71,15 +73,24 @@ export function generateStatusPage(
 	body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; margin: 0; padding: 20px; background: #0d1117; color: #e6edf3; }
 	h1 { margin: 0 0 8px; }
 	.summary { margin-bottom: 16px; font-size: 14px; color: #8b949e; }
-	table { border-collapse: collapse; width: 100%; font-size: 14px; }
-	th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #21262d; }
-	th { background: #161b22; color: #8b949e; font-weight: 600; position: sticky; top: 0; }
+	table { border-collapse: collapse; width: 100%; font-size: 14px; table-layout: fixed; }
+	th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #21262d; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+	th { background: #161b22; color: #8b949e; font-weight: 600; position: sticky; top: 0; z-index: 1; }
 	tr:hover { background: #161b22; }
+	td:hover { overflow: visible; white-space: normal; word-break: break-word; }
 	a { color: #58a6ff; text-decoration: none; }
 	a:hover { text-decoration: underline; }
-	td.notes { font-size: 12px; color: #8b949e; max-width: 400px; }
+	col.col-id { width: 150px; }
+	col.col-name { }
+	col.col-status { width: 100px; }
+	col.col-date { width: 100px; }
+	col.col-license { width: 150px; }
+	col.col-creator { }
+	col.col-notes { width: 100px; }
+	td.notes { font-size: 12px; color: #8b949e; }
 	td.notes details summary { cursor: pointer; color: #8b949e; }
 	td.notes details summary:hover { color: #e6edf3; }
+	td.notes details { white-space: normal; }
 	td.notes ul { margin: 4px 0 0; padding-left: 18px; }
 </style>
 </head>
@@ -87,6 +98,9 @@ export function generateStatusPage(
 <h1>VersaTiles Orthophotos</h1>
 <p class="summary">${allMetadata.size} regions &middot; ${summary}</p>
 <table>
+<colgroup>
+<col class="col-id"><col class="col-name"><col class="col-status"><col class="col-date"><col class="col-license"><col class="col-creator"><col class="col-notes">
+</colgroup>
 <thead>
 <tr><th>ID</th><th>Name</th><th>Status</th><th>Date</th><th>License</th><th>Creator</th><th>Notes</th></tr>
 </thead>

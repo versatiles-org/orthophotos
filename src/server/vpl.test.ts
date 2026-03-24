@@ -7,46 +7,39 @@ import { generateVPL } from './vpl.ts';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TEST_DIR = resolve(__dirname, '../../test-data/vpl');
 
-test('generateVPL - creates valid VPL file', () => {
-	// Set up test environment
+function setupDirs(base: string) {
+	mkdirSync(resolve(base, 'orthophotos'), { recursive: true });
+	mkdirSync(resolve(base, 'satellite/s2gm'), { recursive: true });
+	mkdirSync(resolve(base, 'satellite/bluemarble'), { recursive: true });
+	writeFileSync(resolve(base, 'satellite/s2gm/s2gm_overview.versatiles'), '');
+	writeFileSync(resolve(base, 'satellite/bluemarble/bluemarble.versatiles'), '');
+}
+
+test('generateVPL - creates valid VPL with orthophoto layers', () => {
 	process.env['dir_data'] = TEST_DIR;
-	mkdirSync(resolve(TEST_DIR, 'orthophotos'), { recursive: true });
-	mkdirSync(resolve(TEST_DIR, 'satellite/s2gm'), { recursive: true });
-	mkdirSync(resolve(TEST_DIR, 'satellite/bluemarble'), { recursive: true });
+	setupDirs(TEST_DIR);
 
-	// Create test versatiles files
-	writeFileSync(resolve(TEST_DIR, 'orthophotos/test.versatiles'), '');
-	writeFileSync(resolve(TEST_DIR, 'satellite/s2gm/s2gm_overview.versatiles'), '');
-	writeFileSync(resolve(TEST_DIR, 'satellite/bluemarble/bluemarble.versatiles'), '');
+	// Create a versatiles file matching a real region (li has status: success, entries: ['result'])
+	mkdirSync(resolve(TEST_DIR, 'orthophotos/li'), { recursive: true });
+	writeFileSync(resolve(TEST_DIR, 'orthophotos/li/result.versatiles'), '');
 
-	// Generate VPL
 	generateVPL('test.vpl');
-
-	// Read and verify the generated file
 	const vpl = readFileSync(resolve(TEST_DIR, 'test.vpl'), 'utf-8');
 
 	expect(vpl).toContain('from_stacked_raster');
-	expect(vpl).toContain('test.versatiles');
+	expect(vpl).toContain('auto_overscale=true');
+	expect(vpl).toContain('li/result.versatiles');
+	expect(vpl).toContain('filter level_min=11');
 	expect(vpl).toContain('s2gm_overview.versatiles');
 	expect(vpl).toContain('bluemarble.versatiles');
-	expect(vpl).toContain('raster_overscale');
-	expect(vpl).toContain('filter level_max=19');
 });
 
-test('generateVPL - handles empty orthophotos directory', () => {
-	// Set up test environment with empty orthophotos
+test('generateVPL - includes satellite layers even without orthophotos', () => {
 	const emptyTestDir = resolve(TEST_DIR, 'empty');
 	process.env['dir_data'] = emptyTestDir;
-	mkdirSync(resolve(emptyTestDir, 'orthophotos'), { recursive: true });
-	mkdirSync(resolve(emptyTestDir, 'satellite/s2gm'), { recursive: true });
-	mkdirSync(resolve(emptyTestDir, 'satellite/bluemarble'), { recursive: true });
-	writeFileSync(resolve(emptyTestDir, 'satellite/s2gm/s2gm_overview.versatiles'), '');
-	writeFileSync(resolve(emptyTestDir, 'satellite/bluemarble/bluemarble.versatiles'), '');
+	setupDirs(emptyTestDir);
 
-	// Generate VPL
 	generateVPL('empty.vpl');
-
-	// Read and verify the generated file
 	const vpl = readFileSync(resolve(emptyTestDir, 'empty.vpl'), 'utf-8');
 
 	expect(vpl).toContain('from_stacked_raster');
@@ -54,33 +47,9 @@ test('generateVPL - handles empty orthophotos directory', () => {
 	expect(vpl).toContain('bluemarble.versatiles');
 });
 
-test('generateVPL - includes from_container for each versatiles file', () => {
-	process.env['dir_data'] = TEST_DIR;
-	mkdirSync(resolve(TEST_DIR, 'orthophotos'), { recursive: true });
-	mkdirSync(resolve(TEST_DIR, 'satellite/s2gm'), { recursive: true });
-	mkdirSync(resolve(TEST_DIR, 'satellite/bluemarble'), { recursive: true });
-
-	writeFileSync(resolve(TEST_DIR, 'orthophotos/region1.versatiles'), '');
-	writeFileSync(resolve(TEST_DIR, 'orthophotos/region2.versatiles'), '');
-	writeFileSync(resolve(TEST_DIR, 'satellite/s2gm/s2gm_overview.versatiles'), '');
-	writeFileSync(resolve(TEST_DIR, 'satellite/bluemarble/bluemarble.versatiles'), '');
-
-	generateVPL('multi.vpl');
-	const vpl = readFileSync(resolve(TEST_DIR, 'multi.vpl'), 'utf-8');
-
-	expect(vpl).toContain('from_container');
-	expect(vpl).toContain('region1.versatiles');
-	expect(vpl).toContain('region2.versatiles');
-});
-
 test('generateVPL - applies gamma/brightness/contrast to bluemarble', () => {
 	process.env['dir_data'] = TEST_DIR;
-	mkdirSync(resolve(TEST_DIR, 'orthophotos'), { recursive: true });
-	mkdirSync(resolve(TEST_DIR, 'satellite/s2gm'), { recursive: true });
-	mkdirSync(resolve(TEST_DIR, 'satellite/bluemarble'), { recursive: true });
-
-	writeFileSync(resolve(TEST_DIR, 'satellite/s2gm/s2gm_overview.versatiles'), '');
-	writeFileSync(resolve(TEST_DIR, 'satellite/bluemarble/bluemarble.versatiles'), '');
+	setupDirs(TEST_DIR);
 
 	generateVPL('gamma.vpl');
 	const vpl = readFileSync(resolve(TEST_DIR, 'gamma.vpl'), 'utf-8');
@@ -93,16 +62,26 @@ test('generateVPL - applies gamma/brightness/contrast to bluemarble', () => {
 
 test('generateVPL - includes meta_update with attribution', () => {
 	process.env['dir_data'] = TEST_DIR;
-	mkdirSync(resolve(TEST_DIR, 'orthophotos'), { recursive: true });
-	mkdirSync(resolve(TEST_DIR, 'satellite/s2gm'), { recursive: true });
-	mkdirSync(resolve(TEST_DIR, 'satellite/bluemarble'), { recursive: true });
+	setupDirs(TEST_DIR);
 
-	writeFileSync(resolve(TEST_DIR, 'satellite/s2gm/s2gm_overview.versatiles'), '');
-	writeFileSync(resolve(TEST_DIR, 'satellite/bluemarble/bluemarble.versatiles'), '');
-
-	generateVPL('attribution.vpl');
-	const vpl = readFileSync(resolve(TEST_DIR, 'attribution.vpl'), 'utf-8');
+	generateVPL('meta.vpl');
+	const vpl = readFileSync(resolve(TEST_DIR, 'meta.vpl'), 'utf-8');
 
 	expect(vpl).toContain('meta_update');
 	expect(vpl).toContain('attribution');
+	expect(vpl).toContain('VersaTiles');
+});
+
+test('generateVPL - skips regions with missing files', () => {
+	const testDir = resolve(TEST_DIR, 'missing');
+	process.env['dir_data'] = testDir;
+	setupDirs(testDir);
+
+	// Don't create any orthophoto files — all regions should be skipped
+	generateVPL('missing.vpl');
+	const vpl = readFileSync(resolve(testDir, 'missing.vpl'), 'utf-8');
+
+	// Should still have satellite layers but no level_min=11 filters (no ortho layers)
+	expect(vpl).not.toContain('level_min=11');
+	expect(vpl).toContain('s2gm_overview.versatiles');
 });

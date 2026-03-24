@@ -96,12 +96,33 @@ export default defineTileRegion({
 	},
 	convertCores: 5,
 	convert: async ({ jp2Path }, { dest, tempDir }) => {
+		const tifPath = jp2Path.replace(/\.jp2$/, '.tif');
 		try {
-			await runMosaicTile(jp2Path, dest, { cacheDirectory: tempDir });
+			// Convert JP2 to GeoTIFF first — versatiles crashes reading JP2 directly.
+			// LZW is lossless and fast to read with multi-threaded decoding.
+			await runCommand('gdal_translate', [
+				'-q',
+				'-of',
+				'GTiff',
+				'-co',
+				'COMPRESS=LZW',
+				'-co',
+				'PREDICTOR=2',
+				'-co',
+				'TILED=YES',
+				'-co',
+				'NUM_THREADS=ALL_CPUS',
+				jp2Path,
+				tifPath,
+			]);
+			rmSync(jp2Path, { force: true });
+			await runMosaicTile(tifPath, dest, { cacheDirectory: tempDir });
 		} finally {
-			try {
-				rmSync(jp2Path, { force: true });
-			} catch {}
+			for (const p of [jp2Path, tifPath]) {
+				try {
+					rmSync(p, { force: true });
+				} catch {}
+			}
 		}
 	},
 	minFiles: 720,

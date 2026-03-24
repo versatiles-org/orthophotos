@@ -1,4 +1,4 @@
-import { existsSync, renameSync, rmSync } from 'node:fs';
+import { existsSync, renameSync, rmSync, statSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { runCommand } from '../lib/command.ts';
@@ -42,6 +42,8 @@ export default defineTileRegion({
 		notes: [
 			'License requires attribution.',
 			'Server has an invalid SSL certificate.',
+			'Server returns 1-byte files for some tiles.',
+			'Some tiles may be missing or incomplete.',
 			'Rather than a national mosaic, inconsistent regional mosaics with different access and formats are available instead.',
 		],
 		entries: ['result'],
@@ -69,6 +71,9 @@ export default defineTileRegion({
 		const tifPath = join(tempDir, `${id}.tif`);
 		try {
 			await withRetry(() => downloadInsecure(url, tifPath), { maxAttempts: 3 });
+			if (statSync(tifPath).size === 1) {
+				return 'empty'; // server returns 1-byte files ???
+			}
 			if (!(await isValidRaster(tifPath))) {
 				errors.add(`${id}.tif (${url})`);
 				return 'invalid';

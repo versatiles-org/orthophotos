@@ -2,46 +2,47 @@ import { existsSync, rmSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { XMLParser } from 'fast-xml-parser';
-import { downloadFile, runCommand } from '../lib/command.ts';
-import { extractZipFile } from '../lib/fs.ts';
+import { downloadFile } from '../lib/command.ts';
+import { extractZipFile, safeRemoveDir } from '../lib/fs.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
 import { runVersatilesRasterConvert } from '../run/commands.ts';
 
 const ATOM_URL = 'https://atom.cuzk.gov.cz/OI/OI.xml';
+const ZIP_BASE_URL = 'https://openzu.cuzk.gov.cz/opendata/OI/';
 
 const xmlParser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
 
-export function parseTileXmlUrls(xml: string): { xmlUrl: string; id: string }[] {
+/**
+ * Parse tile IDs from the main Atom feed.
+ * Entry IDs contain paths like "CZ-00025712-CUZK_OI_302_5550".
+ */
+export function parseTileIds(xml: string): { id: string; url: string }[] {
 	const parsed = xmlParser.parse(xml);
 	const entries: unknown[] = [parsed.feed?.entry ?? []].flat();
-	const items: { xmlUrl: string; id: string }[] = [];
+	const items: { id: string; url: string }[] = [];
+	const seen = new Set<string>();
 	for (const entry of entries) {
-		const entryId = String((entry as Record<string, unknown>).id ?? '');
-		if (!entryId) continue;
-		const match = entryId.match(/(\d+_\d+)/);
-		if (match) {
-			items.push({ xmlUrl: entryId, id: match[1] });
+		const links: unknown[] = [(entry as Record<string, unknown>).link ?? []].flat();
+		for (const link of links) {
+			const attrs = link as Record<string, string>;
+			if (attrs['@_rel'] !== 'alternate') continue;
+			const href = attrs['@_href'] ?? '';
+			const match = href.match(/CUZK_OI_(\d+_\d+)\.xml$/);
+			if (match && !seen.has(match[1])) {
+				seen.add(match[1]);
+				items.push({ id: match[1], url: `${ZIP_BASE_URL}${match[1]}.zip` });
+			}
 		}
 	}
 	return items;
-}
-
-export function parseZipUrl(xml: string): string | undefined {
-	const parsed = xmlParser.parse(xml);
-	const entries: unknown[] = [parsed.feed?.entry ?? []].flat();
-	for (const entry of entries) {
-		const entryId = String((entry as Record<string, unknown>).id ?? '');
-		if (entryId) return entryId;
-	}
-	return undefined;
 }
 
 export default defineTileRegion({
 	name: 'cz',
 	meta: {
 		status: 'success',
-		notes: ['License requires attribution.'],
+		notes: ['License requires attribution.', 'JP2 files have no embedded CRS; worldfile + EPSG:3045 assumed.'],
 		entries: ['result'],
 		license: {
 			name: 'CC BY 4.0',
@@ -61,20 +62,14 @@ export default defineTileRegion({
 			await withRetry(() => downloadFile(ATOM_URL, atomPath), { maxAttempts: 3 });
 		}
 		const xml = await readFile(atomPath, 'utf-8');
-		return parseTileXmlUrls(xml);
+		return parseTileIds(xml);
 	},
-	download: async ({ xmlUrl, id }, { tempDir }) => {
-		const tileXmlPath = join(tempDir, `${id}.xml`);
+	download: async ({ url, id }, { tempDir }) => {
 		const zipPath = join(tempDir, `${id}.zip`);
 		const extractDir = join(tempDir, id);
 
 		try {
-			await withRetry(() => downloadFile(xmlUrl as string, tileXmlPath), { maxAttempts: 3 });
-			const tileXml = await readFile(tileXmlPath, 'utf-8');
-			const zipUrl = parseZipUrl(tileXml);
-			if (!zipUrl) return 'empty';
-
-			await withRetry(() => downloadFile(zipUrl, zipPath), { maxAttempts: 3 });
+			await withRetry(() => downloadFile(url, zipPath), { maxAttempts: 3 });
 			await extractZipFile(zipPath, extractDir);
 			rmSync(zipPath, { force: true });
 
@@ -83,109 +78,21 @@ export default defineTileRegion({
 
 			return { jp2Path, extractDir };
 		} catch (err) {
-			for (const p of [tileXmlPath, zipPath]) {
-				try {
-					rmSync(p, { force: true });
-				} catch {}
-			}
 			try {
-				rmSync(extractDir, { recursive: true, force: true });
+				rmSync(zipPath, { force: true });
 			} catch {}
+			await safeRemoveDir(extractDir);
 			throw err;
-		} finally {
-			try {
-				rmSync(tileXmlPath, { force: true });
-			} catch {}
 		}
 	},
-	convert: async ({ jp2Path, extractDir }, { dest, tempDir }) => {
-		const id = jp2Path.match(/([^/]+)\.jp2$/)?.[1] ?? 'tile';
-		const alphaPath = join(tempDir, `${id}_alpha.tif`);
-		const rgbVrt = join(tempDir, `${id}_rgb.vrt`);
-		const rgbaVrt = join(tempDir, `${id}_rgba.vrt`);
-
+	convert: async ({ jp2Path, extractDir }, { dest }) => {
 		try {
-			// Create alpha mask: opaque where any band < 254, transparent where all bands >= 254
-			await runCommand('gdal', [
-				'raster',
-				'calc',
-				'-i',
-				`A=${jp2Path}`,
-				'--calc=255*(((A[1]<254)+(A[2]<254)+(A[3]<254))>0)',
-				'--overwrite',
-				'--datatype=Byte',
-				'-o',
-				alphaPath,
-			]);
-
-			// Build RGB VRT from JP2 (bands 1-3)
-			await runCommand('gdalbuildvrt', [
-				'-b',
-				'1',
-				'-b',
-				'2',
-				'-b',
-				'3',
-				'-a_srs',
-				'EPSG:3045',
-				rgbVrt,
-				jp2Path as string,
-			]);
-
-			// Combine RGB + alpha into RGBA VRT
-			await runCommand('gdalbuildvrt', ['-separate', rgbaVrt, rgbVrt, alphaPath]);
-
-			throw new Error('not implemented from here');
-			// Set ColorInterp for proper band identification
-			await runCommand('xmlstarlet', [
-				'ed',
-				'-L',
-				'-s',
-				"/VRTDataset/VRTRasterBand[@band='1'][not(ColorInterp)]",
-				'-t',
-				'elem',
-				'-n',
-				'ColorInterp',
-				'-v',
-				'Red',
-				'-s',
-				"/VRTDataset/VRTRasterBand[@band='2'][not(ColorInterp)]",
-				'-t',
-				'elem',
-				'-n',
-				'ColorInterp',
-				'-v',
-				'Green',
-				'-s',
-				"/VRTDataset/VRTRasterBand[@band='3'][not(ColorInterp)]",
-				'-t',
-				'elem',
-				'-n',
-				'ColorInterp',
-				'-v',
-				'Blue',
-				'-s',
-				"/VRTDataset/VRTRasterBand[@band='4'][not(ColorInterp)]",
-				'-t',
-				'elem',
-				'-n',
-				'ColorInterp',
-				'-v',
-				'Alpha',
-				rgbaVrt,
-			]);
-
-			await runVersatilesRasterConvert(rgbaVrt, dest);
+			// JP2 has no embedded CRS; worldfile provides coordinates in EPSG:3045.
+			// White borders (255,255,255) are treated as transparent via --nodata.
+			await runVersatilesRasterConvert(jp2Path, dest, { nodata: '255,255,255' });
 		} finally {
-			for (const p of [alphaPath, rgbVrt, rgbaVrt]) {
-				try {
-					rmSync(p, { force: true });
-				} catch {}
-			}
-			try {
-				rmSync(extractDir, { recursive: true, force: true });
-			} catch {}
+			await safeRemoveDir(extractDir);
 		}
 	},
-	minFiles: 123456,
+	minFiles: 20000,
 });

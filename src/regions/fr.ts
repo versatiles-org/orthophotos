@@ -91,7 +91,7 @@ export default defineTileRegion({
 				const filename = url.split('/').pop()!;
 				const filePath = join(tempDir, filename);
 				if (!existsSync(filePath)) {
-					await withRetry(() => downloadFile(url, filePath), { maxAttempts: 3 });
+					await withRetry(() => downloadFile(url, filePath, { minSize: 1024, continue: true }), { maxAttempts: 3 });
 				}
 			}
 

@@ -92,17 +92,29 @@ export function runCommandWithRetry(
 	return withRetry(() => runCommand(cmd, args, cmdOptions), retryOptions);
 }
 
+export interface DownloadOptions {
+	/** Minimum expected file size in bytes. Fails if the downloaded file is smaller. Default: 1024 */
+	minSize?: number;
+	/** Resume a partially downloaded file instead of starting over. Default: false */
+	continue?: boolean;
+}
+
 /**
  * Downloads a file from a URL using curl.
  * Downloads to a temporary file first, then renames to avoid partial files.
  */
-export async function downloadFile(url: string, dest: string, minSize = 1024): Promise<void> {
+export async function downloadFile(url: string, dest: string, options?: DownloadOptions): Promise<void> {
 	const tmp = `${dest}.tmp`;
-	await runCommand('curl', ['-sLo', tmp, '--fail', url]);
-	const size = statSync(tmp).size;
-	if (size < minSize) {
-		rmSync(tmp, { force: true });
-		throw new Error(`Downloaded file is too small (${size} bytes, expected >= ${minSize}): ${url}`);
+	const args = ['-sLo', tmp, '--fail'];
+	if (options?.continue) args.push('-C', '-');
+	args.push(url);
+	await runCommand('curl', args);
+	if (options?.minSize) {
+		const size = statSync(tmp).size;
+		if (size < options.minSize) {
+			rmSync(tmp, { force: true });
+			throw new Error(`Downloaded file is too small (${size} bytes, expected >= ${options.minSize}): ${url}`);
+		}
 	}
 	renameSync(tmp, dest);
 }

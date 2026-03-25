@@ -49,7 +49,7 @@ async function taskFetch(ctx: TaskContext): Promise<void> {
 	console.log('Fetching new data...');
 
 	// Clean up any leftover temp files from a previous interrupted run
-	await safeRemoveDir(ctx.tempDir);
+	// await safeRemoveDir(ctx.tempDir);
 	mkdirSync(ctx.tempDir, { recursive: true });
 
 	const pipeline = getRegionPipeline(ctx.name);

@@ -2,7 +2,7 @@ import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { downloadFile, runCommand } from '../lib/command.ts';
-import { extractZipFile, safeRm, safeRemoveDir } from '../lib/fs.ts';
+import { extractZipFile, safeRm } from '../lib/fs.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
 import { runMosaicAssemble, runMosaicTile } from '../run/commands.ts';
@@ -98,8 +98,8 @@ export default defineTileRegion({
 		await runMosaicAssemble(filelistPath, dest, { lossless: true });
 		safeRm(filelistPath);
 		safeRm(zipPath);
-		await safeRemoveDir(extractDir);
-		await safeRemoveDir(tilesDir);
+		safeRm(extractDir);
+		safeRm(tilesDir);
 	},
 	minFiles: 2,
 });

@@ -3,7 +3,6 @@
  */
 
 import { readdirSync, renameSync, rmSync, type Dirent } from 'node:fs';
-import { rm } from 'node:fs/promises';
 import { extname, join } from 'node:path';
 import { runCommand } from './command.ts';
 
@@ -14,20 +13,6 @@ export function safeRm(path: string): void {
 	try {
 		rmSync(path, { recursive: true, force: true });
 	} catch {}
-}
-
-/**
- * Safely removes a directory, ignoring NotFound errors.
- * @param path Path to the directory to remove
- */
-export async function safeRemoveDir(path: string): Promise<void> {
-	try {
-		await rm(path, { recursive: true });
-	} catch (e) {
-		if ((e as NodeJS.ErrnoException).code !== 'ENOENT') {
-			throw e;
-		}
-	}
 }
 
 /**

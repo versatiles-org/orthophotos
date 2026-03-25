@@ -4,7 +4,7 @@ import { rmSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
-import { safeRemoveDir, walkSync, extractZipFile } from './fs.ts';
+import { walkSync, extractZipFile, safeRm } from './fs.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TEST_DIR = resolve(__dirname, '../../test-data/fs-temp');
@@ -30,7 +30,7 @@ test('safeRemoveDir - removes existing directory', async () => {
 	expect(statSync(testPath).isDirectory()).toBe(true);
 
 	// Remove it
-	await safeRemoveDir(testPath);
+	safeRm(testPath);
 
 	// Verify it's gone
 	expect(existsSync(testPath)).toBe(false);
@@ -47,7 +47,7 @@ test('safeRemoveDir - removes directory recursively', async () => {
 	writeFileSync(filePath, 'content');
 
 	// Remove recursively
-	await safeRemoveDir(testPath);
+	safeRm(testPath);
 
 	// Verify it's gone
 	expect(existsSync(testPath)).toBe(false);
@@ -56,7 +56,7 @@ test('safeRemoveDir - removes directory recursively', async () => {
 
 test('safeRemoveDir - ignores non-existent path', async () => {
 	// This should not throw
-	await safeRemoveDir('/nonexistent/path/that/does/not/exist');
+	safeRm('/nonexistent/path/that/does/not/exist');
 });
 
 describe('walkSync', () => {

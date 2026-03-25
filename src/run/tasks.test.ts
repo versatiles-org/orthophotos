@@ -3,7 +3,7 @@ import { mkdirSync, writeFileSync, existsSync } from 'node:fs';
 import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runTask, type TaskContext } from './tasks.ts';
-import { safeRemoveDir } from '../lib/fs.ts';
+import { safeRm } from '../lib/fs.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TEST_TEMP_DIR = resolve(__dirname, '../../test-data/tasks-temp');
@@ -17,7 +17,7 @@ function createTestContext(name: string): TaskContext {
 }
 
 async function cleanupTestTemp(): Promise<void> {
-	await safeRemoveDir(TEST_TEMP_DIR);
+	safeRm(TEST_TEMP_DIR);
 }
 
 test('runTask - throws on unknown task number', async () => {
@@ -51,8 +51,8 @@ test('runTask - task 3 (delete) removes directories', async () => {
 test('runTask - task 3 (delete) handles non-existent directories', async () => {
 	const ctx = createTestContext('nonexistent');
 
-	await safeRemoveDir(ctx.dataDir);
-	await safeRemoveDir(ctx.tempDir);
+	safeRm(ctx.dataDir);
+	safeRm(ctx.tempDir);
 
 	await runTask(3, ctx);
 

@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'node:f
 import { readFile, readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { downloadFile, runCommand } from '../lib/command.ts';
-import { safeRm, safeRemoveDir } from '../lib/fs.ts';
+import { safeRm } from '../lib/fs.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { pipeline } from '../lib/pipeline.ts';
 import { withRetry } from '../lib/retry.ts';
@@ -152,7 +152,7 @@ export default defineTileRegion({
 		rmSync(filelistPath, { force: true });
 
 		safeRm(extractDir);
-		await safeRemoveDir(tilesDir);
+		safeRm(tilesDir);
 	},
 	minFiles: 100,
 });

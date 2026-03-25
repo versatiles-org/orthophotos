@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { downloadFile, runCommand } from '../lib/command.ts';
-import { extractZipFile, safeRm, safeRemoveDir } from '../lib/fs.ts';
+import { extractZipFile, safeRm } from '../lib/fs.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
 import { runMosaicTile } from '../run/commands.ts';
@@ -93,7 +93,7 @@ export default defineTileRegion({
 
 		safeRm(vrtPath);
 		safeRm(zipPath);
-		await safeRemoveDir(extractDir);
+		safeRm(extractDir);
 	},
 	minFiles: 7,
 });

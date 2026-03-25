@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { XMLParser } from 'fast-xml-parser';
 import { downloadFile } from '../lib/command.ts';
-import { extractZipFile, safeRemoveDir } from '../lib/fs.ts';
+import { extractZipFile, safeRm } from '../lib/fs.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
 import { runMosaicTile } from '../run/commands.ts';
@@ -81,7 +81,7 @@ export default defineTileRegion({
 		// JP2 has no embedded CRS; coordinates come from .j2w worldfile in EPSG:3045.
 		// White borders (255,255,255) are treated as transparent via --nodata.
 		await runMosaicTile(jp2Path, dest, { crs: '3045', nodata: '255,255,255' });
-		await safeRemoveDir(extractDir);
+		safeRm(extractDir);
 	},
 	minFiles: 20000,
 });

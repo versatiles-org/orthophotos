@@ -8,7 +8,7 @@ import { createInterface } from 'node:readline';
 import { resolve, join } from 'node:path';
 import { runSshCommand, runMosaicAssemble, runScpUpload } from './commands.ts';
 import { TASK_NUMBER_TO_NAME } from './tasks.constants.ts';
-import { safeRm, safeRemoveDir } from '../lib/fs.ts';
+import { safeRm } from '../lib/fs.ts';
 import { getRegionPipeline } from '../regions/index.ts';
 import { getConfig } from '../config.ts';
 
@@ -49,7 +49,7 @@ async function taskFetch(ctx: TaskContext): Promise<void> {
 	console.log('Fetching new data...');
 
 	// Clean up any leftover temp files from a previous interrupted run
-	// await safeRemoveDir(ctx.tempDir);
+	// safeRm(ctx.tempDir);
 	mkdirSync(ctx.tempDir, { recursive: true });
 
 	const pipeline = getRegionPipeline(ctx.name);
@@ -156,8 +156,8 @@ async function taskDelete(ctx: TaskContext): Promise<void> {
 		}
 	}
 
-	await safeRemoveDir(ctx.dataDir);
-	await safeRemoveDir(ctx.tempDir);
+	safeRm(ctx.dataDir);
+	safeRm(ctx.tempDir);
 
 	console.log('  Local data deleted.');
 }

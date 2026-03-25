@@ -30,33 +30,25 @@ export default defineTileRegion({
 	},
 	download: async ({ url, id }, { tempDir }) => {
 		const jp2Path = join(tempDir, `${id}.jp2`);
-		const tifPath = join(tempDir, `${id}.tif`);
 		try {
 			console.log(`  Downloading ${id}.jp2 (~69 GB)...`);
 			await withRetry(() => downloadFile(url, jp2Path), { maxAttempts: 3 });
 
-			// Convert JP2 to uncompressed tiled GeoTIFF — versatiles crashes reading JP2 directly.
-			console.log(`  Converting JP2 to GeoTIFF...`);
-			await runCommand('gdal_translate', ['-q', '-of', 'GTiff', '-co', 'TILED=YES', jp2Path, tifPath]);
-			rmSync(jp2Path, { force: true });
-
-			return { tifPath };
+			return { jp2Path };
 		} catch (err) {
-			for (const p of [jp2Path, tifPath]) {
-				try {
-					rmSync(p, { force: true });
-				} catch {}
-			}
+			try {
+				rmSync(jp2Path, { force: true });
+			} catch { }
 			throw err;
 		}
 	},
-	convert: async ({ tifPath }, { dest, tempDir }) => {
+	convert: async ({ jp2Path }, { dest, tempDir }) => {
 		try {
-			await runMosaicTile(tifPath, dest, { crs: '2169', cacheDirectory: tempDir });
+			await runMosaicTile(jp2Path, dest, { crs: '2169', cacheDirectory: tempDir });
 		} finally {
 			try {
-				rmSync(tifPath, { force: true });
-			} catch {}
+				rmSync(jp2Path, { force: true });
+			} catch { }
 		}
 	},
 	minFiles: 1,

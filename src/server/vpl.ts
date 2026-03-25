@@ -7,8 +7,9 @@ import { getAllRegionMetadata } from '../regions/index.ts';
  * Generates a VersaTiles Pipeline Language (VPL) configuration file.
  * Stacks orthophoto containers (via sftp) from all successful regions onto satellite imagery.
  * @param filename - Output filename for the VPL file (relative to data directory)
+ * @param debug - If true, shows all orthophoto layers with level_min = 0 for debugging purposes. Otherwise, sets level_min = 11 to show only high-res tiles.
  */
-export function generateVPL(filename: string) {
+export function generateVPL(filename: string, debug = false): void {
 	const { host, port, dir } = config.ssh!;
 
 	function sftpUrl(path: string): string {
@@ -22,12 +23,13 @@ export function generateVPL(filename: string) {
 
 	// Add orthophoto layers for all successful regions via sftp
 	const allMetadata = getAllRegionMetadata();
+	const levelMin = debug ? 0 : 11;
 	for (const [id, meta] of allMetadata) {
 		if (meta.status !== 'released') continue;
 
 		const entries = meta.entries ?? ['result'];
 		for (const entry of entries) {
-			layers.push(`from_container filename="${sftpUrl(`${dir}/${id}/${entry}.versatiles`)}" | filter level_min=11`);
+			layers.push(`from_container filename="${sftpUrl(`${dir}/${id}/${entry}.versatiles`)}" | filter level_min=${levelMin}`);
 		}
 	}
 

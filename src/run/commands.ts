@@ -117,12 +117,12 @@ export async function runMosaicTile(
 export async function runMosaicAssemble(
 	filelistPath: string,
 	output: string,
-	options?: { lossless?: boolean },
+	options?: { lossless?: boolean; quiet?: boolean; quietOnError?: boolean },
 ): Promise<void> {
 	const args = ['mosaic', 'assemble', '--prescan', '--max-zoom', String(MAX_ZOOM), '--quality', QUALITY];
 	if (options?.lossless) {
 		args.push('--lossless');
 	}
 	args.push(filelistPath, output);
-	await runCommand('versatiles', args, { quiet: true });
+	await runCommand('versatiles', args, { quiet: options?.quiet, quietOnError: options?.quietOnError });
 }

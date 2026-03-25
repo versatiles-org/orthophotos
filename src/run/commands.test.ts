@@ -173,19 +173,44 @@ test('runMosaicTile - cleans up tmp file on error', async () => {
 test('runMosaicAssemble - calls versatiles with correct args', async () => {
 	mockRunCommand.mockResolvedValue({ success: true, code: 0, stdout: new Uint8Array(), stderr: new Uint8Array() });
 
-	await runMosaicAssemble('/filelist.txt', '/output.versatiles');
+	await runMosaicAssemble('/filelist.txt', '/output.versatiles', { quiet: true, quietOnError: true });
 
 	expect(mockRunCommand).toHaveBeenCalledWith(
 		'versatiles',
-		expect.arrayContaining(['mosaic', 'assemble', '--prescan', '/filelist.txt', '/output.versatiles']),
-		{ quiet: true },
+		[
+			'mosaic',
+			'assemble',
+			'--prescan',
+			'--max-zoom',
+			'17',
+			'--quality',
+			'70,16:50,17:30',
+			'/filelist.txt',
+			'/output.versatiles',
+		],
+		{ quiet: true, quietOnError: true },
 	);
 });
 
 test('runMosaicAssemble - passes lossless option', async () => {
 	mockRunCommand.mockResolvedValue({ success: true, code: 0, stdout: new Uint8Array(), stderr: new Uint8Array() });
 
-	await runMosaicAssemble('/filelist.txt', '/output.versatiles', { lossless: true });
+	await runMosaicAssemble('/filelist.txt', '/output.versatiles', { lossless: true, quiet: true, quietOnError: true });
 
-	expect(mockRunCommand).toHaveBeenCalledWith('versatiles', expect.arrayContaining(['--lossless']), { quiet: true });
+	expect(mockRunCommand).toHaveBeenCalledWith(
+		'versatiles',
+		[
+			'mosaic',
+			'assemble',
+			'--prescan',
+			'--max-zoom',
+			'17',
+			'--quality',
+			'70,16:50,17:30',
+			'--lossless',
+			'/filelist.txt',
+			'/output.versatiles',
+		],
+		{ quiet: true, quietOnError: true },
+	);
 });

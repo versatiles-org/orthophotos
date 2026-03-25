@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { expandTasks, parseArgs, validateRegionName } from './args.ts';
+import { expandTasks, getHelpText, parseArgs, validateRegionName } from './args.ts';
 
 // validateRegionName tests
 test('validateRegionName - accepts two-letter country code', () => {
@@ -91,4 +91,26 @@ test('parseArgs - throws on missing task', () => {
 
 test('parseArgs - throws on invalid region name', () => {
 	expect(() => parseArgs(['invalid', '1'])).toThrow('Invalid region name');
+});
+
+test('expandTasks - throws on invalid number in descending range', () => {
+	expect(() => expandTasks('3-0')).toThrow('Invalid task number');
+});
+
+test('expandTasks - handles empty tokens', () => {
+	expect(expandTasks('1,,3')).toEqual([1, 3]);
+});
+
+test('parseArgs - throws with no tasks specified', () => {
+	expect(() => parseArgs(['de', ''])).toThrow('No tasks specified');
+});
+
+test('getHelpText - returns help text with usage info', () => {
+	const help = getHelpText();
+	expect(help).toContain('<name>');
+	expect(help).toContain('<task>');
+	expect(help).toContain('fetch');
+	expect(help).toContain('merge');
+	expect(help).toContain('delete');
+	expect(help).toContain('all');
 });

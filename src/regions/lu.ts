@@ -15,7 +15,7 @@ const LAYER = 'ortho_2025';
 export default defineTileRegion({
 	name: 'lu',
 	meta: {
-		status: 'scraping',
+		status: 'released',
 		notes: ['JP2 download is corrupt; using WMS instead.'],
 		entries: ['result'],
 		license: {

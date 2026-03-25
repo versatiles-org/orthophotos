@@ -16,7 +16,7 @@
 		"upgrade": "npm-check-updates -u && npm install"
 	},
 	"dependencies": {
-		"fast-xml-parser": "^5.5.8",
+		"fast-xml-parser": "^5.5.9",
 		"topojson-client": "^3.1.0"
 	},
 	"engines": {
@@ -31,7 +31,7 @@
 		"npm-check-updates": "^19.6.5",
 		"prettier": "^3.8.1",
 		"tsx": "^4.21.0",
-		"typescript": "^6.0.2",
+		"typescript": "^5.9.3",
 		"typescript-eslint": "^8.57.2",
 		"vitest": "^4.1.1"
 	}

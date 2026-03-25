@@ -56,13 +56,12 @@ async function taskFetch(ctx: TaskContext): Promise<void> {
 	if (!pipeline?.run) {
 		throw new Error(`No pipeline defined for region "${ctx.name}"`);
 	}
-	try {
-		await pipeline.run({
-			name: ctx.name,
-			dataDir: ctx.dataDir,
-			tempDir: ctx.tempDir,
-		});
-	} catch {}
+
+	await pipeline.run({
+		name: ctx.name,
+		dataDir: ctx.dataDir,
+		tempDir: ctx.tempDir,
+	});
 
 	// Scan for .versatiles files and write filelist.txt
 	const versatilesFiles: string[] = [];
@@ -107,7 +106,7 @@ async function taskMerge(ctx: TaskContext): Promise<void> {
 	} catch (err) {
 		try {
 			rmSync(localTmp, { force: true });
-		} catch {}
+		} catch { }
 		throw err;
 	}
 
@@ -134,7 +133,7 @@ async function uploadToRemote(localPath: string, regionName: string, filename: s
 	} catch (err) {
 		try {
 			await runSshCommand(`rm -f '${tmpRemote}'`);
-		} catch {}
+		} catch { }
 		throw err;
 	}
 }

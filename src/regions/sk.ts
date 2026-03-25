@@ -1,12 +1,13 @@
-import { existsSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { XMLParser } from 'fast-xml-parser';
 import { downloadFile } from '../lib/command.ts';
-import { extractZipFile } from '../lib/fs.ts';
+import { extractZipFile, safeRm } from '../lib/fs.ts';
+import { pipeline } from '../lib/pipeline.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
-import { runMosaicTile } from '../run/commands.ts';
+import { runMosaicAssemble, runMosaicTile } from '../run/commands.ts';
 
 const ATOM_URL = 'https://inspirews.skgeodesy.sk/atom/7efad194-3006-408f-9e6c-c06dc79703bd_dataFeed.atom';
 
@@ -52,40 +53,56 @@ export default defineTileRegion({
 			console.log('  Fetching atom feed...');
 			await withRetry(() => downloadFile(ATOM_URL, atomPath), { maxAttempts: 3 });
 		}
-
-		// Download and extract all ZIPs, collect TIF paths
 		const xml = await readFile(atomPath, 'utf-8');
 		const zips = parseZipUrls(xml);
 		console.log(`  Found ${zips.length} zip files`);
+		return zips;
+	},
+	downloadConcurrency: 1,
+	download: async ({ url, id }, { tempDir }) => {
+		const zipPath = join(tempDir, `${id}.zip`);
+		console.log(`  Downloading ${id}.zip...`);
+		await withRetry(() => downloadFile(url, zipPath), { maxAttempts: 3 });
+		return { zipPath };
+	},
+	convertLimit: { concurrency: 1 },
+	convert: async ({ zipPath }, { dest, tempDir }) => {
+		const extractDir = join(tempDir, `extract_${Date.now()}`);
+		const tilesDir = join(tempDir, `tiles_${Date.now()}`);
 
-		const items: { id: string; tifPath: string }[] = [];
+		// Extract ZIP
+		console.log(`  Extracting ${basename(zipPath)}...`);
+		await extractZipFile(zipPath, extractDir);
+		safeRm(zipPath);
 
-		for (const { url, id } of zips) {
-			const extractDir = join(ctx.tempDir, id);
-			if (!existsSync(extractDir)) {
-				const zipPath = join(ctx.tempDir, `${id}.zip`);
-				console.log(`  Downloading ${id}...`);
-				await withRetry(() => downloadFile(url, zipPath), { maxAttempts: 3 });
-				await extractZipFile(zipPath, extractDir);
-				rmSync(zipPath, { force: true });
-			}
+		// Find all TIF files
+		const files = await readdir(extractDir, { recursive: true });
+		const tifFiles = files
+			.map((f) => (typeof f === 'string' ? f : String(f)))
+			.filter((f) => f.endsWith('.tif'))
+			.map((f) => join(extractDir, f));
 
-			const files = await readdir(extractDir, { recursive: true });
-			for (const file of files) {
-				const name = typeof file === 'string' ? file : String(file);
-				if (!name.endsWith('.tif')) continue;
-				const tifPath = join(extractDir, name);
-				items.push({ id: basename(name, '.tif'), tifPath });
-			}
+		if (tifFiles.length === 0) {
+			throw new Error(`No TIF files found in ${extractDir}`);
 		}
 
-		return items;
+		// Convert each TIF to a .versatiles container individually
+		mkdirSync(tilesDir, { recursive: true });
+		console.log(`  Converting ${tifFiles.length} TIF files...`);
+		const versatilesFiles: string[] = [];
+		await pipeline(tifFiles, { progress: { labels: ['converted'] } }).forEach(4, async (tifPath) => {
+			const tileName = basename(tifPath, '.tif') + '.versatiles';
+			const tilePath = join(tilesDir, tileName);
+			await runMosaicTile(tifPath, tilePath, { crs: '3046' });
+			versatilesFiles.push(tilePath);
+			return 'converted';
+		});
+
+		// Assemble all per-file containers into one
+		const filelistPath = join(tempDir, 'filelist.txt');
+		writeFileSync(filelistPath, versatilesFiles.join('\n'));
+		await runMosaicAssemble(filelistPath, dest, { lossless: true });
+		safeRm(filelistPath);
 	},
-	download: async ({ tifPath }) => {
-		return { src: tifPath };
-	},
-	convert: async ({ src }, { dest }) => {
-		await runMosaicTile(src, dest, { crs: '3046' });
-	},
-	minFiles: 123456,
+	minFiles: 3,
 });

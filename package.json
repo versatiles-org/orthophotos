@@ -3,7 +3,8 @@
 	"version": "1.0.0",
 	"type": "module",
 	"scripts": {
-		"check": "npm run format:check && npm run typecheck && npm run test",
+		"check": "npm run lint && npm run format:check && npm run typecheck && npm run test",
+		"lint": "eslint 'src/**/*.ts'",
 		"format:check": "prettier --check 'src/**/*.ts'",
 		"format": "prettier --log-level warn --write 'src/**/*.ts'",
 		"run": "node --env-file=config.env --import tsx/esm src/run.ts",
@@ -28,10 +29,12 @@
 		"@types/node": "^25.5.0",
 		"@types/topojson-client": "^3.1.5",
 		"@vitest/coverage-v8": "^4.1.1",
+		"eslint": "^10.1.0",
 		"npm-check-updates": "^19.6.5",
 		"prettier": "^3.8.1",
 		"tsx": "^4.21.0",
 		"typescript": "^6.0.2",
+		"typescript-eslint": "^8.57.2",
 		"vitest": "^4.1.1"
 	}
 }

@@ -1,10 +1,12 @@
-import { existsSync, renameSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { downloadFile, runCommand } from '../lib/command.ts';
+import { safeRemoveDir } from '../lib/fs.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
+import { pipeline } from '../lib/pipeline.ts';
 import { withRetry } from '../lib/retry.ts';
-import { runMosaicTile } from '../run/commands.ts';
+import { runMosaicAssemble, runMosaicTile } from '../run/commands.ts';
 
 const INDEX_URL = 'https://geoservices.ign.fr/bdortho';
 
@@ -82,7 +84,7 @@ export default defineTileRegion({
 		const tmpExtractDir = `${extractDir}.tmp`;
 		try {
 			rmSync(tmpExtractDir, { recursive: true, force: true });
-		} catch {}
+		} catch { }
 
 		try {
 			// Download all 7z parts
@@ -120,25 +122,25 @@ export default defineTileRegion({
 				const filename = url.split('/').pop()!;
 				try {
 					rmSync(join(tempDir, filename), { force: true });
-				} catch {}
+				} catch { }
 			}
 
 			return { extractDir };
 		} catch (err) {
 			try {
 				rmSync(tmpExtractDir, { recursive: true, force: true });
-			} catch {}
+			} catch { }
 			for (const url of urls) {
 				const filename = url.split('/').pop()!;
 				try {
 					rmSync(join(tempDir, filename), { force: true });
-				} catch {}
+				} catch { }
 			}
 			throw err;
 		}
 	},
 	convert: async ({ extractDir }, { dest, tempDir }) => {
-		const vrtPath = `${dest}.vrt`;
+		const tilesDir = join(tempDir, `tiles_${Date.now()}`);
 		try {
 			const files = await readdir(extractDir);
 			const jp2Files = files.filter((f) => f.endsWith('.jp2')).map((f) => join(extractDir, f));
@@ -147,15 +149,28 @@ export default defineTileRegion({
 				throw new Error(`No JP2 files found in ${extractDir}`);
 			}
 
-			await runCommand('gdalbuildvrt', [vrtPath, ...jp2Files]);
-			await runMosaicTile(vrtPath, dest, { cacheDirectory: tempDir });
+			// Convert each JP2 to a .versatiles container individually
+			mkdirSync(tilesDir, { recursive: true });
+			console.log(`  Converting ${jp2Files.length} JP2 files...`);
+			const versatilesFiles: string[] = [];
+			await pipeline(jp2Files, { progress: { labels: ['converted'] } }).forEach(4, async (jp2Path) => {
+				const tileName = basename(jp2Path, '.jp2') + '.versatiles';
+				const tilePath = join(tilesDir, tileName);
+				await runMosaicTile(jp2Path, tilePath);
+				versatilesFiles.push(tilePath);
+				return 'converted';
+			});
+
+			// Assemble all per-file containers into one
+			const filelistPath = join(tempDir, 'filelist.txt');
+			writeFileSync(filelistPath, versatilesFiles.join('\n'));
+			await runMosaicAssemble(filelistPath, dest, { lossless: true, quiet: true });
+			rmSync(filelistPath, { force: true });
 		} finally {
 			try {
-				rmSync(vrtPath, { force: true });
-			} catch {}
-			try {
 				rmSync(extractDir, { recursive: true, force: true });
-			} catch {}
+			} catch { }
+			await safeRemoveDir(tilesDir);
 		}
 	},
 	minFiles: 100,

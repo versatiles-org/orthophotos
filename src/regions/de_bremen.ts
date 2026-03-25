@@ -1,4 +1,4 @@
-import { rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { downloadFile, runCommand } from '../lib/command.ts';
@@ -80,7 +80,6 @@ export default defineTileRegion({
 			}
 
 			// Convert each image file to a .versatiles container individually
-			const { mkdirSync } = await import('node:fs');
 			mkdirSync(tilesDir, { recursive: true });
 
 			console.log(`  Converting ${imageFiles.length} image files...`);

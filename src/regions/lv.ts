@@ -1,5 +1,5 @@
 import { existsSync, rmSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { downloadFile } from '../lib/command.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
@@ -34,7 +34,6 @@ export default defineTileRegion({
 			const tmpPath = join(ctx.tempDir, 'index.tmp');
 			await withRetry(() => downloadFile(INDEX_URL, tmpPath), { maxAttempts: 3 });
 			const content = await readFile(tmpPath, 'utf-8');
-			const { writeFile } = await import('node:fs/promises');
 			await writeFile(indexPath, content.replace(/\r/g, ''));
 			rmSync(tmpPath, { force: true });
 		}

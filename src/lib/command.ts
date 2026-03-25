@@ -4,6 +4,7 @@
 
 import { spawn } from 'node:child_process';
 import { type RetryOptions, withRetry } from './retry.ts';
+import { renameSync, rmSync, statSync } from 'node:fs';
 
 interface CommandOutput {
 	success: boolean;
@@ -95,9 +96,13 @@ export function runCommandWithRetry(
  * Downloads a file from a URL using curl.
  * Downloads to a temporary file first, then renames to avoid partial files.
  */
-export async function downloadFile(url: string, dest: string): Promise<void> {
+export async function downloadFile(url: string, dest: string, minSize = 1024): Promise<void> {
 	const tmp = `${dest}.tmp`;
-	await runCommand('curl', ['-sLo', tmp, '--http1.1', url]);
-	const { renameSync } = await import('node:fs');
+	await runCommand('curl', ['-sLo', tmp, '--fail', url]);
+	const size = statSync(tmp).size;
+	if (size < minSize) {
+		rmSync(tmp, { force: true });
+		throw new Error(`Downloaded file is too small (${size} bytes, expected >= ${minSize}): ${url}`);
+	}
 	renameSync(tmp, dest);
 }

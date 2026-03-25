@@ -11,7 +11,7 @@ import { runSshCommand, runMosaicAssemble, runScpUpload } from './commands.ts';
 import { TASK_NUMBER_TO_NAME } from './tasks.constants.ts';
 import { safeRemoveDir } from '../lib/fs.ts';
 import { getRegionPipeline } from '../regions/index.ts';
-import { config } from '../config.ts';
+import { getConfig } from '../config.ts';
 
 export interface TaskContext {
 	name: string; // Region identifier (e.g., "de/bw")
@@ -120,7 +120,7 @@ async function taskMerge(ctx: TaskContext): Promise<void> {
  * Writes to a temp file first, then atomically renames on success.
  */
 async function uploadToRemote(localPath: string, regionName: string, filename: string): Promise<void> {
-	const { dir } = config.ssh!;
+	const { dir } = getConfig().ssh!;
 	const remoteDir = `${dir}/${regionName}`;
 	const finalRemote = `${remoteDir}/${filename}`;
 	const tmpRemote = `${finalRemote}.tmp`;

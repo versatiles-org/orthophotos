@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { config } from '../config.ts';
+import { getConfig } from '../config.ts';
 import { getAllRegionMetadata } from '../regions/index.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -17,7 +17,7 @@ const GEOJSON_DIR = resolve(__dirname, '../../data');
  * @param debug - If true, shows all orthophoto layers with level_min = 0 for debugging purposes.
  */
 export function generateVPL(filename: string, debug = false): void {
-	const { host, port, dir } = config.ssh!;
+	const { host, port, dir } = getConfig().ssh!;
 
 	function sftpUrl(path: string): string {
 		path = path.replace(/\/\/+/g, '/');
@@ -25,7 +25,7 @@ export function generateVPL(filename: string, debug = false): void {
 		return `sftp://${host}:${port ?? ''}${path}`;
 	}
 
-	const dataDir = resolve(config.dirData);
+	const dataDir = resolve(getConfig().dirData);
 	const masksDir = resolve(dataDir, 'masks');
 	mkdirSync(masksDir, { recursive: true });
 

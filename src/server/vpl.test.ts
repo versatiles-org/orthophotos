@@ -2,14 +2,14 @@ import { expect, test } from 'vitest';
 import { mkdirSync, readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { config } from '../config.ts';
+import { getConfig } from '../config.ts';
 import { generateVPL } from './vpl.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TEST_DIR = resolve(__dirname, '../../test-data/vpl');
 
 function setup(base: string) {
-	config.dirData = base;
+	getConfig().dirData = base;
 	mkdirSync(base, { recursive: true });
 }
 

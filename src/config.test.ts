@@ -1,18 +1,20 @@
 import { expect, test } from 'vitest';
-import { config } from './config.ts';
+import { getConfig } from './config.ts';
 
-test('config - dirData is set from env', () => {
-	// dir_data is set in the test environment via process.env
+test('getConfig - dirData is set from env', () => {
+	const config = getConfig();
 	expect(typeof config.dirData).toBe('string');
 	expect(config.dirData.length).toBeGreaterThan(0);
 });
 
-test('config - dirTemp is set from env', () => {
+test('getConfig - dirTemp is set from env', () => {
+	const config = getConfig();
 	expect(typeof config.dirTemp).toBe('string');
 	expect(config.dirTemp.length).toBeGreaterThan(0);
 });
 
-test('config - ssh is populated when ssh_host is set', () => {
+test('getConfig - ssh is populated when ssh_host is set', () => {
+	const config = getConfig();
 	if (process.env['ssh_host']) {
 		expect(config.ssh).toBeDefined();
 		expect(config.ssh!.host).toBe(process.env['ssh_host']);
@@ -20,7 +22,8 @@ test('config - ssh is populated when ssh_host is set', () => {
 	}
 });
 
-test('config - ssh is undefined when ssh_host is not set', () => {
+test('getConfig - ssh is undefined when ssh_host is not set', () => {
+	const config = getConfig();
 	if (!process.env['ssh_host']) {
 		expect(config.ssh).toBeUndefined();
 	}

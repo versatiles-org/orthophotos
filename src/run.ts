@@ -15,7 +15,7 @@
 import { resolve } from 'node:path';
 import { mkdirSync } from 'node:fs';
 import { runCommand } from './lib/command.ts';
-import { config } from './config.ts';
+import { getConfig } from './config.ts';
 import { getHelpText, parseArgs } from './run/args.ts';
 import { checkRequiredCommands, runSshCommand } from './run/commands.ts';
 import { runTask, type TaskContext } from './run/tasks.ts';
@@ -52,8 +52,8 @@ async function main(): Promise<void> {
 	}
 
 	// Build paths
-	const dataDir = resolve(config.dirData, args.name);
-	const tempDir = resolve(config.dirTemp, args.name);
+	const dataDir = resolve(getConfig().dirData, args.name);
+	const tempDir = resolve(getConfig().dirTemp, args.name);
 
 	// Ensure data directory exists
 	mkdirSync(dataDir, { recursive: true });

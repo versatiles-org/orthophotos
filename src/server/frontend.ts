@@ -1,6 +1,6 @@
 import { resolve } from 'node:path';
 import { existsSync, renameSync } from 'node:fs';
-import { config } from '../config.ts';
+import { getConfig } from '../config.ts';
 import { runCommandWithRetry } from '../lib/command.ts';
 
 /**
@@ -9,7 +9,7 @@ import { runCommandWithRetry } from '../lib/command.ts';
  * Uses retry logic for resilience against transient network failures.
  */
 export async function downloadFrontend() {
-	const filename = resolve(config.dirData, 'frontend.br.tar.gz');
+	const filename = resolve(getConfig().dirData, 'frontend.br.tar.gz');
 	if (existsSync(filename)) {
 		console.log('Frontend archive already exists, skipping download.');
 		return;

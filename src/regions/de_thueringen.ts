@@ -1,8 +1,8 @@
-import { rmSync, writeFileSync } from 'node:fs';
+import { writeFileSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { downloadFile, runCommand } from '../lib/command.ts';
-import { extractZipFile } from '../lib/fs.ts';
+import { extractZipFile, safeRm } from '../lib/fs.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
 import { runMosaicTile } from '../run/commands.ts';
@@ -48,55 +48,42 @@ export default defineTileRegion({
 		const zipPath = join(tempDir, `${id}.zip`);
 		const extractDir = join(tempDir, id);
 
-		try {
-			const bbox = `${x * 1000}&bbox%5B%5D=${y * 1000}&bbox%5B%5D=${(x + 1) * 1000}&bbox%5B%5D=${(y + 1) * 1000}`;
-			const apiUrl = `https://geoportal.geoportal-th.de/gaialight-th/_apps/dladownload/_ajax/overview.php?crs=EPSG%3A25832&bbox%5B%5D=${bbox}&type%5B%5D=op`;
+		const bbox = `${x * 1000}&bbox%5B%5D=${y * 1000}&bbox%5B%5D=${(x + 1) * 1000}&bbox%5B%5D=${(y + 1) * 1000}`;
+		const apiUrl = `https://geoportal.geoportal-th.de/gaialight-th/_apps/dladownload/_ajax/overview.php?crs=EPSG%3A25832&bbox%5B%5D=${bbox}&type%5B%5D=op`;
 
-			await withRetry(() => downloadFile(apiUrl, jsonPath), { maxAttempts: 3 });
-			const json = JSON.parse(await readFile(jsonPath, 'utf-8'));
+		await withRetry(() => downloadFile(apiUrl, jsonPath), { maxAttempts: 3 });
+		const json = JSON.parse(await readFile(jsonPath, 'utf-8'));
 
-			// Find the GID for this tile (most recent flight)
-			const features = json.result?.features ?? [];
-			type Feature = { properties: { bildnr: string; bildflugnr: number; gid: number } };
-			const matching = (features as Feature[]).filter((f) => f.properties.bildnr === id);
-			if (matching.length === 0) {
-				writeFileSync(skipDest, '');
-				return 'empty';
-			}
-			const best = matching.reduce((a, b) => (a.properties.bildflugnr > b.properties.bildflugnr ? a : b));
-
-			const downloadUrl = `https://geoportal.geoportal-th.de/gaialight-th/_apps/dladownload/download.php?type=op&id=${best.properties.gid}`;
-			await withRetry(() => runCommand('curl', ['-sko', zipPath, downloadUrl]), {
-				maxAttempts: 3,
-			});
-
-			await extractZipFile(zipPath, extractDir);
-
-			// Find the single .tif file
-			const files = await readdir(extractDir, { recursive: true });
-			const tifFile = files.find((f) => typeof f === 'string' && f.endsWith('.tif'));
-			if (!tifFile) {
-				writeFileSync(skipDest, '');
-				return 'empty';
-			}
-
-			return { srcTif: join(extractDir, tifFile), extractDir };
-		} finally {
-			for (const p of [jsonPath, zipPath]) {
-				try {
-					rmSync(p, { force: true });
-				} catch {}
-			}
+		// Find the GID for this tile (most recent flight)
+		const features = json.result?.features ?? [];
+		type Feature = { properties: { bildnr: string; bildflugnr: number; gid: number } };
+		const matching = (features as Feature[]).filter((f) => f.properties.bildnr === id);
+		if (matching.length === 0) {
+			writeFileSync(skipDest, '');
+			return 'empty';
 		}
+		const best = matching.reduce((a, b) => (a.properties.bildflugnr > b.properties.bildflugnr ? a : b));
+
+		const downloadUrl = `https://geoportal.geoportal-th.de/gaialight-th/_apps/dladownload/download.php?type=op&id=${best.properties.gid}`;
+		await withRetry(() => runCommand('curl', ['-sko', zipPath, downloadUrl]), {
+			maxAttempts: 3,
+		});
+
+		await extractZipFile(zipPath, extractDir);
+
+		// Find the single .tif file
+		const files = await readdir(extractDir, { recursive: true });
+		const tifFile = files.find((f) => typeof f === 'string' && f.endsWith('.tif'));
+		if (!tifFile) {
+			writeFileSync(skipDest, '');
+			return 'empty';
+		}
+
+		return { srcTif: join(extractDir, tifFile), extractDir };
 	},
 	convert: async ({ srcTif, extractDir }, { dest }) => {
-		try {
-			await runMosaicTile(srcTif, dest);
-		} finally {
-			try {
-				rmSync(extractDir, { recursive: true, force: true });
-			} catch {}
-		}
+		await runMosaicTile(srcTif, dest);
+		safeRm(extractDir);
 	},
 	minFiles: 35000,
 });

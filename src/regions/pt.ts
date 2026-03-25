@@ -1,6 +1,7 @@
 import { rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { downloadFile } from '../lib/command.ts';
+import { safeRm } from '../lib/fs.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
 import { isValidRaster } from '../lib/validators.ts';
@@ -75,54 +76,40 @@ export default defineTileRegion({
 		const tifPath = join(tempDir, `${item.id}.tif`);
 		const url = buildTileUrl(item);
 
-		try {
-			await withRetry(() => downloadFile(url, pngPath, { minSize: 500 }), { maxAttempts: 3 });
+		await withRetry(() => downloadFile(url, pngPath, { minSize: 500 }), { maxAttempts: 3 });
 
-			// The PNG has no georeference — create a GeoTIFF with the correct extent
-			const { runCommand } = await import('../lib/command.ts');
-			await runCommand('gdal_translate', [
-				'-q',
-				'-of',
-				'GTiff',
-				'-expand',
-				'rgb',
-				'-a_srs',
-				'EPSG:3857',
-				'-a_ullr',
-				String(item.x0),
-				String(item.y1),
-				String(item.x1),
-				String(item.y0),
-				'-co',
-				'TILED=YES',
-				pngPath,
-				tifPath,
-			]);
-			rmSync(pngPath, { force: true });
+		// The PNG has no georeference — create a GeoTIFF with the correct extent
+		const { runCommand } = await import('../lib/command.ts');
+		await runCommand('gdal_translate', [
+			'-q',
+			'-of',
+			'GTiff',
+			'-expand',
+			'rgb',
+			'-a_srs',
+			'EPSG:3857',
+			'-a_ullr',
+			String(item.x0),
+			String(item.y1),
+			String(item.x1),
+			String(item.y0),
+			'-co',
+			'TILED=YES',
+			pngPath,
+			tifPath,
+		]);
+		rmSync(pngPath, { force: true });
 
-			if (!(await isValidRaster(tifPath))) {
-				errors.add(`${item.id}.tif (${url})`);
-				return 'invalid';
-			}
-
-			return { tifPath };
-		} catch (err) {
-			for (const p of [pngPath, tifPath]) {
-				try {
-					rmSync(p, { force: true });
-				} catch {}
-			}
-			throw err;
+		if (!(await isValidRaster(tifPath))) {
+			errors.add(`${item.id}.tif (${url})`);
+			return 'invalid';
 		}
+
+		return { tifPath };
 	},
 	convert: async ({ tifPath }, { dest }) => {
-		try {
-			await runMosaicTile(tifPath, dest);
-		} finally {
-			try {
-				rmSync(tifPath, { force: true });
-			} catch {}
-		}
+		await runMosaicTile(tifPath, dest);
+		safeRm(tifPath);
 	},
 	minFiles: 500,
 });

@@ -1,7 +1,8 @@
-import { existsSync, rmSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { downloadFile, runCommand } from '../lib/command.ts';
+import { safeRm } from '../lib/fs.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
 import { computeWmsBlocks, generateWmsXml, parseWmsCapabilities } from '../lib/wms.ts';
@@ -73,69 +74,53 @@ export default defineTileRegion({
 		const tifPath = join(tempDir, `${item.id}.tif`);
 		const maskedPath = join(tempDir, `${item.id}_masked.tif`);
 
-		try {
-			await runCommand('gdal_translate', [
-				'-q',
-				item.wmsXmlPath as string,
-				tifPath,
-				'-projwin',
-				String(item.x0),
-				String(item.y1),
-				String(item.x1),
-				String(item.y0),
-				'-projwin_srs',
-				'EPSG:3857',
-				'-outsize',
-				String(item.blockPx),
-				String(item.blockPx),
-				'-of',
-				'GTiff',
-				'-co',
-				'COMPRESS=DEFLATE',
-				'-co',
-				'PREDICTOR=2',
-				'-co',
-				'ALPHA=YES',
-			]);
+		await runCommand('gdal_translate', [
+			'-q',
+			item.wmsXmlPath as string,
+			tifPath,
+			'-projwin',
+			String(item.x0),
+			String(item.y1),
+			String(item.x1),
+			String(item.y0),
+			'-projwin_srs',
+			'EPSG:3857',
+			'-outsize',
+			String(item.blockPx),
+			String(item.blockPx),
+			'-of',
+			'GTiff',
+			'-co',
+			'COMPRESS=DEFLATE',
+			'-co',
+			'PREDICTOR=2',
+			'-co',
+			'ALPHA=YES',
+		]);
 
-			// Black background → transparent
-			await runCommand('gdal', ['raster', 'edit', '--nodata', '0', tifPath]);
-			await runCommand('gdal_translate', [
-				'-q',
-				'-b',
-				'1',
-				'-b',
-				'2',
-				'-b',
-				'3',
-				'-b',
-				'mask',
-				'-colorinterp_4',
-				'alpha',
-				tifPath,
-				maskedPath,
-			]);
+		// Black background → transparent
+		await runCommand('gdal', ['raster', 'edit', '--nodata', '0', tifPath]);
+		await runCommand('gdal_translate', [
+			'-q',
+			'-b',
+			'1',
+			'-b',
+			'2',
+			'-b',
+			'3',
+			'-b',
+			'mask',
+			'-colorinterp_4',
+			'alpha',
+			tifPath,
+			maskedPath,
+		]);
 
-			return { srcPath: maskedPath };
-		} catch (err) {
-			try {
-				rmSync(maskedPath, { force: true });
-			} catch {}
-			throw err;
-		} finally {
-			try {
-				rmSync(tifPath, { force: true });
-			} catch {}
-		}
+		return { srcPath: maskedPath };
 	},
 	convert: async ({ srcPath }, { dest }) => {
-		try {
-			await runMosaicTile(srcPath as string, dest);
-		} finally {
-			try {
-				rmSync(srcPath as string, { force: true });
-			} catch {}
-		}
+		await runMosaicTile(srcPath as string, dest);
+		safeRm(srcPath as string);
 	},
 	minFiles: 123456,
 });

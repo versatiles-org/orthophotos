@@ -1,8 +1,8 @@
-import { existsSync, rmSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { downloadFile, runCommand } from '../lib/command.ts';
-import { extractZipFile, safeRemoveDir } from '../lib/fs.ts';
+import { extractZipFile, safeRm, safeRemoveDir } from '../lib/fs.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
 import { runMosaicTile } from '../run/commands.ts';
@@ -70,33 +70,30 @@ export default defineTileRegion({
 	convert: async ({ zipPath }, { dest, tempDir }) => {
 		const extractDir = join(tempDir, basename(zipPath, '.zip'));
 		const vrtPath = `${dest}.vrt`;
-		try {
-			console.log(`  Extracting ${basename(zipPath)}...`);
-			await extractZipFile(zipPath, extractDir);
 
-			// Find all .tif files in the extracted directory
-			const files = await readdir(extractDir, { recursive: true });
-			const tifFiles = files
-				.map((f) => (typeof f === 'string' ? f : String(f)))
-				.filter((f) => f.endsWith('.tif'))
-				.map((f) => join(extractDir, f));
+		console.log(`  Extracting ${basename(zipPath)}...`);
+		await extractZipFile(zipPath, extractDir);
 
-			if (tifFiles.length === 0) {
-				throw new Error(`No .tif files found in ${extractDir}`);
-			}
+		// Find all .tif files in the extracted directory
+		const files = await readdir(extractDir, { recursive: true });
+		const tifFiles = files
+			.map((f) => (typeof f === 'string' ? f : String(f)))
+			.filter((f) => f.endsWith('.tif'))
+			.map((f) => join(extractDir, f));
 
-			// Build VRT from all TIFs
-			await runCommand('gdalbuildvrt', [vrtPath, ...tifFiles]);
-
-			// Convert VRT to versatiles
-			await runMosaicTile(vrtPath, dest);
-		} finally {
-			try {
-				rmSync(vrtPath, { force: true });
-				rmSync(zipPath, { force: true });
-			} catch {}
-			await safeRemoveDir(extractDir);
+		if (tifFiles.length === 0) {
+			throw new Error(`No .tif files found in ${extractDir}`);
 		}
+
+		// Build VRT from all TIFs
+		await runCommand('gdalbuildvrt', [vrtPath, ...tifFiles]);
+
+		// Convert VRT to versatiles
+		await runMosaicTile(vrtPath, dest);
+
+		safeRm(vrtPath);
+		safeRm(zipPath);
+		await safeRemoveDir(extractDir);
 	},
 	minFiles: 7,
 });

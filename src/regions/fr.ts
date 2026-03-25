@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'node:f
 import { readFile, readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { downloadFile, runCommand } from '../lib/command.ts';
-import { safeRemoveDir } from '../lib/fs.ts';
+import { safeRm, safeRemoveDir } from '../lib/fs.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { pipeline } from '../lib/pipeline.ts';
 import { withRetry } from '../lib/retry.ts';
@@ -82,96 +82,76 @@ export default defineTileRegion({
 		}
 
 		const tmpExtractDir = `${extractDir}.tmp`;
-		try {
-			rmSync(tmpExtractDir, { recursive: true, force: true });
-		} catch { }
+		safeRm(tmpExtractDir);
 
-		try {
-			// Download all 7z parts
-			console.log(`  Downloading ${id} (${urls.length} parts)...`);
-			for (const url of urls) {
-				const filename = url.split('/').pop()!;
-				const filePath = join(tempDir, filename);
-				if (!existsSync(filePath)) {
-					await withRetry(() => downloadFile(url, filePath, { minSize: 1024, continue: true }), { maxAttempts: 3 });
-				}
+		// Download all 7z parts
+		console.log(`  Downloading ${id} (${urls.length} parts)...`);
+		for (const url of urls) {
+			const filename = url.split('/').pop()!;
+			const filePath = join(tempDir, filename);
+			if (!existsSync(filePath)) {
+				await withRetry(() => downloadFile(url, filePath, { minSize: 1024, continue: true }), { maxAttempts: 3 });
 			}
-
-			// Find the first .7z or .7z.001 file and extract
-			const tmpFiles = await readdir(tempDir);
-			const groupBase = id.split('/').pop() ?? id;
-			let archiveFiles = tmpFiles
-				.filter((f) => f.startsWith(groupBase) && (f.endsWith('.7z') || f.endsWith('.7z.001')))
-				.sort();
-
-			if (archiveFiles.length === 0) {
-				archiveFiles = tmpFiles.filter((f) => f.endsWith('.7z') || f.endsWith('.7z.001')).sort();
-			}
-
-			if (archiveFiles.length === 0) {
-				throw new Error(`No .7z archive found for ${id}`);
-			}
-
-			console.log(`  Extracting ${id}...`);
-			const mainFile = join(tempDir, archiveFiles[0]);
-			await runCommand('7z', ['e', `-o${tmpExtractDir}`, '-bb0', '-aoa', mainFile]);
-			renameSync(tmpExtractDir, extractDir);
-
-			// Clean up downloaded archive parts
-			for (const url of urls) {
-				const filename = url.split('/').pop()!;
-				try {
-					rmSync(join(tempDir, filename), { force: true });
-				} catch { }
-			}
-
-			return { extractDir };
-		} catch (err) {
-			try {
-				rmSync(tmpExtractDir, { recursive: true, force: true });
-			} catch { }
-			for (const url of urls) {
-				const filename = url.split('/').pop()!;
-				try {
-					rmSync(join(tempDir, filename), { force: true });
-				} catch { }
-			}
-			throw err;
 		}
+
+		// Find the first .7z or .7z.001 file and extract
+		const tmpFiles = await readdir(tempDir);
+		const groupBase = id.split('/').pop() ?? id;
+		let archiveFiles = tmpFiles
+			.filter((f) => f.startsWith(groupBase) && (f.endsWith('.7z') || f.endsWith('.7z.001')))
+			.sort();
+
+		if (archiveFiles.length === 0) {
+			archiveFiles = tmpFiles.filter((f) => f.endsWith('.7z') || f.endsWith('.7z.001')).sort();
+		}
+
+		if (archiveFiles.length === 0) {
+			throw new Error(`No .7z archive found for ${id}`);
+		}
+
+		console.log(`  Extracting ${id}...`);
+		const mainFile = join(tempDir, archiveFiles[0]);
+		await runCommand('7z', ['e', `-o${tmpExtractDir}`, '-bb0', '-aoa', mainFile]);
+		renameSync(tmpExtractDir, extractDir);
+
+		// Clean up downloaded archive parts
+		for (const url of urls) {
+			const filename = url.split('/').pop()!;
+			safeRm(join(tempDir, filename));
+		}
+
+		return { extractDir };
 	},
 	convert: async ({ extractDir }, { dest, tempDir }) => {
 		const tilesDir = join(tempDir, `tiles_${Date.now()}`);
-		try {
-			const files = await readdir(extractDir);
-			const jp2Files = files.filter((f) => f.endsWith('.jp2')).map((f) => join(extractDir, f));
 
-			if (jp2Files.length === 0) {
-				throw new Error(`No JP2 files found in ${extractDir}`);
-			}
+		const files = await readdir(extractDir);
+		const jp2Files = files.filter((f) => f.endsWith('.jp2')).map((f) => join(extractDir, f));
 
-			// Convert each JP2 to a .versatiles container individually
-			mkdirSync(tilesDir, { recursive: true });
-			console.log(`  Converting ${jp2Files.length} JP2 files...`);
-			const versatilesFiles: string[] = [];
-			await pipeline(jp2Files, { progress: { labels: ['converted'] } }).forEach(4, async (jp2Path) => {
-				const tileName = basename(jp2Path, '.jp2') + '.versatiles';
-				const tilePath = join(tilesDir, tileName);
-				await runMosaicTile(jp2Path, tilePath);
-				versatilesFiles.push(tilePath);
-				return 'converted';
-			});
-
-			// Assemble all per-file containers into one
-			const filelistPath = join(tempDir, 'filelist.txt');
-			writeFileSync(filelistPath, versatilesFiles.join('\n'));
-			await runMosaicAssemble(filelistPath, dest, { lossless: true, quiet: true });
-			rmSync(filelistPath, { force: true });
-		} finally {
-			try {
-				rmSync(extractDir, { recursive: true, force: true });
-			} catch { }
-			await safeRemoveDir(tilesDir);
+		if (jp2Files.length === 0) {
+			throw new Error(`No JP2 files found in ${extractDir}`);
 		}
+
+		// Convert each JP2 to a .versatiles container individually
+		mkdirSync(tilesDir, { recursive: true });
+		console.log(`  Converting ${jp2Files.length} JP2 files...`);
+		const versatilesFiles: string[] = [];
+		await pipeline(jp2Files, { progress: { labels: ['converted'] } }).forEach(4, async (jp2Path) => {
+			const tileName = basename(jp2Path, '.jp2') + '.versatiles';
+			const tilePath = join(tilesDir, tileName);
+			await runMosaicTile(jp2Path, tilePath);
+			versatilesFiles.push(tilePath);
+			return 'converted';
+		});
+
+		// Assemble all per-file containers into one
+		const filelistPath = join(tempDir, 'filelist.txt');
+		writeFileSync(filelistPath, versatilesFiles.join('\n'));
+		await runMosaicAssemble(filelistPath, dest, { lossless: true, quiet: true });
+		rmSync(filelistPath, { force: true });
+
+		safeRm(extractDir);
+		await safeRemoveDir(tilesDir);
 	},
 	minFiles: 100,
 });

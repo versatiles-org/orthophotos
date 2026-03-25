@@ -2,6 +2,7 @@ import { existsSync, rmSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { downloadFile } from '../lib/command.ts';
+import { safeRm } from '../lib/fs.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
 import { runMosaicTile } from '../run/commands.ts';
@@ -56,15 +57,9 @@ export default defineTileRegion({
 		return { src, tfwPath };
 	},
 	convert: async ({ src, tfwPath }, { dest }) => {
-		try {
-			await runMosaicTile(src, dest);
-		} finally {
-			for (const p of [src, tfwPath]) {
-				try {
-					rmSync(p, { force: true });
-				} catch {}
-			}
-		}
+		await runMosaicTile(src, dest);
+		safeRm(src);
+		safeRm(tfwPath);
 	},
 	minFiles: 123456,
 });

@@ -2,9 +2,10 @@
  * External command execution utilities for the run script.
  */
 
-import { renameSync, rmSync } from 'node:fs';
+import { renameSync } from 'node:fs';
 import { dirname, basename, join } from 'node:path';
 import { runCommand } from '../lib/command.ts';
+import { safeRm } from '../lib/fs.ts';
 import { getConfig } from '../config.ts';
 
 /** Required CLI tools */
@@ -104,9 +105,7 @@ export async function runMosaicTile(
 		await runCommand('versatiles', args, { quiet: true });
 		renameSync(tmpOutput, output);
 	} catch (err) {
-		try {
-			rmSync(tmpOutput, { force: true });
-		} catch {}
+		safeRm(tmpOutput);
 		throw err;
 	}
 }

@@ -1,9 +1,10 @@
-import { existsSync, rmSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { XMLParser } from 'fast-xml-parser';
 import { shuffle } from '../lib/array.ts';
 import { downloadFile } from '../lib/command.ts';
+import { safeRm } from '../lib/fs.ts';
 import { pipeline } from '../lib/pipeline.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
@@ -77,9 +78,7 @@ export default defineTileRegion({
 						allTileUrls.add(tileUrl);
 					}
 				} finally {
-					try {
-						rmSync(meta4Path, { force: true });
-					} catch {}
+					safeRm(meta4Path);
 				}
 				return 'fetched';
 			});
@@ -94,28 +93,16 @@ export default defineTileRegion({
 	},
 	download: async ({ url, id }, { tempDir, errors }) => {
 		const tifPath = join(tempDir, `${id}.tif`);
-		try {
-			await withRetry(() => downloadFile(url, tifPath), { maxAttempts: 3 });
-			if (!(await isValidRaster(tifPath))) {
-				errors.add(`${id}.tif (${url})`);
-				return 'invalid';
-			}
-			return { tifPath };
-		} catch (err) {
-			try {
-				rmSync(tifPath, { force: true });
-			} catch {}
-			throw err;
+		await withRetry(() => downloadFile(url, tifPath), { maxAttempts: 3 });
+		if (!(await isValidRaster(tifPath))) {
+			errors.add(`${id}.tif (${url})`);
+			return 'invalid';
 		}
+		return { tifPath };
 	},
 	convert: async ({ tifPath }, { dest }) => {
-		try {
-			await runMosaicTile(tifPath, dest);
-		} finally {
-			try {
-				rmSync(tifPath, { force: true });
-			} catch {}
-		}
+		await runMosaicTile(tifPath, dest);
+		safeRm(tifPath);
 	},
 	minFiles: 2220,
 });

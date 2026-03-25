@@ -2,7 +2,7 @@ import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { downloadFile, runCommand } from '../lib/command.ts';
-import { extractZipFile, safeRemoveDir } from '../lib/fs.ts';
+import { extractZipFile, safeRm, safeRemoveDir } from '../lib/fs.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
 import { runMosaicAssemble, runMosaicTile } from '../run/commands.ts';
@@ -54,56 +54,52 @@ export default defineTileRegion({
 	convert: async ({ zipPath }, { dest, tempDir }) => {
 		const extractDir = join(tempDir, `extract_${Date.now()}`);
 		const tilesDir = join(tempDir, `tiles_${Date.now()}`);
-		try {
-			console.log(`  Extracting ${basename(zipPath)}...`);
-			await extractZipFile(zipPath, extractDir);
-			rmSync(zipPath, { force: true });
 
-			// Find and extract the inner zip (name includes a date suffix that changes)
-			const outerFiles = await readdir(extractDir);
-			const innerZip = outerFiles.find((f) => f.endsWith('.zip'));
-			if (innerZip) {
-				console.log(`  Extracting inner ${innerZip}...`);
-				await runCommand('unzip', ['-qo', join(extractDir, innerZip), '-d', extractDir]);
-				rmSync(join(extractDir, innerZip), { force: true });
-			}
+		console.log(`  Extracting ${basename(zipPath)}...`);
+		await extractZipFile(zipPath, extractDir);
+		rmSync(zipPath, { force: true });
 
-			// Find all image files
-			const files = await readdir(extractDir, { recursive: true });
-			const imageFiles = files
-				.map((f) => (typeof f === 'string' ? f : String(f)))
-				.filter((f) => IMAGE_EXTS.some((ext) => f.endsWith(ext)))
-				.map((f) => join(extractDir, f));
-
-			if (imageFiles.length === 0) {
-				throw new Error(`No image files found in ${extractDir}`);
-			}
-
-			// Convert each image file to a .versatiles container individually
-			mkdirSync(tilesDir, { recursive: true });
-
-			console.log(`  Converting ${imageFiles.length} image files...`);
-			const versatilesFiles: string[] = [];
-			await pipeline(imageFiles, { progress: { labels: ['converted'] } }).forEach(4, async (imgPath) => {
-				const tileName = basename(imgPath).replace(/\.[^.]+$/, '.versatiles');
-				const tilePath = join(tilesDir, tileName);
-				await runMosaicTile(imgPath, tilePath, { crs: '25832' });
-				versatilesFiles.push(tilePath);
-				return 'converted';
-			});
-
-			// Write filelist and assemble into final output
-			const filelistPath = join(tempDir, 'filelist.txt');
-			writeFileSync(filelistPath, versatilesFiles.join('\n'));
-			await runMosaicAssemble(filelistPath, dest, { lossless: true });
-			rmSync(filelistPath, { force: true });
-		} finally {
-			try {
-				rmSync(zipPath, { force: true });
-			} catch {}
-			await safeRemoveDir(extractDir);
-			await safeRemoveDir(tilesDir);
+		// Find and extract the inner zip (name includes a date suffix that changes)
+		const outerFiles = await readdir(extractDir);
+		const innerZip = outerFiles.find((f) => f.endsWith('.zip'));
+		if (innerZip) {
+			console.log(`  Extracting inner ${innerZip}...`);
+			await runCommand('unzip', ['-qo', join(extractDir, innerZip), '-d', extractDir]);
+			rmSync(join(extractDir, innerZip), { force: true });
 		}
+
+		// Find all image files
+		const files = await readdir(extractDir, { recursive: true });
+		const imageFiles = files
+			.map((f) => (typeof f === 'string' ? f : String(f)))
+			.filter((f) => IMAGE_EXTS.some((ext) => f.endsWith(ext)))
+			.map((f) => join(extractDir, f));
+
+		if (imageFiles.length === 0) {
+			throw new Error(`No image files found in ${extractDir}`);
+		}
+
+		// Convert each image file to a .versatiles container individually
+		mkdirSync(tilesDir, { recursive: true });
+
+		console.log(`  Converting ${imageFiles.length} image files...`);
+		const versatilesFiles: string[] = [];
+		await pipeline(imageFiles, { progress: { labels: ['converted'] } }).forEach(4, async (imgPath) => {
+			const tileName = basename(imgPath).replace(/\.[^.]+$/, '.versatiles');
+			const tilePath = join(tilesDir, tileName);
+			await runMosaicTile(imgPath, tilePath, { crs: '25832' });
+			versatilesFiles.push(tilePath);
+			return 'converted';
+		});
+
+		// Write filelist and assemble into final output
+		const filelistPath = join(tempDir, 'filelist.txt');
+		writeFileSync(filelistPath, versatilesFiles.join('\n'));
+		await runMosaicAssemble(filelistPath, dest, { lossless: true });
+		safeRm(filelistPath);
+		safeRm(zipPath);
+		await safeRemoveDir(extractDir);
+		await safeRemoveDir(tilesDir);
 	},
 	minFiles: 2,
 });

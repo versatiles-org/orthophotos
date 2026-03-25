@@ -3,7 +3,7 @@ import { readFile, readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { XMLParser } from 'fast-xml-parser';
 import { downloadFile, runCommand } from '../lib/command.ts';
-import { extractZipFile } from '../lib/fs.ts';
+import { extractZipFile, safeRm } from '../lib/fs.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
 import { runMosaicTile } from '../run/commands.ts';
@@ -61,40 +61,23 @@ export default defineTileRegion({
 		const zipPath = join(tempDir, `${id}.zip`);
 		const extractDir = join(tempDir, id);
 
-		try {
-			await withRetry(() => downloadFile(url, zipPath), { maxAttempts: 3 });
-			await extractZipFile(zipPath, extractDir);
-			rmSync(zipPath, { force: true });
+		await withRetry(() => downloadFile(url, zipPath), { maxAttempts: 3 });
+		await extractZipFile(zipPath, extractDir);
+		rmSync(zipPath, { force: true });
 
-			const files = await readdir(extractDir);
-			const tifFiles = files.filter((f) => f.endsWith('.tif'));
-			if (tifFiles.length === 0) return 'empty';
+		const files = await readdir(extractDir);
+		const tifFiles = files.filter((f) => f.endsWith('.tif'));
+		if (tifFiles.length === 0) return 'empty';
 
-			const vrtPath = join(tempDir, `${id}.vrt`);
-			await runCommand('gdalbuildvrt', ['-q', vrtPath, ...tifFiles.map((f) => join(extractDir, f))]);
+		const vrtPath = join(tempDir, `${id}.vrt`);
+		await runCommand('gdalbuildvrt', ['-q', vrtPath, ...tifFiles.map((f) => join(extractDir, f))]);
 
-			return { vrtPath, extractDir };
-		} catch (err) {
-			try {
-				rmSync(zipPath, { force: true });
-			} catch {}
-			try {
-				rmSync(extractDir, { recursive: true, force: true });
-			} catch {}
-			throw err;
-		}
+		return { vrtPath, extractDir };
 	},
 	convert: async ({ vrtPath, extractDir }, { dest }) => {
-		try {
-			await runMosaicTile(vrtPath, dest);
-		} finally {
-			try {
-				rmSync(vrtPath, { force: true });
-			} catch {}
-			try {
-				rmSync(extractDir, { recursive: true, force: true });
-			} catch {}
-		}
+		await runMosaicTile(vrtPath, dest);
+		safeRm(vrtPath);
+		safeRm(extractDir);
 	},
 	minFiles: 123456,
 });

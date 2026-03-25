@@ -1,8 +1,8 @@
-import { existsSync, rmSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { downloadFile } from '../lib/command.ts';
-import { extractZipFile } from '../lib/fs.ts';
+import { extractZipFile, safeRm } from '../lib/fs.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
 import { runMosaicTile } from '../run/commands.ts';
@@ -58,35 +58,19 @@ export default defineTileRegion({
 		const zipPath = join(tempDir, `${id}.zip`);
 		const extractDir = join(tempDir, id);
 
-		try {
-			await withRetry(() => downloadFile(url, zipPath), { maxAttempts: 3 });
-			await extractZipFile(zipPath, extractDir);
+		await withRetry(() => downloadFile(url, zipPath), { maxAttempts: 3 });
+		await extractZipFile(zipPath, extractDir);
 
-			// Find the .jpg file (GDAL reads .jgw sidecar automatically for georeferencing)
-			const files = await readdir(extractDir, { recursive: true });
-			const jpgFile = files.find((f) => typeof f === 'string' && f.endsWith('.jpg'));
-			if (!jpgFile) return 'empty';
+		// Find the .jpg file (GDAL reads .jgw sidecar automatically for georeferencing)
+		const files = await readdir(extractDir, { recursive: true });
+		const jpgFile = files.find((f) => typeof f === 'string' && f.endsWith('.jpg'));
+		if (!jpgFile) return 'empty';
 
-			return { jpgPath: join(extractDir, String(jpgFile)), extractDir };
-		} catch (err) {
-			try {
-				rmSync(extractDir, { recursive: true, force: true });
-			} catch {}
-			throw err;
-		} finally {
-			try {
-				rmSync(zipPath, { force: true });
-			} catch {}
-		}
+		return { jpgPath: join(extractDir, String(jpgFile)), extractDir };
 	},
 	convert: async ({ jpgPath, extractDir }, { dest }) => {
-		try {
-			await runMosaicTile(jpgPath, dest);
-		} finally {
-			try {
-				rmSync(extractDir, { recursive: true, force: true });
-			} catch {}
-		}
+		await runMosaicTile(jpgPath, dest);
+		safeRm(extractDir);
 	},
 	minFiles: 32000,
 });

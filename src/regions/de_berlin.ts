@@ -1,8 +1,9 @@
-import { existsSync, rmSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { XMLParser } from 'fast-xml-parser';
 import { downloadFile } from '../lib/command.ts';
+import { safeRm } from '../lib/fs.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
 import { runMosaicTile } from '../run/commands.ts';
@@ -83,13 +84,8 @@ export default defineTileRegion({
 		return { src };
 	},
 	convert: async ({ src }, { dest }) => {
-		try {
-			await runMosaicTile(src, dest);
-		} finally {
-			try {
-				rmSync(src, { force: true });
-			} catch {}
-		}
+		await runMosaicTile(src, dest);
+		safeRm(src);
 	},
 	minFiles: 280,
 });

@@ -1,6 +1,7 @@
-import { existsSync, rmSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { downloadFile, runCommand } from '../lib/command.ts';
+import { safeRm } from '../lib/fs.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
 import { computeWmsBlocks, generateWmsXml, parseWmsCapabilities } from '../lib/wms.ts';
@@ -55,48 +56,36 @@ export default defineTileRegion({
 	download: async (item, { tempDir }) => {
 		const tifPath = join(tempDir, `${item.id}.tif`);
 
-		try {
-			await runCommand('gdal_translate', [
-				'-q',
-				item.wmsXmlPath as string,
-				tifPath,
-				'-projwin',
-				String(item.x0),
-				String(item.y1),
-				String(item.x1),
-				String(item.y0),
-				'-projwin_srs',
-				'EPSG:3857',
-				'-outsize',
-				String(item.blockPx),
-				String(item.blockPx),
-				'-of',
-				'GTiff',
-				'-co',
-				'COMPRESS=DEFLATE',
-				'-co',
-				'PREDICTOR=2',
-				'-co',
-				'ALPHA=YES',
-			]);
+		await runCommand('gdal_translate', [
+			'-q',
+			item.wmsXmlPath as string,
+			tifPath,
+			'-projwin',
+			String(item.x0),
+			String(item.y1),
+			String(item.x1),
+			String(item.y0),
+			'-projwin_srs',
+			'EPSG:3857',
+			'-outsize',
+			String(item.blockPx),
+			String(item.blockPx),
+			'-of',
+			'GTiff',
+			'-co',
+			'COMPRESS=DEFLATE',
+			'-co',
+			'PREDICTOR=2',
+			'-co',
+			'ALPHA=YES',
+		]);
 
-			// No mask color — pass TIF directly
-			return { srcPath: tifPath };
-		} catch (err) {
-			try {
-				rmSync(tifPath, { force: true });
-			} catch {}
-			throw err;
-		}
+		// No mask color — pass TIF directly
+		return { srcPath: tifPath };
 	},
 	convert: async ({ srcPath }, { dest }) => {
-		try {
-			await runMosaicTile(srcPath as string, dest);
-		} finally {
-			try {
-				rmSync(srcPath as string, { force: true });
-			} catch {}
-		}
+		await runMosaicTile(srcPath as string, dest);
+		safeRm(srcPath as string);
 	},
 	minFiles: 123456,
 });

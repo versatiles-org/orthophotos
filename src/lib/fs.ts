@@ -8,6 +8,15 @@ import { extname, join } from 'node:path';
 import { runCommand } from './command.ts';
 
 /**
+ * Safely removes a file or directory, ignoring errors.
+ */
+export function safeRm(path: string): void {
+	try {
+		rmSync(path, { recursive: true, force: true });
+	} catch {}
+}
+
+/**
  * Safely removes a directory, ignoring NotFound errors.
  * @param path Path to the directory to remove
  */
@@ -28,13 +37,9 @@ export async function safeRemoveDir(path: string): Promise<void> {
  */
 export async function extractZipFile(zipPath: string, targetDir: string): Promise<void> {
 	const tmpDir = `${targetDir}.tmp`;
-	try {
-		rmSync(tmpDir, { recursive: true, force: true });
-	} catch {}
+	safeRm(tmpDir);
 	await runCommand('unzip', ['-qo', zipPath, '-d', tmpDir]);
-	try {
-		rmSync(targetDir, { recursive: true, force: true });
-	} catch {}
+	safeRm(targetDir);
 	renameSync(tmpDir, targetDir);
 }
 

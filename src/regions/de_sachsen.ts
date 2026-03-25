@@ -3,7 +3,7 @@ import { readFile, readdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { downloadFile } from '../lib/command.ts';
-import { extractZipFile } from '../lib/fs.ts';
+import { extractZipFile, safeRm } from '../lib/fs.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
 import { runMosaicTile } from '../run/commands.ts';
@@ -46,35 +46,20 @@ export default defineTileRegion({
 		const zipPath = join(tempDir, `${id}.zip`);
 		const extractDir = join(tempDir, id);
 
-		try {
-			await withRetry(() => downloadFile(url, zipPath), { maxAttempts: 3 });
-			await extractZipFile(zipPath, extractDir);
-			rmSync(zipPath, { force: true });
+		await withRetry(() => downloadFile(url, zipPath), { maxAttempts: 3 });
+		await extractZipFile(zipPath, extractDir);
+		rmSync(zipPath, { force: true });
 
-			// Find the TIF file
-			const files = await readdir(extractDir, { recursive: true });
-			const tifFile = files.find((f) => typeof f === 'string' && f.endsWith('.tif'));
-			if (!tifFile) return 'empty';
+		// Find the TIF file
+		const files = await readdir(extractDir, { recursive: true });
+		const tifFile = files.find((f) => typeof f === 'string' && f.endsWith('.tif'));
+		if (!tifFile) return 'empty';
 
-			return { tifPath: join(extractDir, String(tifFile)), extractDir };
-		} catch (err) {
-			try {
-				rmSync(zipPath, { force: true });
-			} catch {}
-			try {
-				rmSync(extractDir, { recursive: true, force: true });
-			} catch {}
-			throw err;
-		}
+		return { tifPath: join(extractDir, String(tifFile)), extractDir };
 	},
 	convert: async ({ tifPath, extractDir }, { dest }) => {
-		try {
-			await runMosaicTile(tifPath, dest);
-		} finally {
-			try {
-				rmSync(extractDir, { recursive: true, force: true });
-			} catch {}
-		}
+		await runMosaicTile(tifPath, dest);
+		safeRm(extractDir);
 	},
 	minFiles: 4900,
 });

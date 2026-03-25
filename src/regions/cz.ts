@@ -68,31 +68,20 @@ export default defineTileRegion({
 		const zipPath = join(tempDir, `${id}.zip`);
 		const extractDir = join(tempDir, id);
 
-		try {
-			await withRetry(() => downloadFile(url, zipPath), { maxAttempts: 3 });
-			await extractZipFile(zipPath, extractDir);
-			rmSync(zipPath, { force: true });
+		await withRetry(() => downloadFile(url, zipPath), { maxAttempts: 3 });
+		await extractZipFile(zipPath, extractDir);
+		rmSync(zipPath, { force: true });
 
-			const jp2Path = join(extractDir, `${id}.jp2`);
-			if (!existsSync(jp2Path)) return 'empty';
+		const jp2Path = join(extractDir, `${id}.jp2`);
+		if (!existsSync(jp2Path)) return 'empty';
 
-			return { jp2Path, extractDir };
-		} catch (err) {
-			try {
-				rmSync(zipPath, { force: true });
-			} catch {}
-			await safeRemoveDir(extractDir);
-			throw err;
-		}
+		return { jp2Path, extractDir };
 	},
 	convert: async ({ jp2Path, extractDir }, { dest }) => {
-		try {
-			// JP2 has no embedded CRS; coordinates come from .j2w worldfile in EPSG:3045.
-			// White borders (255,255,255) are treated as transparent via --nodata.
-			await runMosaicTile(jp2Path, dest, { crs: '3045', nodata: '255,255,255' });
-		} finally {
-			await safeRemoveDir(extractDir);
-		}
+		// JP2 has no embedded CRS; coordinates come from .j2w worldfile in EPSG:3045.
+		// White borders (255,255,255) are treated as transparent via --nodata.
+		await runMosaicTile(jp2Path, dest, { crs: '3045', nodata: '255,255,255' });
+		await safeRemoveDir(extractDir);
 	},
 	minFiles: 20000,
 });

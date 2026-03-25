@@ -1,8 +1,8 @@
-import { rmSync, statSync, writeFileSync } from 'node:fs';
+import { statSync, writeFileSync } from 'node:fs';
 import { readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { downloadFile, runCommand } from '../lib/command.ts';
-import { extractZipFile } from '../lib/fs.ts';
+import { extractZipFile, safeRm } from '../lib/fs.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
 import { runMosaicTile } from '../run/commands.ts';
@@ -51,61 +51,44 @@ export default defineTileRegion({
 		const vrtPath = join(tempDir, `${id}.vrt`);
 		const listPath = join(tempDir, `${id}_files.txt`);
 
-		try {
-			await withRetry(() => downloadFile(`${BASE_URL}dop20rgb_32_${id}_2_bw.zip`, zipPath), { maxAttempts: 3 });
+		await withRetry(() => downloadFile(`${BASE_URL}dop20rgb_32_${id}_2_bw.zip`, zipPath), { maxAttempts: 3 });
 
-			const size = statSync(zipPath).size;
-			if (size < 1000) {
-				writeFileSync(skipDest, '');
-				return 'empty';
-			}
-
-			await extractZipFile(zipPath, extractDir);
-
-			const tifDir = join(extractDir, `dop20rgb_32_${id}_2_bw`);
-			const tifFiles = (await readdir(tifDir)).filter((f) => f.endsWith('.tif'));
-			if (tifFiles.length === 0) {
-				writeFileSync(skipDest, '');
-				return 'empty';
-			}
-			await writeFile(listPath, tifFiles.map((f) => join(tifDir, f)).join('\n'));
-			await runCommand(
-				'gdalbuildvrt',
-				[
-					'-q',
-					'-addalpha',
-					'-allow_projection_difference',
-					'-a_srs',
-					'EPSG:25832',
-					vrtPath,
-					'-input_file_list',
-					listPath,
-				],
-				{ cwd: tempDir },
-			);
-
-			return { vrtPath, extractDir };
-		} catch {
+		const size = statSync(zipPath).size;
+		if (size < 1000) {
+			writeFileSync(skipDest, '');
 			return 'empty';
-		} finally {
-			for (const p of [zipPath, listPath]) {
-				try {
-					rmSync(p, { force: true });
-				} catch {}
-			}
 		}
+
+		await extractZipFile(zipPath, extractDir);
+
+		const tifDir = join(extractDir, `dop20rgb_32_${id}_2_bw`);
+		const tifFiles = (await readdir(tifDir)).filter((f) => f.endsWith('.tif'));
+		if (tifFiles.length === 0) {
+			writeFileSync(skipDest, '');
+			return 'empty';
+		}
+		await writeFile(listPath, tifFiles.map((f) => join(tifDir, f)).join('\n'));
+		await runCommand(
+			'gdalbuildvrt',
+			[
+				'-q',
+				'-addalpha',
+				'-allow_projection_difference',
+				'-a_srs',
+				'EPSG:25832',
+				vrtPath,
+				'-input_file_list',
+				listPath,
+			],
+			{ cwd: tempDir },
+		);
+
+		return { vrtPath, extractDir };
 	},
 	convert: async ({ vrtPath, extractDir }, { dest }) => {
-		try {
-			await runMosaicTile(vrtPath, dest);
-		} finally {
-			try {
-				rmSync(vrtPath, { force: true });
-			} catch {}
-			try {
-				rmSync(extractDir, { recursive: true, force: true });
-			} catch {}
-		}
+		await runMosaicTile(vrtPath, dest);
+		safeRm(vrtPath);
+		safeRm(extractDir);
 	},
 	minFiles: 14000,
 });

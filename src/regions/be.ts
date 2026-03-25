@@ -2,6 +2,7 @@ import { existsSync, rmSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { downloadFile, runCommand } from '../lib/command.ts';
+import { safeRm } from '../lib/fs.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
 import { isValidRaster } from '../lib/validators.ts';
@@ -83,53 +84,40 @@ export default defineTileRegion({
 	download: async ({ path, id }, { tempDir, errors }) => {
 		const jp2Path = join(tempDir, `${id}.jp2`);
 		const tifPath = join(tempDir, `${id}.tif`);
-		try {
-			const accessCode = await getAccessCode();
-			const url = `https://ac.ngi.be/client-open/${accessCode}/${path}`;
-			await withRetry(() => downloadFile(url, jp2Path), { maxAttempts: 3 });
-			if (!(await isValidRaster(jp2Path))) {
-				errors.add(`${id}.jp2 (${url})`);
-				return 'invalid';
-			}
-			// Convert JP2 to uncompressed tiled GeoTIFF — versatiles crashes reading JP2 directly.
-			// Uncompressed is fastest since the bottleneck is single-threaded JP2 decoding (OpenJPEG).
-			await runCommand('gdal_translate', [
-				'-q',
-				'-of',
-				'GTiff',
-				'-co',
-				'BIGTIFF=YES',
-				'-co',
-				'COMPRESS=LZW',
-				'-co',
-				'PREDICTOR=2',
-				'-co',
-				'TILED=YES',
-				'-co',
-				'NUM_THREADS=ALL_CPUS',
-				jp2Path,
-				tifPath,
-			]);
-			rmSync(jp2Path, { force: true });
-			return { tifPath };
-		} catch (err) {
-			for (const p of [jp2Path, tifPath]) {
-				try {
-					rmSync(p, { force: true });
-				} catch {}
-			}
-			throw err;
+
+		const accessCode = await getAccessCode();
+		const url = `https://ac.ngi.be/client-open/${accessCode}/${path}`;
+		await withRetry(() => downloadFile(url, jp2Path), { maxAttempts: 3 });
+		if (!(await isValidRaster(jp2Path))) {
+			errors.add(`${id}.jp2 (${url})`);
+			return 'invalid';
 		}
+		// Convert JP2 to uncompressed tiled GeoTIFF — versatiles crashes reading JP2 directly.
+		// Uncompressed is fastest since the bottleneck is single-threaded JP2 decoding (OpenJPEG).
+		await runCommand('gdal_translate', [
+			'-q',
+			'-of',
+			'GTiff',
+			'-co',
+			'BIGTIFF=YES',
+			'-co',
+			'COMPRESS=LZW',
+			'-co',
+			'PREDICTOR=2',
+			'-co',
+			'TILED=YES',
+			'-co',
+			'NUM_THREADS=ALL_CPUS',
+			jp2Path,
+			tifPath,
+		]);
+		rmSync(jp2Path, { force: true });
+		return { tifPath };
 	},
 	convertCores: 8,
 	convert: async ({ tifPath }, { dest, tempDir }) => {
-		try {
-			await runMosaicTile(tifPath, dest, { cacheDirectory: tempDir });
-		} finally {
-			try {
-				rmSync(tifPath, { force: true });
-			} catch {}
-		}
+		await runMosaicTile(tifPath, dest, { cacheDirectory: tempDir });
+		safeRm(tifPath);
 	},
 	minFiles: 720,
 });

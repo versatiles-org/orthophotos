@@ -3,12 +3,12 @@
  * Task implementations for the pipeline (tasks 1-3).
  */
 
-import { existsSync, mkdirSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, renameSync, writeFileSync } from 'node:fs';
 import { createInterface } from 'node:readline';
 import { resolve, join } from 'node:path';
 import { runSshCommand, runMosaicAssemble, runScpUpload } from './commands.ts';
 import { TASK_NUMBER_TO_NAME } from './tasks.constants.ts';
-import { safeRemoveDir } from '../lib/fs.ts';
+import { safeRm, safeRemoveDir } from '../lib/fs.ts';
 import { getRegionPipeline } from '../regions/index.ts';
 import { getConfig } from '../config.ts';
 
@@ -104,9 +104,7 @@ async function taskMerge(ctx: TaskContext): Promise<void> {
 		renameSync(localTmp, localFinal);
 		console.log(`  Merged into ${localFinal}`);
 	} catch (err) {
-		try {
-			rmSync(localTmp, { force: true });
-		} catch {}
+		safeRm(localTmp);
 		throw err;
 	}
 

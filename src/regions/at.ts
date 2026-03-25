@@ -122,7 +122,7 @@ export default defineTileRegion({
 		await withRetry(() => downloadFile(url, src), { maxAttempts: 3 });
 		return { src };
 	},
-	convertCores: 8,
+	convertLimit: { memoryGB: 8 },
 	convert: async ({ src }, { dest, tempDir }) => {
 		await runMosaicTile(src, dest, { cacheDirectory: tempDir });
 		safeRm(src);

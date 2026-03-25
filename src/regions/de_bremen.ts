@@ -50,7 +50,7 @@ export default defineTileRegion({
 		await withRetry(() => downloadFile(url, zipPath), { maxAttempts: 3 });
 		return { zipPath };
 	},
-	convertCores: 8,
+	convertLimit: { memoryGB: 8 },
 	convert: async ({ zipPath }, { dest, tempDir }) => {
 		const extractDir = join(tempDir, `extract_${Date.now()}`);
 		const tilesDir = join(tempDir, `tiles_${Date.now()}`);

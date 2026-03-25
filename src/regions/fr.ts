@@ -122,6 +122,7 @@ export default defineTileRegion({
 
 		return { extractDir };
 	},
+	convertLimit: { concurrency: 1 },
 	convert: async ({ extractDir }, { dest, tempDir }) => {
 		const tilesDir = join(tempDir, `tiles_${Date.now()}`);
 

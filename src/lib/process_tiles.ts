@@ -19,12 +19,29 @@
 
 import { createReadStream, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { createInterface } from 'node:readline';
-import { availableParallelism } from 'node:os';
+import { availableParallelism, totalmem } from 'node:os';
 import { join } from 'node:path';
 import { shuffle } from './array.ts';
 import type { RegionMetadata, RegionPipeline, StepContext } from './framework.ts';
 import { pipeline, skip } from './pipeline.ts';
 import { ErrorBucket, expectMinFiles } from './validators.ts';
+
+/** Limits for concurrency. The effective concurrency is the minimum of all applicable limits. */
+export interface ConcurrencyLimit {
+	/** CPU cores per process (default: 4). Concurrency = availableParallelism() / cores. */
+	cores?: number;
+	/** Hard maximum concurrency. */
+	concurrency?: number;
+	/** GB of RAM per process. Concurrency = totalMemoryGB / memoryGB. */
+	memoryGB?: number;
+}
+
+function resolveConcurrency(limit?: ConcurrencyLimit): number {
+	const cpuLimit = Math.floor(availableParallelism() / (limit?.cores ?? 4));
+	const memLimit = limit?.memoryGB ? Math.floor(totalmem() / 1e9 / limit.memoryGB) : Infinity;
+	const hardLimit = limit?.concurrency ?? Infinity;
+	return Math.max(1, Math.min(cpuLimit, memLimit, hardLimit));
+}
 
 /** Items must have an `id` property used to derive output and skip-file paths. */
 export interface TileItem {
@@ -57,8 +74,8 @@ export interface TileRegionOptions<T extends TileItem, D> {
 	downloadConcurrency?: number;
 	/** Download callback — returns data for the convert stage, 'empty'/'invalid' to skip, or void */
 	download: (item: T, ctx: TileContext) => Promise<D | 'empty' | 'invalid' | void>;
-	/** Number of CPU cores each convert instance uses (default: 4). Concurrency is derived as availableParallelism() / convertCores. */
-	convertCores?: number;
+	/** Limits for convert concurrency. Concurrency is the minimum of all applicable limits. */
+	convertLimit?: ConcurrencyLimit;
 	/** Convert callback — receives non-empty download result, produces the final .versatiles file */
 	convert: (data: Exclude<D, 'empty' | 'invalid' | void>, ctx: TileContext) => Promise<void>;
 	/** Minimum number of *.versatiles output files required */
@@ -122,8 +139,7 @@ async function processTiles<T extends TileItem, D>(
 	};
 
 	const dlConcurrency = options.downloadConcurrency ?? 4;
-	const coresPerConvert = options.convertCores ?? 4;
-	const cvConcurrency = Math.max(1, Math.floor(availableParallelism() / coresPerConvert));
+	const cvConcurrency = resolveConcurrency(options.convertLimit);
 
 	const { download, convert } = options;
 	await pipeline(shuffled, { progress: { labels: [...LABELS] } })

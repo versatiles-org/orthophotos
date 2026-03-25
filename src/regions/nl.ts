@@ -42,7 +42,7 @@ export default defineTileRegion({
 	},
 	download: async ({ url, id }, { tempDir }) => {
 		const src = join(tempDir, `${id}.tif`);
-		await withRetry(() => downloadFile(url as string, src), { maxAttempts: 3 });
+		await withRetry(() => downloadFile(url, src), { maxAttempts: 3 });
 		return { src };
 	},
 	convert: async ({ src }, { dest }) => {

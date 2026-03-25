@@ -52,8 +52,8 @@ export default defineTileRegion({
 	download: async ({ url, tfwUrl, id }, { tempDir }) => {
 		const src = join(tempDir, `${id}.tif`);
 		const tfwPath = join(tempDir, `${id}.tfw`);
-		await withRetry(() => downloadFile(url as string, src), { maxAttempts: 3 });
-		await withRetry(() => downloadFile(tfwUrl as string, tfwPath), { maxAttempts: 3 });
+		await withRetry(() => downloadFile(url, src), { maxAttempts: 3 });
+		await withRetry(() => downloadFile(tfwUrl, tfwPath), { maxAttempts: 3 });
 		return { src, tfwPath };
 	},
 	convert: async ({ src, tfwPath }, { dest }) => {

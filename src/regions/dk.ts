@@ -76,7 +76,7 @@ export default defineTileRegion({
 
 		await runCommand('gdal_translate', [
 			'-q',
-			item.wmsXmlPath as string,
+			item.wmsXmlPath,
 			tifPath,
 			'-projwin',
 			String(item.x0),
@@ -119,8 +119,8 @@ export default defineTileRegion({
 		return { srcPath: maskedPath };
 	},
 	convert: async ({ srcPath }, { dest }) => {
-		await runMosaicTile(srcPath as string, dest);
-		safeRm(srcPath as string);
+		await runMosaicTile(srcPath, dest);
+		safeRm(srcPath);
 	},
 	minFiles: 123456,
 });

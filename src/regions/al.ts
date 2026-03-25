@@ -55,7 +55,7 @@ export default defineTileRegion({
 
 		await runCommand('gdal_translate', [
 			'-q',
-			item.wmsXmlPath as string,
+			item.wmsXmlPath,
 			tifPath,
 			'-projwin',
 			String(item.x0),

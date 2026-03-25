@@ -82,7 +82,7 @@ export default defineTileRegion({
 		return items;
 	},
 	download: async ({ tifPath }) => {
-		return { src: tifPath as string };
+		return { src: tifPath };
 	},
 	convert: async ({ src }, { dest }) => {
 		await runMosaicTile(src, dest, { crs: '3046' });

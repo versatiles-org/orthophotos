@@ -5,8 +5,7 @@ import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
 import { runMosaicTile } from '../run/commands.ts';
 
-const GML_URL =
-	'https://download.data.public.lu/resources/inspire-annex-ii-theme-orthoimagery-orthoimagecoverage-2025-summer/20260324-074957/oi.ortho-rgb-2025-summer.gml';
+// GML source: https://download.data.public.lu/resources/inspire-annex-ii-theme-orthoimagery-orthoimagecoverage-2025-summer/20260324-074957/oi.ortho-rgb-2025-summer.gml
 const JP2_URL = 'https://data.public.lu/fr/datasets/r/db28baa5-3bd2-45ed-980d-5b8de1f452b0';
 
 export default defineTileRegion({

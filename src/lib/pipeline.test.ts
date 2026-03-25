@@ -62,7 +62,7 @@ describe('pipeline', () => {
 				maxInFlight = Math.max(maxInFlight, inFlight);
 				return n;
 			})
-			.forEach(downstreamConcurrency, async (n) => {
+			.forEach(downstreamConcurrency, async (_n) => {
 				inFlight--;
 				// Simulate slow downstream
 				await new Promise((r) => setTimeout(r, 10));

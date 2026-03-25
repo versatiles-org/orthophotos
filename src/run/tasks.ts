@@ -6,7 +6,6 @@
 import { existsSync, mkdirSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { createInterface } from 'node:readline';
 import { resolve, join } from 'node:path';
-import { runCommand } from '../lib/command.ts';
 import { runSshCommand, runMosaicAssemble, runScpUpload } from './commands.ts';
 import { TASK_NUMBER_TO_NAME } from './tasks.constants.ts';
 import { safeRemoveDir } from '../lib/fs.ts';

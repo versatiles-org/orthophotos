@@ -183,7 +183,6 @@ class PipelineBuilder<T> {
 			const last = isLastStage(stageIdx);
 
 			const workers = Array.from({ length: stage.concurrency }, async () => {
-				// eslint-disable-next-line no-constant-condition
 				while (true) {
 					const item = await inputChannel.receive();
 					if (item === DONE) break;

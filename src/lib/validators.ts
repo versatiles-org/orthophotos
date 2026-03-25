@@ -42,7 +42,7 @@ export class ErrorBucket {
  */
 export async function expectMinFiles(dir: string, pattern: string, min: number): Promise<void> {
 	let count = 0;
-	for await (const _ of glob(join(dir, pattern))) {
+	for await (const _path of glob(join(dir, pattern))) {
 		count++;
 		if (count >= min) return;
 	}

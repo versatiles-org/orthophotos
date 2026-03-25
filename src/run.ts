@@ -14,7 +14,6 @@
 
 import { resolve } from 'node:path';
 import { mkdirSync } from 'node:fs';
-import { runCommand } from './lib/command.ts';
 import { getConfig } from './config.ts';
 import { getHelpText, parseArgs } from './run/args.ts';
 import { checkRequiredCommands, runSshCommand } from './run/commands.ts';

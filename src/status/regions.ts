@@ -1,6 +1,5 @@
 import type { Status } from './status.ts';
 import { KnownRegion } from './geojson.ts';
-import { runCommand } from '../lib/command.ts';
 import type { RegionMetadata } from '../lib/framework.ts';
 import { getAllRegionMetadata } from '../regions/index.ts';
 
@@ -67,10 +66,4 @@ export function scanRegions(knownRegions: KnownRegion[]): Region[] {
 	}
 
 	return entries;
-}
-
-/** Creates a GeoJSON outline file for a VersaTiles container */
-async function createGeoJsonOutline(versaTilesFilename: string, geoJsonFilename: string): Promise<void> {
-	console.log(`Creating GeoJSON for ${versaTilesFilename}`);
-	await runCommand('versatiles', ['dev', 'export-outline', versaTilesFilename, geoJsonFilename]);
 }

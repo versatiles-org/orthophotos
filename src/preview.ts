@@ -2,6 +2,7 @@
 
 /**
  * Downloads the frontend, generates the VPL file, and starts the preview server.
+ * Uses a local .preview/ directory for generated files (VPL, masks, frontend).
  */
 
 import { resolve, dirname } from 'node:path';
@@ -12,15 +13,15 @@ import { downloadFrontend } from './server/frontend.ts';
 import { generateVPL } from './server/vpl.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-
-const config = getConfig();
+const previewDir = resolve(__dirname, '../.preview');
 const vplFilename = 'orthophotos.vpl';
 
-await downloadFrontend();
-generateVPL(vplFilename, true);
+await downloadFrontend(previewDir);
+generateVPL(previewDir, vplFilename, true);
 
-const vplPath = resolve(config.dirData, vplFilename);
-const frontendPath = resolve(config.dirData, 'frontend.br.tar.gz');
+const config = getConfig();
+const vplPath = resolve(previewDir, vplFilename);
+const frontendPath = resolve(previewDir, 'frontend.br.tar.gz');
 const webDir = resolve(__dirname, '../web');
 
 const args = ['serve', '-p', '8080', '-s', webDir, '-s', frontendPath, `[satellite]${vplPath}`];

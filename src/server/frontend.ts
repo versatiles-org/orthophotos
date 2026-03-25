@@ -1,15 +1,15 @@
 import { resolve } from 'node:path';
-import { existsSync, renameSync } from 'node:fs';
-import { getConfig } from '../config.ts';
+import { existsSync, mkdirSync, renameSync } from 'node:fs';
 import { runCommandWithRetry } from '../lib/command.ts';
 
 /**
  * Downloads the VersaTiles frontend archive from GitHub releases.
  * Skips download if the archive already exists.
- * Uses retry logic for resilience against transient network failures.
+ * @param targetDir - Directory to download the frontend into
  */
-export async function downloadFrontend() {
-	const filename = resolve(getConfig().dirData, 'frontend.br.tar.gz');
+export async function downloadFrontend(targetDir: string) {
+	mkdirSync(targetDir, { recursive: true });
+	const filename = resolve(targetDir, 'frontend.br.tar.gz');
 	if (existsSync(filename)) {
 		console.log('Frontend archive already exists, skipping download.');
 		return;

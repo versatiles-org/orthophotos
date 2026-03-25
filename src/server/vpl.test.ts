@@ -1,22 +1,14 @@
 import { expect, test } from 'vitest';
-import { mkdirSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { getConfig } from '../config.ts';
 import { generateVPL } from './vpl.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TEST_DIR = resolve(__dirname, '../../test-data/vpl');
 
-function setup(base: string) {
-	getConfig().dirData = base;
-	mkdirSync(base, { recursive: true });
-}
-
 test('generateVPL - creates valid VPL with sftp orthophoto layers', () => {
-	setup(TEST_DIR);
-
-	generateVPL('test.vpl');
+	generateVPL(TEST_DIR, 'test.vpl');
 	const vpl = readFileSync(resolve(TEST_DIR, 'test.vpl'), 'utf-8');
 
 	expect(vpl).toContain('from_stacked_raster');
@@ -28,9 +20,7 @@ test('generateVPL - creates valid VPL with sftp orthophoto layers', () => {
 });
 
 test('generateVPL - includes satellite layers via sftp', () => {
-	setup(TEST_DIR);
-
-	generateVPL('sat.vpl');
+	generateVPL(TEST_DIR, 'sat.vpl');
 	const vpl = readFileSync(resolve(TEST_DIR, 'sat.vpl'), 'utf-8');
 
 	expect(vpl).toContain('sftp://');
@@ -39,9 +29,7 @@ test('generateVPL - includes satellite layers via sftp', () => {
 });
 
 test('generateVPL - applies gamma/brightness/contrast to bluemarble', () => {
-	setup(TEST_DIR);
-
-	generateVPL('gamma.vpl');
+	generateVPL(TEST_DIR, 'gamma.vpl');
 	const vpl = readFileSync(resolve(TEST_DIR, 'gamma.vpl'), 'utf-8');
 
 	expect(vpl).toContain('gamma=0.8');
@@ -51,9 +39,7 @@ test('generateVPL - applies gamma/brightness/contrast to bluemarble', () => {
 });
 
 test('generateVPL - includes meta_update with attribution', () => {
-	setup(TEST_DIR);
-
-	generateVPL('meta.vpl');
+	generateVPL(TEST_DIR, 'meta.vpl');
 	const vpl = readFileSync(resolve(TEST_DIR, 'meta.vpl'), 'utf-8');
 
 	expect(vpl).toContain('meta_update');

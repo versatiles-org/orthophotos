@@ -1,7 +1,6 @@
 import { dirname, relative, resolve } from 'node:path';
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
-import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { getConfig } from '../config.ts';
 import { getAllRegionMetadata } from '../regions/index.ts';
@@ -13,10 +12,11 @@ const GEOJSON_DIR = resolve(__dirname, '../../data');
  * Generates a VersaTiles Pipeline Language (VPL) configuration file.
  * Stacks orthophoto containers (via sftp) from all successful regions onto satellite imagery.
  * Uses GeoJSON mask files from data/ to cleanly clip the raster data at region borders.
- * @param filename - Output filename for the VPL file (relative to data directory)
+ * @param outputDir - Directory to write VPL and mask files into
+ * @param filename - Output filename for the VPL file
  * @param debug - If true, shows all orthophoto layers with level_min = 0 for debugging purposes.
  */
-export function generateVPL(filename: string, debug = false): void {
+export function generateVPL(outputDir: string, filename: string, debug = false): void {
 	const { host, port, dir } = getConfig().ssh!;
 
 	function sftpUrl(path: string): string {
@@ -25,8 +25,8 @@ export function generateVPL(filename: string, debug = false): void {
 		return `sftp://${host}:${port ?? ''}${path}`;
 	}
 
-	const dataDir = resolve(getConfig().dirData);
-	const masksDir = resolve(dataDir, 'masks');
+	mkdirSync(outputDir, { recursive: true });
+	const masksDir = resolve(outputDir, 'masks');
 	mkdirSync(masksDir, { recursive: true });
 
 	const layers: string[] = [];
@@ -48,7 +48,7 @@ export function generateVPL(filename: string, debug = false): void {
 				const geojson = gunzipSync(readFileSync(gzPath)).toString('utf-8');
 				writeFileSync(maskPath, geojson);
 				const buffer = meta.maskBuffer ?? 0;
-				layer += ` | raster_mask geojson="${relative(dataDir, maskPath)}"`;
+				layer += ` | raster_mask geojson="${relative(outputDir, maskPath)}"`;
 				if (buffer !== 0) layer += ` buffer=${buffer}`;
 			}
 
@@ -72,6 +72,6 @@ export function generateVPL(filename: string, debug = false): void {
   attribution="<a href='https://versatiles.org/sources/'>VersaTiles sources</a>"
 `;
 
-	writeFileSync(resolve(dataDir, filename), vpl);
+	writeFileSync(resolve(outputDir, filename), vpl);
 	console.log(`Wrote VPL with ${layers.length - 2} orthophoto layers to ${filename}`);
 }

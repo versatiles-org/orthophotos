@@ -1,4 +1,5 @@
 .DS_Store
+.preview/
 config.env
 coverage/
 node_modules/

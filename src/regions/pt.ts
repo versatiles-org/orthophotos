@@ -84,6 +84,8 @@ export default defineTileRegion({
 				'-q',
 				'-of',
 				'GTiff',
+				'-expand',
+				'rgb',
 				'-a_srs',
 				'EPSG:3857',
 				'-a_ullr',

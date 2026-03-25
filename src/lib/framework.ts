@@ -35,6 +35,8 @@ export interface RegionMetadata {
 	license?: RegionLicense;
 	creator?: RegionCreator;
 	date?: string;
+	/** Override the buffer distance (in meters) for the raster_mask in the VPL. Default: 0 */
+	maskBuffer?: number;
 }
 
 export interface RegionPipeline {

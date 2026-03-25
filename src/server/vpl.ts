@@ -47,7 +47,9 @@ export function generateVPL(filename: string, debug = false): void {
 				const maskPath = resolve(masksDir, `${maskId}.geojson`);
 				const geojson = gunzipSync(readFileSync(gzPath)).toString('utf-8');
 				writeFileSync(maskPath, geojson);
+				const buffer = meta.maskBuffer ?? 0;
 				layer += ` | raster_mask geojson="${relative(dataDir, maskPath)}"`;
+				if (buffer !== 0) layer += ` buffer=${buffer}`;
 			}
 
 			layer += ` | filter level_min=${levelMin}`;

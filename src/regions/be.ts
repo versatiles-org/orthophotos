@@ -95,6 +95,8 @@ export default defineTileRegion({
 				'-of',
 				'GTiff',
 				'-co',
+				'BIGTIFF=YES',
+				'-co',
 				'COMPRESS=LZW',
 				'-co',
 				'PREDICTOR=2',

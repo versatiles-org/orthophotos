@@ -70,7 +70,7 @@ Task spec supports: numbers (`2`), names (`fetch`), ranges (`1-3`), comma lists 
 
 ## Preview Server
 
-The preview server shows all processed orthophoto data using VersaTiles. It downloads all `.versatiles` containers from remote storage and builds a `.vpl` (VersaTiles Pipeline Language) file that layers orthophotos over satellite imagery.
+The preview server shows all processed orthophoto data using VersaTiles. It generates a `.vpl` (VersaTiles Pipeline Language) file that references orthophoto and satellite containers via SFTP, with GeoJSON masks for clean region clipping.
 
 ```bash
 npm run server
@@ -81,7 +81,8 @@ The demo is publicly accessible at [versatiles.org/satellite_demo/](https://vers
 ## Development
 
 ```bash
-npm run check          # Format check + typecheck + tests
+npm run check          # Lint + format check + typecheck + tests
+npm run lint           # ESLint
 npm run test           # Run tests (vitest)
 npm run coverage       # Run tests with coverage
 npm run typecheck      # TypeScript type checking

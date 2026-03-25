@@ -9,7 +9,7 @@ import { runCommandWithRetry } from '../lib/command.ts';
  * Uses retry logic for resilience against transient network failures.
  */
 export async function downloadFrontend() {
-	const filename = resolve(config.dirData, 'frontend-dev.br.tar.gz');
+	const filename = resolve(config.dirData, 'frontend.br.tar.gz');
 	if (existsSync(filename)) {
 		console.log('Frontend archive already exists, skipping download.');
 		return;
@@ -22,7 +22,7 @@ export async function downloadFrontend() {
 		filename + '.tmp',
 		'-z',
 		filename,
-		'https://github.com/versatiles-org/versatiles-frontend/releases/latest/download/frontend-dev.br.tar.gz',
+		'https://github.com/versatiles-org/versatiles-frontend/releases/latest/download/frontend.br.tar.gz',
 	]);
 
 	if (existsSync(filename + '.tmp')) {

@@ -11,9 +11,11 @@ import { getAllRegionMetadata } from '../regions/index.ts';
 export function generateVPL(filename: string) {
 	const { host, port, dir } = config.ssh!;
 
-	function sftpUrl(remotePath: string): string {
-		const cleaned = remotePath.replace(/\/\/+/g, '/');
-		return `sftp://${host}:${port}${cleaned.startsWith('/') ? '' : '/'}${cleaned}`;
+	function sftpUrl(path: string): string {
+		path = path.replace(/\/\/+/g, '/');
+		if (!path.startsWith('/')) path = '/' + path;
+
+		return `sftp://${host}:${port ?? ''}${path}`;
 	}
 
 	const layers: string[] = [];
@@ -30,9 +32,9 @@ export function generateVPL(filename: string) {
 	}
 
 	// Add satellite base layers via sftp
-	layers.push(`from_container filename="${sftpUrl('satellite/s2gm/s2gm_overview.versatiles')}"`);
+	layers.push(`from_container filename="${sftpUrl('/home/satellite/s2gm/s2gm_overview.versatiles')}"`);
 	layers.push(
-		`from_container filename="${sftpUrl('satellite/bluemarble/bluemarble.versatiles')}" | raster_levels gamma=0.8 brightness=0.2 contrast=0.8`,
+		`from_container filename="${sftpUrl('/home/satellite/bluemarble/bluemarble.versatiles')}" | raster_levels gamma=0.8 brightness=0.2 contrast=0.8`,
 	);
 
 	const vpl = `from_stacked_raster auto_overscale=true [

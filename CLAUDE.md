@@ -7,7 +7,8 @@ Orthophoto tile pipeline: fetches aerial imagery from European national agencies
 ## Common Commands
 
 ```bash
-npm run check              # Format check + typecheck + tests (run before committing)
+npm run check              # Lint + format check + typecheck + tests (run before committing)
+npm run lint               # ESLint
 npm run test               # Run tests (vitest)
 npm run typecheck          # TypeScript type checking
 npm run format             # Auto-format with Prettier
@@ -20,6 +21,7 @@ npm run server                    # Prepare data + start server on port 8080
 
 ## Code Style
 
+- **Linter:** ESLint with typescript-eslint (flat config in `eslint.config.js`)
 - **Formatter:** Prettier - single quotes, tabs, 120 char width, trailing commas
 - **TypeScript:** Strict mode, ES2022 target, Node16 modules, noEmit
 - **Tests:** Vitest, colocated `*.test.ts` files alongside source, fixtures in `test-data/`
@@ -47,7 +49,7 @@ Task spec supports: numbers (`2`), names (`fetch`), ranges (`1-3`), comma lists 
   - `src/run.ts` - Main entry point
   - `src/run/` - CLI args, task implementations, command wrappers
   - `src/regions/` - Region definitions (metadata + fetch pipeline steps)
-  - `src/server/` - VPL generation, rsync, frontend download
+  - `src/server/` - VPL generation, frontend download
   - `src/status/` - Region scanning, status checking, GeoJSON loading
   - `src/lib/` - Utilities (command exec, retry, fs helpers, framework, validators, pipeline, progress)
 - `data/` - NUTS TopoJSON reference data
@@ -60,10 +62,20 @@ Region IDs follow pattern `<cc>` or `<cc>/<name>` (e.g., `de`, `de/baden_wuertte
 
 ### Configuration
 
-Environment variables loaded from `config.env`:
+Environment variables loaded from `config.env`, accessed via `getConfig()` from `src/config.ts`:
 - `dir_data` - Directory for large datasets and outputs (required)
 - `dir_temp` - Directory for temporary processing files (required)
-- `ssh_host`, `ssh_port`, `ssh_id`, `ssh_dir` - Remote storage SSH connection and base path (required for merge + server)
+- `ssh_host`, `ssh_port`, `ssh_id`, `ssh_dir` - Remote storage SSH connection and base path (optional, required for merge + server)
+
+### Region Statuses
+
+Defined in `src/lib/framework.ts` as `RegionStatus`:
+- `'planned'` — data source identified, scraper not yet implemented
+- `'scraping'` — scraper implemented but result not yet released
+- `'released'` — scraper works and result is published on the server
+- `'blocked'` — cannot proceed (access restricted, proprietary format, etc.)
+
+Only `'released'` regions are included in the VPL file for the server.
 
 ### New Tile Pipeline (`defineTileRegion`)
 
@@ -80,7 +92,7 @@ All regions use `defineTileRegion()` from `src/lib/process_tiles.ts`. The pipeli
 ```typescript
 export default defineTileRegion({
     name: 'de/example',
-    meta: { status: 'success', notes: [...], license: {...}, creator: {...}, date: '2024' },
+    meta: { status: 'released', notes: [...], license: {...}, creator: {...}, date: '2024' },
     init: async (ctx) => {
         // Fetch index/feed, parse, return items. Use ctx.tempDir for caching.
         const feedPath = join(ctx.tempDir, 'feed.xml');
@@ -164,9 +176,21 @@ The project uses the `versatiles` CLI tool with the `mosaic` subcommand:
 - `versatiles mosaic tile <input> <output>` — tile a single raster into a `.versatiles` container
 - `versatiles mosaic assemble <filelist> <output>` — assemble multiple containers into one
 
-These are wrapped in `src/run/commands.ts` as `runMosaicTile()` and `runMosaicAssemble()`. Quality and max-zoom settings are defined as constants (`MAX_ZOOM`, `QUALITY`) in that file.
+These are wrapped in `src/run/commands.ts` as `runMosaicTile()` and `runMosaicAssemble()`. Quality and max-zoom settings are defined as constants (`MAX_ZOOM`, `QUALITY`) in that file. Both run with `quiet: true` to suppress output during normal operation.
 
 `runMosaicTile()` supports options: `bands`, `nodata`, `crs`, `cacheDirectory`. Use `crs` to override the source CRS (e.g., `{ crs: '3045' }` for EPSG:3045) — this avoids needing `gdal raster edit` to assign CRS before conversion. Use `nodata` to treat specific pixel values as transparent (e.g., `{ nodata: '255,255,255' }` for white borders).
+
+`runMosaicAssemble()` supports `lossless` option for lossless WebP encoding of translucent tiles.
+
+### VPL Generation and Region Masks
+
+`generateVPL()` in `src/server/vpl.ts` builds a VPL file that stacks orthophoto layers (via SFTP) over satellite imagery. Each released region can have a GeoJSON mask (`data/{region_id}.geojson.gz`) for clean border clipping via `raster_mask`. Regions can set `maskBuffer` in their metadata to adjust the mask buffer distance (negative values shrink the mask).
+
+### Command Execution
+
+`runCommand()` in `src/lib/command.ts` supports `quiet` and `quietOnError` options:
+- `quiet: true` — suppresses stdout/stderr during execution (still captured for error messages)
+- `quietOnError: true` — also suppresses output in error messages
 
 ### External CLI Dependencies
 

@@ -25,6 +25,7 @@ export default defineTileRegion({
 			url: 'https://www.lgia.gov.lv/lv/aerofotografesanas-6-cikls-2016-2018-g',
 		},
 		date: '2016-2018',
+		maskBuffer: -1000,
 	},
 	init: async (ctx) => {
 		const indexPath = join(ctx.tempDir, 'index.txt');

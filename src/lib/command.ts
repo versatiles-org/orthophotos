@@ -97,7 +97,7 @@ export function runCommandWithRetry(
  */
 export async function downloadFile(url: string, dest: string): Promise<void> {
 	const tmp = `${dest}.tmp`;
-	await runCommand('curl', ['-sLo', tmp, url]);
+	await runCommand('curl', ['-sLo', tmp, '--http1.1', url]);
 	const { renameSync } = await import('node:fs');
 	renameSync(tmp, dest);
 }

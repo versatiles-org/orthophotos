@@ -64,7 +64,7 @@ export function parseDatasetFeed(xml: string): string | undefined {
 export default defineTileRegion({
 	name: 'at',
 	meta: {
-		status: 'scraping',
+		status: 'released',
 		notes: ['License requires attribution.'],
 		entries: ['result'],
 		license: {

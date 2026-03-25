@@ -106,7 +106,7 @@ async function taskMerge(ctx: TaskContext): Promise<void> {
 	} catch (err) {
 		try {
 			rmSync(localTmp, { force: true });
-		} catch { }
+		} catch {}
 		throw err;
 	}
 
@@ -133,7 +133,7 @@ async function uploadToRemote(localPath: string, regionName: string, filename: s
 	} catch (err) {
 		try {
 			await runSshCommand(`rm -f '${tmpRemote}'`);
-		} catch { }
+		} catch {}
 		throw err;
 	}
 }

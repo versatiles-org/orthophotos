@@ -39,6 +39,9 @@ async function getAccessCode(): Promise<string> {
 }
 
 export function parseIndex(data: IndexResponse): { id: string; path: string }[] {
+	if (!Array.isArray(data.children)) {
+		throw new Error('Belgium NGI data is currently unavailable (server synchronization in progress)');
+	}
 	return data.children
 		.filter((c) => c.type === 'FILE' && c.name.endsWith('.jp2'))
 		.map((c) => ({

@@ -137,24 +137,24 @@ export default defineTileRegion({
 			throw err;
 		}
 	},
-	convert: async ({ extractDir }, { dest }) => {
+	convert: async ({ extractDir }, { dest, tempDir }) => {
 		const vrtPath = `${dest}.vrt`;
 		try {
-			const files = await readdir(extractDir as string);
-			const jp2Files = files.filter((f) => f.endsWith('.jp2')).map((f) => join(extractDir as string, f));
+			const files = await readdir(extractDir);
+			const jp2Files = files.filter((f) => f.endsWith('.jp2')).map((f) => join(extractDir, f));
 
 			if (jp2Files.length === 0) {
 				throw new Error(`No JP2 files found in ${extractDir}`);
 			}
 
 			await runCommand('gdalbuildvrt', [vrtPath, ...jp2Files]);
-			await runMosaicTile(vrtPath, dest);
+			await runMosaicTile(vrtPath, dest, { cacheDirectory: tempDir });
 		} finally {
 			try {
 				rmSync(vrtPath, { force: true });
 			} catch {}
 			try {
-				rmSync(extractDir as string, { recursive: true, force: true });
+				rmSync(extractDir, { recursive: true, force: true });
 			} catch {}
 		}
 	},

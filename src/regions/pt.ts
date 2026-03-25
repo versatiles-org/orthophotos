@@ -30,11 +30,12 @@ interface GridItem {
 
 function generateGrid(): GridItem[] {
 	const items: GridItem[] = [];
-	for (let x = XMIN; x < XMAX; x += BLOCK_SIZE) {
-		for (let y = YMIN; y < YMAX; y += BLOCK_SIZE) {
-			const x1 = x + BLOCK_SIZE;
-			const y1 = y + BLOCK_SIZE;
-			items.push({ id: `${x}_${y}`, x0: x, y0: y, x1, y1 });
+	for (let x0 = XMIN; x0 < XMAX; x0 += BLOCK_SIZE) {
+		for (let y0 = YMIN; y0 < YMAX; y0 += BLOCK_SIZE) {
+			const x1 = x0 + BLOCK_SIZE;
+			const y1 = y0 + BLOCK_SIZE;
+			const id = `${x0}_${y0}`.replace(/-/g, 'm'); // Replace negative sign with 'm' for better readability
+			items.push({ id, x0, y0, x1, y1 });
 		}
 	}
 	return items;

@@ -5,10 +5,10 @@ import { downloadFile, runCommand } from '../lib/command.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
 import { computeWmsBlocks, generateWmsXml, parseWmsCapabilities } from '../lib/wms.ts';
+import { MAX_ZOOM } from '../lib/constants.ts';
 import { runMosaicTile } from '../run/commands.ts';
 
 const LAYER = 'orto_foraar_12_5';
-const ZOOM = 17;
 
 async function extractToken(tempDir: string): Promise<string> {
 	const htmlPath = join(tempDir, 'dk_index.html');
@@ -64,7 +64,7 @@ export default defineTileRegion({
 		}
 
 		const { bbox, maxWidth, maxHeight } = await parseWmsCapabilities(capsPath, LAYER);
-		const { items, blockPx } = computeWmsBlocks(bbox, ZOOM, maxWidth, maxHeight);
+		const { items, blockPx } = computeWmsBlocks(bbox, MAX_ZOOM, maxWidth, maxHeight);
 		console.log(`  ${items.length} blocks at ${blockPx}x${blockPx}px`);
 
 		return items.map((item) => ({ ...item, wmsXmlPath, blockPx }));

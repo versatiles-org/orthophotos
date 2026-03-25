@@ -75,8 +75,7 @@ export async function runScpUpload(localPath: string, remotePath: string): Promi
 	await runCommand('scp', [...scpArgs, localPath, `${host}:${remotePath}`]);
 }
 
-const MAX_ZOOM = '17';
-const QUALITY = '70,16:50,17:30';
+import { MAX_ZOOM, QUALITY } from '../lib/constants.ts';
 
 /**
  * Runs `versatiles mosaic tile` to tile a single raster image into a .versatiles container.
@@ -86,7 +85,7 @@ export async function runMosaicTile(
 	output: string,
 	options?: { bands?: string; nodata?: string; crs?: string; cacheDirectory?: string },
 ): Promise<void> {
-	const args = ['mosaic', 'tile', '--max-zoom', MAX_ZOOM, '--quality', QUALITY];
+	const args = ['mosaic', 'tile', '--max-zoom', String(MAX_ZOOM), '--quality', QUALITY];
 	if (options?.bands) {
 		args.push('--bands', options.bands);
 	}
@@ -120,7 +119,7 @@ export async function runMosaicAssemble(
 	output: string,
 	options?: { lossless?: boolean },
 ): Promise<void> {
-	const args = ['mosaic', 'assemble', '--prescan', '--max-zoom', MAX_ZOOM, '--quality', QUALITY];
+	const args = ['mosaic', 'assemble', '--prescan', '--max-zoom', String(MAX_ZOOM), '--quality', QUALITY];
 	if (options?.lossless) {
 		args.push('--lossless');
 	}

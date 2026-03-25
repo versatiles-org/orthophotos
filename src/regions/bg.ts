@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { runCommand } from '../lib/command.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { computeWmsBlocks, generateWmsXml, type WmsBbox } from '../lib/wms.ts';
+import { MAX_ZOOM } from '../lib/constants.ts';
 import { runMosaicTile } from '../run/commands.ts';
 
 const WMS_URL = 'http://inspire.mzh.government.bg:8080/geoserver/ows';
@@ -16,8 +17,6 @@ const LAYERS = [
 	'RasterDataSet:Orthoimagery_2021',
 	'RasterDataSet:Orthoimagery_2020',
 ].join(',');
-
-const ZOOM = 17;
 
 // Union bounding box covering all years (EPSG:3857), derived from LatLonBoundingBox of all layers
 const BBOX: WmsBbox = {
@@ -56,7 +55,7 @@ export default defineTileRegion({
 		}
 
 		// maxWidth/maxHeight default to 8192 when not set by server
-		const { items, blockPx } = computeWmsBlocks(BBOX, ZOOM, 8192, 8192);
+		const { items, blockPx } = computeWmsBlocks(BBOX, MAX_ZOOM, 8192, 8192);
 		console.log(`  ${items.length} blocks at ${blockPx}x${blockPx}px`);
 
 		return items.map((item) => ({ ...item, wmsXmlPath, blockPx }));

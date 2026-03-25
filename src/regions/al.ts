@@ -4,11 +4,11 @@ import { downloadFile, runCommand } from '../lib/command.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
 import { computeWmsBlocks, generateWmsXml, parseWmsCapabilities } from '../lib/wms.ts';
+import { MAX_ZOOM } from '../lib/constants.ts';
 import { runMosaicTile } from '../run/commands.ts';
 
 const WMS_URL = 'https://geoportal.asig.gov.al/service/wms';
 const LAYER = 'orthophoto_2015:OrthoImagery_20cm';
-const ZOOM = 17;
 
 export default defineTileRegion({
 	name: 'al',
@@ -42,7 +42,7 @@ export default defineTileRegion({
 		}
 
 		const { bbox, maxWidth, maxHeight } = await parseWmsCapabilities(capsPath, LAYER);
-		const { items, blockPx } = computeWmsBlocks(bbox, ZOOM, maxWidth, maxHeight);
+		const { items, blockPx } = computeWmsBlocks(bbox, MAX_ZOOM, maxWidth, maxHeight);
 		console.log(`  ${items.length} blocks at ${blockPx}x${blockPx}px`);
 
 		return items.map((item) => ({ ...item, wmsXmlPath, blockPx }));

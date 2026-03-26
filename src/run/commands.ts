@@ -104,9 +104,9 @@ export async function runMosaicTile(
 	try {
 		await runCommand('versatiles', args, { quiet: true });
 		renameSync(tmpOutput, output);
-	} catch (err) {
+	} catch (cause) {
 		safeRm(tmpOutput);
-		throw err;
+		throw new Error(`runMosaicTile failed for "${input}"`, { cause });
 	}
 }
 

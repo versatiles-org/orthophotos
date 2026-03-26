@@ -79,6 +79,16 @@ export async function runScpUpload(localPath: string, remotePath: string): Promi
 import { MAX_ZOOM, QUALITY } from '../lib/constants.ts';
 
 /**
+ * Verifies that command output contains the expected success marker.
+ */
+function assertOutputContains(result: { stderr: Uint8Array }, marker: string, context: string): void {
+	const stderr = new TextDecoder().decode(result.stderr);
+	if (!stderr.includes(marker)) {
+		throw new Error(`${context}: expected "${marker}" in output but got:\n${stderr.trim()}`);
+	}
+}
+
+/**
  * Runs `versatiles mosaic tile` to tile a single raster image into a .versatiles container.
  */
 export async function runMosaicTile(
@@ -102,7 +112,8 @@ export async function runMosaicTile(
 	const tmpOutput = join(dirname(output), `tmp.${basename(output)}`);
 	args.push(input, tmpOutput);
 	try {
-		await runCommand('versatiles', args, { quiet: true });
+		const result = await runCommand('versatiles', args, { quiet: true });
+		assertOutputContains(result, 'finished mosaic tile', `runMosaicTile for "${input}"`);
 		renameSync(tmpOutput, output);
 	} catch (cause) {
 		safeRm(tmpOutput);
@@ -123,5 +134,6 @@ export async function runMosaicAssemble(
 		args.push('--lossless');
 	}
 	args.push(filelistPath, output);
-	await runCommand('versatiles', args, { quiet: options?.quiet, quietOnError: options?.quietOnError });
+	const result = await runCommand('versatiles', args, { quiet: options?.quiet, quietOnError: options?.quietOnError });
+	assertOutputContains(result, 'finished mosaic assemble', `runMosaicAssemble for "${filelistPath}"`);
 }

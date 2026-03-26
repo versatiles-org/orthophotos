@@ -166,4 +166,40 @@ describe('pipeline', () => {
 			});
 		expect(results.sort()).toEqual(['v3', 'v5', 'v7']);
 	});
+
+	it('propagates errors from forEach callback', async () => {
+		await expect(
+			pipeline([1, 2, 3, 4, 5]).forEach(2, async (n) => {
+				if (n === 3) throw new Error('boom');
+			}),
+		).rejects.toThrow('boom');
+	});
+
+	it('propagates errors from map callback', async () => {
+		const results: number[] = [];
+		await expect(
+			pipeline([1, 2, 3, 4, 5])
+				.map(2, async (n) => {
+					if (n === 3) throw new Error('map boom');
+					return n;
+				})
+				.forEach(2, async (n) => {
+					results.push(n);
+				}),
+		).rejects.toThrow('map boom');
+	});
+
+	it('propagates errors from forEach through outer pipeline', async () => {
+		// Simulates nested pipeline: outer forEach calls inner pipeline that throws
+		await expect(
+			pipeline([1, 2, 3])
+				.map(1, async (n) => n)
+				.forEach(1, async (n) => {
+					// Inner pipeline that throws on item 2
+					await pipeline([n * 10 + 1, n * 10 + 2, n * 10 + 3]).forEach(2, async (inner) => {
+						if (inner === 12) throw new Error('inner boom');
+					});
+				}),
+		).rejects.toThrow('inner boom');
+	});
 });

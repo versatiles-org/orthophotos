@@ -26,6 +26,15 @@ vi.mock('../lib/command.ts', async (importOriginal) => {
 import { runCommand } from '../lib/command.ts';
 const mockRunCommand = vi.mocked(runCommand);
 
+function mockResult(stderr = '') {
+	return {
+		success: true,
+		code: 0,
+		stdout: new Uint8Array(),
+		stderr: new TextEncoder().encode(stderr),
+	};
+}
+
 test('checkRequiredCommands - succeeds when all commands exist', async () => {
 	mockRunCommand.mockResolvedValue({ success: true, code: 0, stdout: new Uint8Array(), stderr: new Uint8Array() });
 	await checkRequiredCommands();
@@ -113,7 +122,7 @@ test('runMosaicTile - calls versatiles with correct args', async () => {
 	const tmpOutput = join(testDir, 'tmp.out.versatiles');
 	mockRunCommand.mockImplementation(async () => {
 		writeFileSync(tmpOutput, 'fake');
-		return { success: true, code: 0, stdout: new Uint8Array(), stderr: new Uint8Array() };
+		return mockResult('info: finished mosaic tile');
 	});
 
 	await runMosaicTile('/input.tif', output);
@@ -133,7 +142,7 @@ test('runMosaicTile - passes all options', async () => {
 	const tmpOutput = join(testDir, 'tmp.out.versatiles');
 	mockRunCommand.mockImplementation(async () => {
 		writeFileSync(tmpOutput, 'fake');
-		return { success: true, code: 0, stdout: new Uint8Array(), stderr: new Uint8Array() };
+		return mockResult('info: finished mosaic tile');
 	});
 
 	await runMosaicTile('/input.tif', output, {
@@ -166,12 +175,12 @@ test('runMosaicTile - cleans up tmp file on error', async () => {
 
 	mockRunCommand.mockRejectedValue(new Error('versatiles failed'));
 
-	await expect(runMosaicTile('/input.tif', output)).rejects.toThrow('versatiles failed');
+	await expect(runMosaicTile('/input.tif', output)).rejects.toThrow('runMosaicTile failed');
 	expect(existsSync(join(testDir, 'tmp.out.versatiles'))).toBe(false);
 });
 
 test('runMosaicAssemble - calls versatiles with correct args', async () => {
-	mockRunCommand.mockResolvedValue({ success: true, code: 0, stdout: new Uint8Array(), stderr: new Uint8Array() });
+	mockRunCommand.mockResolvedValue(mockResult('info: finished mosaic assemble'));
 
 	await runMosaicAssemble('/filelist.txt', '/output.versatiles', { quiet: true, quietOnError: true });
 
@@ -193,7 +202,7 @@ test('runMosaicAssemble - calls versatiles with correct args', async () => {
 });
 
 test('runMosaicAssemble - passes lossless option', async () => {
-	mockRunCommand.mockResolvedValue({ success: true, code: 0, stdout: new Uint8Array(), stderr: new Uint8Array() });
+	mockRunCommand.mockResolvedValue(mockResult('info: finished mosaic assemble'));
 
 	await runMosaicAssemble('/filelist.txt', '/output.versatiles', { lossless: true, quiet: true, quietOnError: true });
 

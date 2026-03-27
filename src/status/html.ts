@@ -46,10 +46,13 @@ export function generateStatusPage(
 			notesHtml = `<details><summary>${meta.notes.length} note${meta.notes.length > 1 ? 's' : ''}</summary><ul>${list}</ul></details>`;
 		}
 
+		const releaseDate = meta.status === 'released' ? meta.releaseDate : '';
+
 		rows.push(`<tr>
 			<td>${escapeHtml(id)}</td>
 			<td>${escapeHtml(name)}</td>
 			<td><span style="color:${color};font-weight:bold">${STATUS_LABELS[meta.status]}</span></td>
+			<td>${releaseDate}</td>
 			<td>${meta.date ?? ''}</td>
 			<td>${license}</td>
 			<td>${creator}</td>
@@ -83,6 +86,7 @@ export function generateStatusPage(
 	col.col-id { width: 150px; }
 	col.col-name { }
 	col.col-status { width: 100px; }
+	col.col-released { width: 130px; }
 	col.col-date { width: 100px; }
 	col.col-license { width: 150px; }
 	col.col-creator { }
@@ -99,10 +103,10 @@ export function generateStatusPage(
 <p class="summary">${allMetadata.size} regions &middot; ${summary}</p>
 <table>
 <colgroup>
-<col class="col-id"><col class="col-name"><col class="col-status"><col class="col-date"><col class="col-license"><col class="col-creator"><col class="col-notes">
+<col class="col-id"><col class="col-name"><col class="col-status"><col class="col-released"><col class="col-date"><col class="col-license"><col class="col-creator"><col class="col-notes">
 </colgroup>
 <thead>
-<tr><th>ID</th><th>Name</th><th>Status</th><th>Date</th><th>License</th><th>Creator</th><th>Notes</th></tr>
+<tr><th>ID</th><th>Name</th><th>Status</th><th>Released</th><th>Date</th><th>License</th><th>Creator</th><th>Notes</th></tr>
 </thead>
 <tbody>
 ${rows.join('\n')}

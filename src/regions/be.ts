@@ -114,7 +114,7 @@ export default defineTileRegion({
 		rmSync(jp2Path, { force: true });
 		return { tifPath };
 	},
-	convertLimit: { memoryGB: 8 },
+	convertLimit: { memoryGB: 5 },
 	convert: async ({ tifPath }, { dest, tempDir }) => {
 		await runMosaicTile(tifPath, dest, { cacheDirectory: tempDir });
 		safeRm(tifPath);

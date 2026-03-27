@@ -94,6 +94,7 @@ export default defineTileRegion({
 		await zip.extractToFile(entry, tifPath);
 		return { tifPath };
 	},
+	convertLimit: { memoryGB: 24 },
 	convert: async ({ tifPath }, { dest }) => {
 		try {
 			await runMosaicTile(tifPath, dest, { crs: '3046' });

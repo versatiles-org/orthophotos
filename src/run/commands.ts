@@ -134,7 +134,7 @@ export async function runMosaicAssemble(
 		'assemble',
 		'--optimize-order',
 		'--max-buffer-size',
-		'66%',
+		'50%',
 		'--max-zoom',
 		String(MAX_ZOOM),
 		'--quality',

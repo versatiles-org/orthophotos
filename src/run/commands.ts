@@ -132,7 +132,6 @@ export async function runMosaicAssemble(
 	const args = [
 		'mosaic',
 		'assemble',
-		'--optimize-order',
 		'--max-buffer-size',
 		'50%',
 		'--max-zoom',

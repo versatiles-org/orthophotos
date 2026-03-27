@@ -41,7 +41,7 @@ export function parseDepartments(html: string): DepartmentItem[] {
 export default defineTileRegion({
 	name: 'fr',
 	meta: {
-		status: 'scraping',
+		status: 'released',
 		notes: [
 			'No API, such as an ATOM feed, available.',
 			'Parsing HTML is required.',

@@ -1,13 +1,13 @@
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
-import { readFile, readdir } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { XMLParser } from 'fast-xml-parser';
 import { downloadFile } from '../lib/command.ts';
-import { extractZipFile, safeRm } from '../lib/fs.ts';
-import { pipeline } from '../lib/pipeline.ts';
+import { safeRm } from '../lib/fs.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
+import { RemoteZip } from '../lib/remote-zip.ts';
 import { withRetry } from '../lib/retry.ts';
-import { runMosaicAssemble, runMosaicTile } from '../run/commands.ts';
+import { runMosaicTile } from '../run/commands.ts';
 
 const ATOM_URL = 'https://inspirews.skgeodesy.sk/atom/7efad194-3006-408f-9e6c-c06dc79703bd_dataFeed.atom';
 
@@ -30,11 +30,22 @@ export function parseZipUrls(xml: string): { url: string; id: string }[] {
 	return items;
 }
 
+interface SkItem {
+	id: string;
+	zipUrl: string;
+	entryFilename: string;
+	[key: string]: unknown;
+}
+
 export default defineTileRegion({
 	name: 'sk',
 	meta: {
 		status: 'scraping',
-		notes: ['Images are unnecessarily packed into container files, such as ZIP.', 'License requires attribution.'],
+		notes: [
+			'Images are unnecessarily packed into container files, such as ZIP.',
+			'License requires attribution.',
+			'ZIP files are read remotely via HTTP range requests.',
+		],
 		entries: ['result'],
 		license: {
 			name: 'CC BY 4.0',
@@ -56,53 +67,39 @@ export default defineTileRegion({
 		const xml = await readFile(atomPath, 'utf-8');
 		const zips = parseZipUrls(xml);
 		console.log(`  Found ${zips.length} zip files`);
-		return zips;
-	},
-	downloadConcurrency: 1,
-	download: async ({ url, id }, { tempDir }) => {
-		const zipPath = join(tempDir, `${id}.zip`);
-		console.log(`  Downloading ${id}.zip...`);
-		await withRetry(() => downloadFile(url, zipPath), { maxAttempts: 3 });
-		return { zipPath };
-	},
-	convertLimit: { concurrency: 1 },
-	convert: async ({ zipPath }, { dest, tempDir }) => {
-		const extractDir = join(tempDir, `extract_${Date.now()}`);
-		const tilesDir = join(tempDir, `tiles_${Date.now()}`);
 
-		// Extract ZIP
-		console.log(`  Extracting ${basename(zipPath)}...`);
-		await extractZipFile(zipPath, extractDir);
-		safeRm(zipPath);
-
-		// Find all TIF files
-		const files = await readdir(extractDir, { recursive: true });
-		const tifFiles = files
-			.map((f) => (typeof f === 'string' ? f : String(f)))
-			.filter((f) => f.endsWith('.tif'))
-			.map((f) => join(extractDir, f));
-
-		if (tifFiles.length === 0) {
-			throw new Error(`No TIF files found in ${extractDir}`);
+		// Read the Central Directory of each ZIP via HTTP range requests
+		const items: SkItem[] = [];
+		for (const { url, id } of zips) {
+			console.log(`  Reading contents of ${id}.zip...`);
+			const zip = await RemoteZip.open(url);
+			for (const entry of zip.getEntries()) {
+				if (!entry.filename.endsWith('.tif')) continue;
+				const tifName = basename(entry.filename, '.tif');
+				items.push({ id: tifName, zipUrl: url, entryFilename: entry.filename });
+			}
+			console.log(`    ${items.length} TIF files so far`);
 		}
 
-		// Convert each TIF to a .versatiles container individually
-		mkdirSync(tilesDir, { recursive: true });
-		console.log(`  Converting ${tifFiles.length} TIF files...`);
-		const versatilesFiles: string[] = [];
-		await pipeline(tifFiles, { progress: { labels: ['converted'] } }).forEach(4, async (tifPath) => {
-			const tileName = basename(tifPath, '.tif') + '.versatiles';
-			const tilePath = join(tilesDir, tileName);
-			await runMosaicTile(tifPath, tilePath, { crs: '3046' });
-			versatilesFiles.push(tilePath);
-			return 'converted';
-		});
-
-		// Assemble all per-file containers into one
-		const filelistPath = join(tempDir, 'filelist.txt');
-		writeFileSync(filelistPath, versatilesFiles.join('\n'));
-		await runMosaicAssemble(filelistPath, dest, { lossless: true });
-		safeRm(filelistPath);
+		return items;
 	},
-	minFiles: 3,
+	download: async (item, { tempDir }) => {
+		const { zipUrl, entryFilename } = item as SkItem;
+		const tifPath = join(tempDir, `${item.id}.tif`);
+
+		const zip = await RemoteZip.open(zipUrl);
+		const entry = zip.getEntries().find((e) => e.filename === entryFilename);
+		if (!entry) throw new Error(`Entry "${entryFilename}" not found in ${zipUrl}`);
+
+		await zip.extractToFile(entry, tifPath);
+		return { tifPath };
+	},
+	convert: async ({ tifPath }, { dest }) => {
+		try {
+			await runMosaicTile(tifPath, dest, { crs: '3046' });
+		} finally {
+			safeRm(tifPath);
+		}
+	},
+	minFiles: 40,
 });

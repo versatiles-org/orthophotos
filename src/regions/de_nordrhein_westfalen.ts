@@ -38,6 +38,7 @@ export default defineTileRegion({
 			url: 'https://www.opengeodata.nrw.de/produkte/geobasis/lusat/akt/dop/dop_jp2_f10/',
 		},
 		date: '2025',
+		releaseDate: '2026-03-22',
 	},
 	init: async (ctx) => {
 		const indexPath = join(ctx.tempDir, 'index.xml');

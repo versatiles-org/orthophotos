@@ -41,6 +41,7 @@ export default defineTileRegion({
 			url: 'https://geoportal.thueringen.de/gdi-th/download-offene-geodaten/download-luftbilder-und-orthophotos',
 		},
 		date: '2024',
+		releaseDate: '2026-03-23',
 	},
 	init: () => generateCoords(),
 	download: async ({ x, y, id }, { tempDir, skipDest }) => {

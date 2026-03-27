@@ -47,6 +47,7 @@ export default defineTileRegion({
 			url: 'https://ni-lgln-opengeodata.hub.arcgis.com/apps/lgln-opengeodata::digitales-orthophoto-dop/about',
 		},
 		date: '2025',
+		releaseDate: '2026-03-24',
 	},
 	init: async (ctx) => {
 		const geojsonPath = join(ctx.tempDir, 'lgln-opengeodata-dop20.geojson');

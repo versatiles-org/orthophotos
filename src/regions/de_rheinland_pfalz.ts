@@ -41,6 +41,7 @@ export default defineTileRegion({
 			url: 'https://geoshop.rlp.de/opendata-dop20.html',
 		},
 		date: '2025',
+		releaseDate: '2026-03-21',
 	},
 	init: async (ctx) => {
 		const indexPath = join(ctx.tempDir, 'index.html');

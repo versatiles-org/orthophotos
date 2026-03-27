@@ -54,6 +54,7 @@ export default defineTileRegion({
 			url: 'https://geodaten.bayern.de/opengeodata/OpenDataDetail.html?pn=dop20rgb',
 		},
 		date: '2025-06',
+		releaseDate: '2026-03-21',
 	},
 	init: async (ctx) => {
 		const kmlPath = join(ctx.tempDir, 'gemeinde.kml');

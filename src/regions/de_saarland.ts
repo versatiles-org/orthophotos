@@ -55,6 +55,7 @@ export default defineTileRegion({
 			url: 'https://geoportal.saarland.de/app-article/geobasisdatenuebersicht/',
 		},
 		date: '2023',
+		releaseDate: '2026-03-22',
 	},
 	init: async (ctx) => {
 		const atomPath = join(ctx.tempDir, 'atom.xml');

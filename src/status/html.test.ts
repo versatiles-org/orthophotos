@@ -3,11 +3,13 @@ import { generateStatusPage } from './html.ts';
 import type { RegionMetadata } from '../lib/framework.ts';
 import type { KnownRegion } from './geojson.ts';
 
-function makeMetadata(overrides: Partial<RegionMetadata> & { status: RegionMetadata['status'] }): RegionMetadata {
+function makeMetadata(overrides: Partial<RegionMetadata>): RegionMetadata {
 	return {
+		status: overrides.status || 'released',
 		notes: [],
+		releaseDate: overrides.releaseDate || '2024-06-01',
 		...overrides,
-	};
+	} as RegionMetadata;
 }
 
 function makeKnownRegion(id: string, fullname: string): KnownRegion {

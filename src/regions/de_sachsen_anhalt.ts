@@ -55,6 +55,7 @@ export default defineTileRegion({
 			url: 'https://www.lvermgeo.sachsen-anhalt.de/de/gdp-open-data.html',
 		},
 		date: '2020',
+		releaseDate: '2026-03-23',
 	},
 	init: async (ctx) => {
 		const atomPath = join(ctx.tempDir, 'atom.xml');

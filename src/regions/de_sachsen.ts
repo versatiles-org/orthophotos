@@ -35,6 +35,7 @@ export default defineTileRegion({
 			url: 'https://www.geodaten.sachsen.de/luftbild-produkte-3995.html',
 		},
 		date: '2024',
+		releaseDate: '2026-03-23',
 	},
 	init: async () => {
 		const urlsPath = join(dirname(fileURLToPath(import.meta.url)), 'de_sachsen.txt');

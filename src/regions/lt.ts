@@ -32,6 +32,7 @@ export default defineTileRegion({
 			url: 'https://www.geoportal.lt/geoportal/paieska',
 		},
 		date: '2019',
+		releaseDate: '2025-10-06',
 	},
 	init: async (ctx) => {
 		const capsPath = join(ctx.tempDir, 'caps.xml');

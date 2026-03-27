@@ -53,6 +53,7 @@ export default defineTileRegion({
 			url: 'https://opendata.hessen.de/en/dataset/atkis-dop-20',
 		},
 		date: '2024',
+		releaseDate: '2026-03-21',
 	},
 	init: async (ctx) => {
 		const atomPath = join(ctx.tempDir, 'atom.xml');

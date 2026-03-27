@@ -33,6 +33,7 @@ vi.mock('../regions/index.ts', () => ({
 					license: { name: 'CC BY 4.0', url: 'https://example.com/license', requiresAttribution: true },
 					creator: { name: 'TestCreator', url: 'https://example.com/creator' },
 					date: '2024',
+					releaseDate: '2024-06-01',
 				},
 			],
 			[

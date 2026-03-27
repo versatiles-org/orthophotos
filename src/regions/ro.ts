@@ -46,6 +46,7 @@ export default defineTileRegion({
 			url: 'https://data.gov.ro/en/dataset/ortofotoplan-scara-1-5000-pentru-teritoriul-romaniei',
 		},
 		date: '2023',
+		releaseDate: '2025-10-05',
 	},
 	init: async (ctx) => {
 		const atomPath = join(ctx.tempDir, 'index.xml');

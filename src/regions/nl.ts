@@ -26,6 +26,7 @@ export default defineTileRegion({
 			url: 'https://www.beeldmateriaal.nl/dataroom',
 		},
 		date: '2024',
+		releaseDate: '2025-10-04',
 	},
 	init: async (ctx) => {
 		const geojsonPath = join(ctx.tempDir, 'features.geojson');

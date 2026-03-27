@@ -27,6 +27,7 @@ export default defineTileRegion({
 			url: 'https://geoportal.asig.gov.al/geonetwork/srv/alb/catalog.search#/metadata/b50abc17-b932-4a96-b97a-ae6cba52c2fb',
 		},
 		date: '2015',
+		releaseDate: '2025-10-05',
 	},
 	init: async (ctx) => {
 		const capsPath = join(ctx.tempDir, 'caps.xml');

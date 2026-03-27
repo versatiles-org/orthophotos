@@ -43,6 +43,7 @@ export default defineTileRegion({
 			url: 'https://data.geobasis-bb.de/geobasis/daten/dop/rgb_jpg/',
 		},
 		date: '2023',
+		releaseDate: '2026-03-19',
 	},
 	init: async (ctx) => {
 		const indexPath = join(ctx.tempDir, 'index.html');

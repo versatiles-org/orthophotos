@@ -27,6 +27,7 @@ export default defineTileRegion({
 		},
 		date: '2016-2018',
 		maskBuffer: -1000,
+		releaseDate: '2025-10-04',
 	},
 	init: async (ctx) => {
 		const indexPath = join(ctx.tempDir, 'index.txt');

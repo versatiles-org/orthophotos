@@ -23,6 +23,7 @@ export default defineTileRegion({
 			url: 'https://www.opendata.li/de/daten',
 		},
 		date: '2022',
+		releaseDate: '2026-03-24',
 	},
 	init: () => [{ id: 'image', url: DOWNLOAD_URL }],
 	download: async ({ url }, { tempDir }) => {

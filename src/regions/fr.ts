@@ -60,6 +60,7 @@ export default defineTileRegion({
 			url: 'https://geoservices.ign.fr/documentation/donnees/ortho/bdortho',
 		},
 		date: '2021-2025',
+		releaseDate: '2025-09-28',
 	},
 	init: async (ctx) => {
 		const indexPath = join(ctx.tempDir, 'index.html');

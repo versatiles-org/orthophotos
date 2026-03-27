@@ -58,6 +58,7 @@ export default defineTileRegion({
 			url: 'https://opendata.schleswig-holstein.de/dataset/digitale-orthophotos-dop20',
 		},
 		date: '2024',
+		releaseDate: '2026-03-24',
 	},
 	init: async (ctx) => {
 		const geojsonPath = join(ctx.tempDir, 'tiles.geojson');

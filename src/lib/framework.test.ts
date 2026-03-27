@@ -13,6 +13,7 @@ const dummyMeta: RegionMetadata = {
 	license: { name: 'CC0', url: 'https://creativecommons.org/publicdomain/zero/1.0/', requiresAttribution: false },
 	creator: { name: 'Test', url: 'https://example.com' },
 	date: '2024',
+	releaseDate: '2025-02-03',
 };
 
 test('RegionPipeline - run executes correctly', async () => {

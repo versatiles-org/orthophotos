@@ -37,6 +37,7 @@ export default defineTileRegion({
 			url: 'https://metaver.de/trefferanzeige?cmd=doShowDocument&docuuid=910260F7-AC66-40F3-8BA2-E7108C3C71C9',
 		},
 		date: '2025',
+		releaseDate: '2026-03-24',
 	},
 	init: async () => {
 		return DISTRICTS.map((d) => ({

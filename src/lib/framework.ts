@@ -28,8 +28,7 @@ export interface RegionCreator {
  */
 export type RegionStatus = 'planned' | 'scraping' | 'released' | 'blocked';
 
-export interface RegionMetadata {
-	status: RegionStatus;
+interface RegionMetadataBase {
 	notes: string[];
 	entries?: string[];
 	license?: RegionLicense;
@@ -38,6 +37,19 @@ export interface RegionMetadata {
 	/** Override the buffer distance (in meters) for the raster_mask in the VPL. Default: 0 */
 	maskBuffer?: number;
 }
+
+interface RegionMetadataReleased extends RegionMetadataBase {
+	status: 'released';
+	/** Date when the data was last released/published (e.g., '2025-03-27') */
+	releaseDate: string;
+}
+
+interface RegionMetadataOther extends RegionMetadataBase {
+	status: 'planned' | 'scraping' | 'blocked';
+	releaseDate?: never;
+}
+
+export type RegionMetadata = RegionMetadataReleased | RegionMetadataOther;
 
 export interface RegionPipeline {
 	id: string;

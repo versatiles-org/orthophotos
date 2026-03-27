@@ -43,6 +43,7 @@ export default defineTileRegion({
 			url: 'https://www.lgl-bw.de/Produkte/Luftbildprodukte/DOP20/',
 		},
 		date: '2024',
+		releaseDate: '2026-03-23',
 	},
 	init: () => generateTileIds().map((id) => ({ id })),
 	download: async ({ id }, { tempDir, skipDest }) => {

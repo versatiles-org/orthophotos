@@ -50,6 +50,7 @@ export default defineTileRegion({
 			url: 'https://metaver.de/trefferanzeige?docuuid=5DF0990B-9195-41E7-9960-9214BC85B4DA',
 		},
 		date: '2024',
+		releaseDate: '2026-03-24',
 	},
 	init: async ({ tempDir }) => {
 		const apiPath = join(tempDir, 'ckan.json');

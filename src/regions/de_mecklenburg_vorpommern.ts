@@ -44,6 +44,7 @@ export default defineTileRegion({
 			url: 'https://www.geoportal-mv.de/portal/Suche/Metadatenuebersicht/Details/Downloaddienst%20Digitale%20Orthophotos%2020cm%20MV%20(ATOM_MV_DOP)/0dea084c-5d2f-4aa0-a974-481dcd85a0ab',
 		},
 		date: '2024',
+		releaseDate: '2026-03-21',
 	},
 	init: async (ctx) => {
 		const atomPath = join(ctx.tempDir, 'atom.xml');

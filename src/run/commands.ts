@@ -129,16 +129,7 @@ export async function runMosaicAssemble(
 	output: string,
 	options?: { lossless?: boolean; quiet?: boolean; quietOnError?: boolean },
 ): Promise<void> {
-	const args = [
-		'mosaic',
-		'assemble',
-		'--max-buffer-size',
-		'50%',
-		'--max-zoom',
-		String(MAX_ZOOM),
-		'--quality',
-		QUALITY,
-	];
+	const args = ['mosaic', 'assemble', '--max-buffer-size', '50%', '--max-zoom', String(MAX_ZOOM), '--quality', QUALITY];
 	if (options?.lossless) {
 		args.push('--lossless');
 	}

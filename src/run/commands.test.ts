@@ -189,7 +189,9 @@ test('runMosaicAssemble - calls versatiles with correct args', async () => {
 		[
 			'mosaic',
 			'assemble',
-			'--prescan',
+			'--optimize-order',
+			'--max-buffer-size',
+			'50%',
 			'--max-zoom',
 			'17',
 			'--quality',
@@ -211,7 +213,9 @@ test('runMosaicAssemble - passes lossless option', async () => {
 		[
 			'mosaic',
 			'assemble',
-			'--prescan',
+			'--optimize-order',
+			'--max-buffer-size',
+			'50%',
 			'--max-zoom',
 			'17',
 			'--quality',

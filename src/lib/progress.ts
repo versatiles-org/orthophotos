@@ -72,12 +72,24 @@ export function createProgress(total: number, options: ProgressOptions): Progres
 		return `  ${renderBar(done, total, barWidth)} ${done}/${total} | ${stats}${eta}`;
 	}
 
+	const inTmux = !!process.env['TMUX'];
+
+	function writeOsc(seq: string) {
+		if (!isTTY || !terminalProgress) return;
+		if (inTmux) {
+			// Wrap in DCS passthrough so tmux forwards it to the outer terminal
+			process.stderr.write(`\x1bPtmux;\x1b${seq}\x1b\\`);
+		} else {
+			process.stderr.write(seq);
+		}
+	}
+
 	function osc9(percent: number) {
-		if (isTTY && terminalProgress) process.stderr.write(`\x1b]9;4;1;${Math.round(percent)}\x07`);
+		writeOsc(`\x1b]9;4;1;${Math.round(percent)}\x07`);
 	}
 
 	function osc9Clear() {
-		if (isTTY && terminalProgress) process.stderr.write('\x1b]9;4;0;0\x07');
+		writeOsc('\x1b]9;4;0;0\x07');
 	}
 
 	// Clear OSC progress on process exit/kill

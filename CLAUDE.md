@@ -159,6 +159,12 @@ Region fetch implementations should follow these patterns consistently:
 
 **Resumability:** The pipeline automatically skips items with existing `.versatiles` or `.skip` files. Use `shuffle()` to distribute load across servers.
 
+**Transparent borders:** Orthophoto tiles must not have black or white borders around the imagery. Borders cause visible rectangles when tiles are stacked. To ensure clean transparency:
+- **Alpha channel:** If the source has an alpha channel (e.g., WMS with `Transparent=TRUE`), use it directly — `versatiles mosaic tile` respects alpha.
+- **Nodata flag:** Use `runMosaicTile(input, output, { nodata: '0,0,0' })` to treat black as transparent, or `{ nodata: '255,255,255' }` for white. Multiple values can be joined with `;` (e.g., `{ nodata: '0,0,0;255,255,255' }`). Note: nodata only works reliably on lossless-compressed source data (e.g., DEFLATE, LZW, uncompressed). JPEG-compressed sources may have intermediate values at edges that don't match the exact nodata value.
+- **GeoJSON masks:** The VPL generator applies `raster_mask` with region border GeoJSON to clip edges at serving time. This is a final safety net but doesn't fix the source tiles.
+- Always inspect the edges of a sample tile with `gdalinfo` + pixel value checks before assuming the border color.
+
 **Temp file cleanup:** Always clean up temp files in a `finally` block:
 ```typescript
 try {

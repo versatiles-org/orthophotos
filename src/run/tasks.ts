@@ -3,9 +3,9 @@
  * Task implementations for the pipeline (tasks 1-3).
  */
 
-import { existsSync, mkdirSync, readdirSync, renameSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, renameSync } from 'node:fs';
 import { createInterface } from 'node:readline';
-import { resolve, join } from 'node:path';
+import { resolve } from 'node:path';
 import { runSshCommand, runMosaicAssemble, runScpUpload } from './commands.ts';
 import { TASK_NUMBER_TO_NAME } from './tasks.constants.ts';
 import { safeRm } from '../lib/fs.ts';
@@ -42,14 +42,11 @@ export async function runTask(taskNum: number, ctx: TaskContext): Promise<void> 
 
 /**
  * Task 1: Fetch new source data.
- * Runs the region's pipeline steps (which download and convert rasters to .versatiles),
- * then scans dataDir for .versatiles files and writes filelist.txt.
+ * Runs the region's pipeline (which downloads, converts, and writes filelist.txt).
  */
 async function taskFetch(ctx: TaskContext): Promise<void> {
 	console.log('Fetching new data...');
 
-	// Clean up any leftover temp files from a previous interrupted run
-	// safeRm(ctx.tempDir);
 	mkdirSync(ctx.tempDir, { recursive: true });
 
 	const pipeline = getRegionPipeline(ctx.name);
@@ -63,24 +60,10 @@ async function taskFetch(ctx: TaskContext): Promise<void> {
 		tempDir: ctx.tempDir,
 	});
 
-	// Scan for .versatiles files and write filelist.txt
-	const versatilesFiles: string[] = [];
-
-	function scanDir(dir: string): void {
-		if (!existsSync(dir)) return;
-		for (const entry of readdirSync(dir, { withFileTypes: true })) {
-			if (entry.isDirectory()) {
-				scanDir(join(dir, entry.name));
-			} else if (entry.name.endsWith('.versatiles')) {
-				versatilesFiles.push(join(dir, entry.name));
-			}
-		}
-	}
-	scanDir(resolve(ctx.dataDir, 'tiles'));
-
 	const filelistPath = resolve(ctx.dataDir, 'filelist.txt');
-	writeFileSync(filelistPath, versatilesFiles.join('\n'));
-	console.log(`  Wrote filelist.txt with ${versatilesFiles.length} entries.`);
+	if (!existsSync(filelistPath)) {
+		throw new Error(`filelist.txt not found after pipeline run. This should not happen.`);
+	}
 }
 
 /**
@@ -131,7 +114,7 @@ async function uploadToRemote(localPath: string, regionName: string, filename: s
 	} catch (err) {
 		try {
 			await runSshCommand(`rm -f '${tmpRemote}'`);
-		} catch { }
+		} catch {}
 		throw err;
 	}
 }

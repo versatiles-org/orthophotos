@@ -17,7 +17,7 @@
  *   });
  */
 
-import { createReadStream, existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { createReadStream, existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import { createInterface } from 'node:readline';
 import { join } from 'node:path';
 import { shuffle } from './array.ts';
@@ -144,6 +144,17 @@ async function processTiles<T extends TileItem, D>(
 
 	errors.throwIfAny();
 	await expectMinFiles(tilesDir, '*.versatiles', options.minFiles);
+
+	// Write filelist.txt with all .versatiles paths for the merge step
+	const versatilesFiles: string[] = [];
+	for (const entry of readdirSync(tilesDir)) {
+		if (entry.endsWith('.versatiles')) {
+			versatilesFiles.push(join(tilesDir, entry));
+		}
+	}
+	const filelistPath = join(ctx.dataDir, 'filelist.txt');
+	writeFileSync(filelistPath, versatilesFiles.join('\n'));
+	console.log(`  Wrote filelist.txt with ${versatilesFiles.length} entries.`);
 }
 
 async function readNdjson<T>(path: string): Promise<T[]> {

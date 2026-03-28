@@ -73,12 +73,20 @@ export default defineTileRegion({
 		return items;
 	},
 	downloadLimit: 2,
-	download: async (item, { tempDir, errors }) => {
+	download: async (item, { tempDir, skipDest, errors }) => {
 		const pngPath = join(tempDir, `${item.id}.png`);
 		const tifPath = join(tempDir, `${item.id}.tif`);
 		const url = buildTileUrl(item);
 
 		await withRetry(() => downloadFile(url, pngPath, { minSize: 500 }), { maxAttempts: 3 });
+
+		// Empty tiles (outside Portugal) are ~2KB; real imagery is >10KB
+		const { statSync, writeFileSync } = await import('node:fs');
+		if (statSync(pngPath).size < 10000) {
+			safeRm(pngPath);
+			writeFileSync(skipDest, '');
+			return 'empty';
+		}
 
 		// The PNG has no georeference — create a GeoTIFF with the correct extent
 		const { runCommand } = await import('../lib/command.ts');

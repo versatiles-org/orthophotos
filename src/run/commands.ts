@@ -155,6 +155,8 @@ export async function convertToTiledTiff(input: string, output: string): Promise
 		'TILED=YES',
 		'-co',
 		'BIGTIFF=YES',
+		'-co',
+		'ALPHA=YES',
 		input,
 		output,
 	]);

@@ -1,61 +1,21 @@
-import { existsSync, rmSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { downloadFile, runCommand } from '../lib/command.ts';
 import { safeRm } from '../lib/fs.ts';
+import { MAX_ZOOM } from '../lib/constants.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
-import { isValidRaster } from '../lib/validators.ts';
-import { convertToTiledTiff, runMosaicTile } from '../run/commands.ts';
+import { computeWmsBlocks, generateWmsXml, parseWmsCapabilities } from '../lib/wms.ts';
+import { runMosaicTile } from '../run/commands.ts';
 
-const OPEN_ACCESS_URL = 'https://ac.ngi.be/catalogue/getopenaccess/ngi-standard-open';
-const INDEX_PATH = 'ngi-standard-open/Rasterdata/Orthos/Y2024/JP2';
-
-interface IndexEntry {
-	name: string;
-	url: string;
-	size: number;
-	type: string;
-}
-
-interface IndexResponse {
-	children: IndexEntry[];
-}
-
-/**
- * Requests a session access code from the NGI open-access catalogue.
- * The /catalogue/getopenaccess/ endpoint returns a 303 redirect whose
- * Location header contains the access code in the URL path.
- */
-async function getAccessCode(): Promise<string> {
-	const result = await runCommand('curl', ['-so', '/dev/null', '-w', '%{redirect_url}', OPEN_ACCESS_URL], {
-		stdout: 'piped',
-	});
-	const redirectUrl = new TextDecoder().decode(result.stdout).trim();
-	const match = redirectUrl.match(/\/client-open\/([^/?]+)/);
-	if (!match) {
-		throw new Error(`Failed to obtain access code from ${OPEN_ACCESS_URL} (redirect: ${redirectUrl})`);
-	}
-	return match[1];
-}
-
-export function parseIndex(data: IndexResponse): { id: string; path: string }[] {
-	if (!Array.isArray(data.children)) {
-		throw new Error('Belgium NGI data is currently unavailable (server synchronization in progress)');
-	}
-	return data.children
-		.filter((c) => c.type === 'FILE' && c.name.endsWith('.jp2'))
-		.map((c) => ({
-			id: c.name.replace('.jp2', ''),
-			path: c.url,
-		}));
-}
+const WMS_URL = 'https://wms.ngi.be/inspire/ortho/service';
+const LAYER = 'orthoimage_coverage';
 
 export default defineTileRegion({
 	name: 'be',
 	meta: {
 		status: 'scraping',
-		notes: ['License requires attribution.'],
+		notes: ['License requires attribution.', 'JPEG2000 without alpha channel'],
 		entries: ['result'],
 		license: {
 			name: 'CC BY 4.0',
@@ -69,38 +29,66 @@ export default defineTileRegion({
 		date: '2024',
 	},
 	init: async (ctx) => {
-		const indexPath = join(ctx.tempDir, 'index.json');
-		if (!existsSync(indexPath)) {
-			console.log('  Obtaining access code...');
-			const accessCode = await getAccessCode();
-			const indexUrl = `https://ac.ngi.be/client-open/${accessCode}/${INDEX_PATH}?editingType=info&editingData=%7B%22addServiceLayers%22%3Atrue%7D`;
-			console.log('  Fetching file index...');
-			await withRetry(() => downloadFile(indexUrl, indexPath), { maxAttempts: 3 });
+		const capsPath = join(ctx.tempDir, 'caps.xml');
+		if (!existsSync(capsPath)) {
+			console.log('  Fetching WMS capabilities...');
+			await withRetry(() => downloadFile(`${WMS_URL}?SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.1.1`, capsPath), {
+				maxAttempts: 3,
+			});
 		}
-		const content = await readFile(indexPath, 'utf-8');
-		return parseIndex(JSON.parse(content));
-	},
-	downloadLimit: 4,
-	download: async ({ path, id }, { tempDir, errors }) => {
-		const jp2Path = join(tempDir, `${id}.jp2`);
-		const tifPath = join(tempDir, `${id}.tif`);
 
-		const accessCode = await getAccessCode();
-		const url = `https://ac.ngi.be/client-open/${accessCode}/${path}`;
-		await withRetry(() => downloadFile(url, jp2Path), { maxAttempts: 3 });
-		if (!(await isValidRaster(jp2Path))) {
-			errors.add(`${id}.jp2 (${url})`);
-			return 'invalid';
+		const wmsXmlPath = join(ctx.tempDir, 'wms.xml');
+		if (!existsSync(wmsXmlPath)) {
+			await generateWmsXml(WMS_URL, LAYER, wmsXmlPath);
 		}
-		// Convert JP2 to tiled GeoTIFF — versatiles crashes reading JP2 directly.
-		await convertToTiledTiff(jp2Path, tifPath);
-		rmSync(jp2Path, { force: true });
-		return { tifPath };
+
+		const { bbox, maxWidth, maxHeight } = await parseWmsCapabilities(capsPath, LAYER);
+		const { items, blockPx } = computeWmsBlocks(bbox, MAX_ZOOM, maxWidth, maxHeight);
+		console.log(`  ${items.length} blocks at ${blockPx}x${blockPx}px`);
+
+		return items.map((item) => ({ ...item, wmsXmlPath, blockPx }));
 	},
-	convertLimit: { memoryGB: 5 },
-	convert: async ({ tifPath }, { dest, tempDir }) => {
-		await runMosaicTile(tifPath, dest, { cacheDirectory: tempDir });
-		safeRm(tifPath);
+	downloadLimit: 2,
+	download: async (item, { tempDir }) => {
+		const tifPath = join(tempDir, `${item.id}.tif`);
+
+		try {
+			await runCommand('gdal_translate', [
+				'-q',
+				item.wmsXmlPath as string,
+				tifPath,
+				'-projwin',
+				String(item.x0),
+				String(item.y1),
+				String(item.x1),
+				String(item.y0),
+				'-projwin_srs',
+				'EPSG:3857',
+				'-outsize',
+				String(item.blockPx),
+				String(item.blockPx),
+				'-of',
+				'GTiff',
+				'-co',
+				'COMPRESS=DEFLATE',
+				'-co',
+				'PREDICTOR=2',
+				'-co',
+				'ALPHA=YES',
+			]);
+
+			return { srcPath: tifPath };
+		} catch (err) {
+			safeRm(tifPath);
+			throw err;
+		}
 	},
-	minFiles: 720,
+	convert: async ({ srcPath }, { dest }) => {
+		try {
+			await runMosaicTile(srcPath as string, dest);
+		} finally {
+			safeRm(srcPath as string);
+		}
+	},
+	minFiles: 500,
 });

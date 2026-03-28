@@ -108,7 +108,7 @@ export function createProgress(total: number, options: ProgressOptions): Progres
 		const { percent, eta } = getState();
 		osc9(percent);
 		if (options.title) {
-			setTitle(`${options.title} ${Math.round(percent)}%${eta ? ` ETA ${eta}` : ''}`);
+			setTitle(`${options.title} | ${Math.round(percent)}%${eta ? ` | ${eta} left` : ''}`);
 		}
 	}
 

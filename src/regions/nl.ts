@@ -8,12 +8,12 @@ import { withRetry } from '../lib/retry.ts';
 import { runMosaicTile } from '../run/commands.ts';
 
 const GEOJSON_URL =
-	'https://fsn1.your-objectstorage.com/hwh-portal/20230609_tmp/links/nationaal/Nederland/BM_LRL2024O_RGB.json';
+	'https://fsn1.your-objectstorage.com/hwh-portal/20230609_tmp/links/nationaal/Nederland/BM_LRL2025O_RGB.json';
 
 export default defineTileRegion({
 	name: 'nl',
 	meta: {
-		status: 'released',
+		status: 'scraping',
 		notes: ['License requires attribution.'],
 		entries: ['result'],
 		license: {
@@ -25,7 +25,7 @@ export default defineTileRegion({
 			name: 'beeldmateriaal.nl',
 			url: 'https://www.beeldmateriaal.nl/dataroom',
 		},
-		date: '2024',
+		date: '2025',
 		releaseDate: '2025-10-04',
 	},
 	init: async (ctx) => {

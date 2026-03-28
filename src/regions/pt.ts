@@ -48,7 +48,7 @@ function buildTileUrl(item: GridItem): string {
 export default defineTileRegion({
 	name: 'pt',
 	meta: {
-		status: 'scraping',
+		status: 'released',
 		notes: [
 			'No WMS available; uses OGC API Maps endpoint.',
 			'Server returns PNG tiles that need georeferencing.',
@@ -65,6 +65,7 @@ export default defineTileRegion({
 			url: 'https://ogcapi.dgterritorio.gov.pt/collections/ortos-rgb',
 		},
 		date: '2018-2023',
+		releaseDate: '2026-03-27',
 	},
 	init: async () => {
 		const items = generateGrid();

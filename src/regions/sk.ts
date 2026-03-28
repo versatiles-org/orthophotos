@@ -40,7 +40,7 @@ interface SkItem {
 export default defineTileRegion({
 	name: 'sk',
 	meta: {
-		status: 'scraping',
+		status: 'released',
 		notes: [
 			'Images are unnecessarily packed into container files, such as ZIP.',
 			'License requires attribution.',
@@ -57,6 +57,7 @@ export default defineTileRegion({
 			url: 'https://rpi.gov.sk/metadata/3b046df1-7867-4377-b15b-6ae6bac999da',
 		},
 		date: '2023',
+		releaseDate: '2026-03-28',
 	},
 	init: async (ctx) => {
 		const atomPath = join(ctx.tempDir, 'index.xml');

@@ -127,7 +127,7 @@ export default defineTileRegion({
 
 		return { tifPath };
 	},
-	convertLimit: { memoryGB: 12 },
+	convertLimit: { memoryGB: 20 },
 	convert: async ({ tifPath }, { dest }) => {
 		try {
 			await runMosaicTile(tifPath, dest, { crs: '3046', nodata: '0,0,0;255,255,255' });

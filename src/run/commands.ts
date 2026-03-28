@@ -133,7 +133,7 @@ export async function runMosaicAssemble(
 	if (options?.lossless) {
 		args.push('--lossless');
 	}
-	args.push(filelistPath, output);
+	args.push(`@${filelistPath}`, output);
 	const result = await runCommand('versatiles', args, { quiet: options?.quiet, quietOnError: options?.quietOnError });
 	assertOutputContains(result, 'finished mosaic assemble', `runMosaicAssemble for "${filelistPath}"`);
 }

@@ -76,7 +76,7 @@ async function taskFetch(ctx: TaskContext): Promise<void> {
 			}
 		}
 	}
-	scanDir(ctx.dataDir);
+	scanDir(resolve(ctx.dataDir, 'tiles'));
 
 	const filelistPath = resolve(ctx.dataDir, 'filelist.txt');
 	writeFileSync(filelistPath, versatilesFiles.join('\n'));
@@ -131,7 +131,7 @@ async function uploadToRemote(localPath: string, regionName: string, filename: s
 	} catch (err) {
 		try {
 			await runSshCommand(`rm -f '${tmpRemote}'`);
-		} catch {}
+		} catch { }
 		throw err;
 	}
 }

@@ -50,7 +50,7 @@ export default defineTileRegion({
 		return items.map((item) => ({ ...item, wmsXmlPath, blockPx }));
 	},
 	downloadLimit: 2,
-	download: async (item, { tempDir }) => {
+	download: async (item, { tempDir, skipDest }) => {
 		const tifPath = join(tempDir, `${item.id}.tif`);
 
 		try {
@@ -71,9 +71,12 @@ export default defineTileRegion({
 			);
 
 			return { srcPath: tifPath };
-		} catch (err) {
+		} catch {
+			// WMS returns errors for blocks outside coverage — mark as empty
 			safeRm(tifPath);
-			throw err;
+			const { writeFileSync } = await import('node:fs');
+			writeFileSync(skipDest, '');
+			return 'empty';
 		}
 	},
 	convert: async ({ srcPath }, { dest }) => {

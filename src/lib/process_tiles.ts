@@ -126,7 +126,7 @@ async function processTiles<T extends TileItem, D>(
 	const cvConcurrency = resolveConcurrency(options.convertLimit);
 
 	const { download, convert } = options;
-	await pipeline(shuffled, { progress: { labels: [...LABELS], terminalProgress: true } })
+	await pipeline(shuffled, { progress: { labels: [...LABELS], terminalProgress: true, title: options.name } })
 		.map(dlConcurrency, async (item: T) => {
 			if (isSkipped(item)) return skip('skipped');
 			const tileCtx = makeTileCtx(item);

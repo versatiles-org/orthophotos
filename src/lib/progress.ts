@@ -45,6 +45,8 @@ export interface ProgressOptions {
 	logInterval?: number;
 	/** Emit OSC 9;4 terminal progress sequences (for tab/titlebar progress). Default: false. */
 	terminalProgress?: boolean;
+	/** Title prefix shown in the terminal window title (e.g., region code). Only used when terminalProgress is true. */
+	title?: string;
 }
 
 export function createProgress(total: number, options: ProgressOptions): Progress {
@@ -55,21 +57,23 @@ export function createProgress(total: number, options: ProgressOptions): Progres
 	const startTime = performance.now();
 	const isTTY = process.stderr.isTTY ?? false;
 
-	function totalDone(): number {
-		let sum = 0;
-		for (const v of counts.values()) sum += v;
-		return sum;
-	}
-
-	function render(): string {
-		const done = totalDone();
+	function getState() {
+		let done = 0;
+		for (const v of counts.values()) done += v;
 		const remaining = total - done;
 		const elapsedMs = performance.now() - startTime;
 		const avgMs = done > 0 ? elapsedMs / done : 0;
 		const etaSec = (avgMs * remaining) / 1000;
-		const eta = done > 0 ? ` | ETA: ${formatDuration(etaSec)}` : '';
+		const percent = total > 0 ? Math.min(done / total, 1) * 100 : 0;
+		const eta = done > 0 ? formatDuration(etaSec) : '';
+		return { done, percent, eta };
+	}
+
+	function render(): string {
+		const { done, eta } = getState();
+		const etaStr = eta ? ` | ETA: ${eta}` : '';
 		const stats = labels.map((l) => `${counts.get(l) ?? 0} ${l}`).join(', ');
-		return `  ${renderBar(done, total, barWidth)} ${done}/${total} | ${stats}${eta}`;
+		return `  ${renderBar(done, total, barWidth)} ${done}/${total} | ${stats}${etaStr}`;
 	}
 
 	const inTmux = !!process.env['TMUX'];
@@ -92,9 +96,30 @@ export function createProgress(total: number, options: ProgressOptions): Progres
 		writeOsc('\x1b]9;4;0;0\x07');
 	}
 
-	// Clear OSC progress on process exit/kill
+	function setTitle(text: string) {
+		writeOsc(`\x1b]2;${text}\x07`);
+	}
+
+	function clearTitle() {
+		writeOsc('\x1b]2;\x07');
+	}
+
+	function updateTerminal() {
+		const { percent, eta } = getState();
+		osc9(percent);
+		if (options.title) {
+			setTitle(`${options.title} ${Math.round(percent)}%${eta ? ` ETA ${eta}` : ''}`);
+		}
+	}
+
+	function clearTerminal() {
+		osc9Clear();
+		if (options.title) clearTitle();
+	}
+
+	// Clear OSC progress and title on process exit/kill
 	if (terminalProgress) {
-		const cleanup = () => osc9Clear();
+		const cleanup = () => clearTerminal();
 		process.on('exit', cleanup);
 		process.on('SIGINT', () => {
 			cleanup();
@@ -107,12 +132,11 @@ export function createProgress(total: number, options: ProgressOptions): Progres
 	}
 
 	function draw() {
-		const done = totalDone();
 		const line = render();
 		if (isTTY) {
 			process.stderr.write(`\r${line}`);
-			osc9(total > 0 ? Math.min(done / total, 1) * 100 : 0);
-		} else if (done % logInterval === 0) {
+			updateTerminal();
+		} else if (getState().done % logInterval === 0) {
 			console.log(line);
 		}
 	}
@@ -130,7 +154,7 @@ export function createProgress(total: number, options: ProgressOptions): Progres
 		},
 
 		done() {
-			osc9Clear();
+			clearTerminal();
 			if (isTTY) process.stderr.write('\n');
 			const stats = labels.map((l) => `${counts.get(l) ?? 0} ${l}`).join(', ');
 			console.log(`  Done: ${stats}`);

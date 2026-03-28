@@ -46,7 +46,7 @@ interface RegionMetadataReleased extends RegionMetadataBase {
 
 interface RegionMetadataOther extends RegionMetadataBase {
 	status: 'planned' | 'scraping' | 'blocked';
-	releaseDate?: never;
+	releaseDate?: string;
 }
 
 export type RegionMetadata = RegionMetadataReleased | RegionMetadataOther;

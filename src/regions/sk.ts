@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { XMLParser } from 'fast-xml-parser';
-import { downloadFile } from '../lib/command.ts';
+import { downloadFile, runCommand } from '../lib/command.ts';
 import { safeRm } from '../lib/fs.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { RemoteZip } from '../lib/remote-zip.ts';
@@ -43,8 +43,8 @@ export default defineTileRegion({
 		status: 'released',
 		notes: [
 			'Images are unnecessarily packed into container files, such as ZIP.',
+			'Filenames do not follow a positional naming convention.',
 			'License requires attribution.',
-			'ZIP files are read remotely via HTTP range requests.',
 		],
 		entries: ['result'],
 		license: {
@@ -86,19 +86,51 @@ export default defineTileRegion({
 	},
 	download: async (item, { tempDir }) => {
 		const { zipUrl, entryFilename } = item as SkItem;
+		const rawPath = join(tempDir, `${item.id}_raw.tif`);
 		const tifPath = join(tempDir, `${item.id}.tif`);
 
 		const zip = await RemoteZip.open(zipUrl);
-		const entry = zip.getEntries().find((e) => e.filename === entryFilename);
-		if (!entry) throw new Error(`Entry "${entryFilename}" not found in ${zipUrl}`);
 
-		await zip.extractToFile(entry, tifPath);
+		// Extract the TIF
+		const tifEntry = zip.getEntries().find((e) => e.filename === entryFilename);
+		if (!tifEntry) throw new Error(`Entry "${entryFilename}" not found in ${zipUrl}`);
+		await zip.extractToFile(tifEntry, rawPath);
+
+		// Also extract the worldfile (.tfw) for georeferencing
+		const tfwFilename = entryFilename.replace(/\.tif$/, '.tfw');
+		const tfwEntry = zip.getEntries().find((e) => e.filename === tfwFilename);
+		if (tfwEntry) {
+			const tfwPath = rawPath.replace(/\.tif$/, '.tfw');
+			const tfwData = await zip.extract(tfwEntry);
+			const { writeFileSync } = await import('node:fs');
+			writeFileSync(tfwPath, tfwData);
+		}
+
+		// Convert to tiled GeoTIFF for faster random access
+		await runCommand('gdal_translate', [
+			'-q',
+			'-of',
+			'GTiff',
+			'-co',
+			'COMPRESS=DEFLATE',
+			'-co',
+			'PREDICTOR=2',
+			'-co',
+			'TILED=YES',
+			'-co',
+			'BIGTIFF=YES',
+			rawPath,
+			tifPath,
+		]);
+		safeRm(rawPath);
+		safeRm(rawPath.replace(/\.tif$/, '.tfw'));
+
 		return { tifPath };
 	},
 	convertLimit: { memoryGB: 24 },
 	convert: async ({ tifPath }, { dest }) => {
 		try {
-			await runMosaicTile(tifPath, dest, { crs: '3046' });
+			await runMosaicTile(tifPath, dest, { crs: '3046', nodata: '0,0,0' });
 		} finally {
 			safeRm(tifPath);
 		}

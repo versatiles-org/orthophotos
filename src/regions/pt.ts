@@ -110,7 +110,7 @@ export default defineTileRegion({
 		return { tifPath };
 	},
 	convert: async ({ tifPath }, { dest }) => {
-		await runMosaicTile(tifPath, dest);
+		await runMosaicTile(tifPath, dest, { nodata: '0,0,0' });
 		safeRm(tifPath);
 	},
 	minFiles: 500,

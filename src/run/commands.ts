@@ -138,15 +138,25 @@ export async function runMosaicAssemble(
 	assertOutputContains(result, 'finished mosaic assemble', `runMosaicAssemble for "${filelistPath}"`);
 }
 
+export interface TiledTiffOptions {
+	/** Expand palette to rgb or rgba (e.g., for paletted PNGs) */
+	expand?: 'rgb' | 'rgba';
+	/** Assign SRS (e.g., 'EPSG:3857') */
+	srs?: string;
+	/** Assign upper-left / lower-right corners [ulx, uly, lrx, lry] */
+	ullr?: [number, number, number, number];
+}
+
 /**
  * Converts a raster file to a tiled, compressed GeoTIFF optimized for fast random access.
- * Uses DEFLATE compression with predictor, BIGTIFF for large files.
+ * Uses DEFLATE compression with predictor, BIGTIFF and ALPHA support.
  */
-export async function convertToTiledTiff(input: string, output: string): Promise<void> {
-	await runCommand('gdal_translate', [
-		'-q',
-		'-of',
-		'GTiff',
+export async function convertToTiledTiff(input: string, output: string, options?: TiledTiffOptions): Promise<void> {
+	const args = ['-q', '-of', 'GTiff'];
+	if (options?.expand) args.push('-expand', options.expand);
+	if (options?.srs) args.push('-a_srs', options.srs);
+	if (options?.ullr) args.push('-a_ullr', ...options.ullr.map(String));
+	args.push(
 		'-co',
 		'COMPRESS=DEFLATE',
 		'-co',
@@ -157,7 +167,48 @@ export async function convertToTiledTiff(input: string, output: string): Promise
 		'BIGTIFF=YES',
 		'-co',
 		'ALPHA=YES',
-		input,
+	);
+	args.push(input, output);
+	await runCommand('gdal_translate', args);
+}
+
+export interface WmsBlockExtractOptions {
+	/** WMS XML config file path */
+	wmsXmlPath: string;
+	/** Block bounds in EPSG:3857 */
+	x0: number;
+	y0: number;
+	x1: number;
+	y1: number;
+	/** Output pixel size */
+	blockPx: number;
+}
+
+/**
+ * Extracts a block from a WMS source as a tiled, compressed GeoTIFF with alpha.
+ */
+export async function extractWmsBlock(options: WmsBlockExtractOptions, output: string): Promise<void> {
+	await runCommand('gdal_translate', [
+		'-q',
+		options.wmsXmlPath,
 		output,
+		'-projwin',
+		String(options.x0),
+		String(options.y1),
+		String(options.x1),
+		String(options.y0),
+		'-projwin_srs',
+		'EPSG:3857',
+		'-outsize',
+		String(options.blockPx),
+		String(options.blockPx),
+		'-of',
+		'GTiff',
+		'-co',
+		'COMPRESS=DEFLATE',
+		'-co',
+		'PREDICTOR=2',
+		'-co',
+		'ALPHA=YES',
 	]);
 }

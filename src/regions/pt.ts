@@ -5,7 +5,7 @@ import { safeRm } from '../lib/fs.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
 import { isValidRaster } from '../lib/validators.ts';
-import { runMosaicTile } from '../run/commands.ts';
+import { convertToTiledTiff, runMosaicTile } from '../run/commands.ts';
 
 const OGC_API_MAP_URL = 'https://ogcapi.dgterritorio.gov.pt/collections/ortos-rgb/map';
 const CRS_3857 = 'http://www.opengis.net/def/crs/EPSG/0/3857';
@@ -89,25 +89,11 @@ export default defineTileRegion({
 		}
 
 		// The PNG has no georeference — create a GeoTIFF with the correct extent
-		const { runCommand } = await import('../lib/command.ts');
-		await runCommand('gdal_translate', [
-			'-q',
-			'-of',
-			'GTiff',
-			'-expand',
-			'rgba',
-			'-a_srs',
-			'EPSG:3857',
-			'-a_ullr',
-			String(item.x0),
-			String(item.y1),
-			String(item.x1),
-			String(item.y0),
-			'-co',
-			'TILED=YES',
-			pngPath,
-			tifPath,
-		]);
+		await convertToTiledTiff(pngPath, tifPath, {
+			expand: 'rgba',
+			srs: 'EPSG:3857',
+			ullr: [item.x0, item.y1, item.x1, item.y0],
+		});
 		rmSync(pngPath, { force: true });
 
 		if (!(await isValidRaster(tifPath))) {

@@ -1,13 +1,12 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { runCommand } from '../lib/command.ts';
+import { downloadFile } from '../lib/command.ts';
 import { MAX_ZOOM } from '../lib/constants.ts';
 import { safeRm } from '../lib/fs.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
-import { computeWmsBlocks, generateWmsXml, parseWmsCapabilities } from '../lib/wms.ts';
-import { runMosaicTile } from '../run/commands.ts';
-import { downloadFile } from '../lib/command.ts';
 import { withRetry } from '../lib/retry.ts';
+import { computeWmsBlocks, generateWmsXml, parseWmsCapabilities } from '../lib/wms.ts';
+import { extractWmsBlock, runMosaicTile } from '../run/commands.ts';
 
 // GML source: https://download.data.public.lu/resources/inspire-annex-ii-theme-orthoimagery-orthoimagecoverage-2025-summer/20260324-074957/oi.ortho-rgb-2025-summer.gml
 const WMS_URL = 'https://wms.geoportail.lu/opendata/service';
@@ -55,29 +54,10 @@ export default defineTileRegion({
 	download: async (item, { tempDir }) => {
 		const tifPath = join(tempDir, `${item.id}.tif`);
 
-		await runCommand('gdal_translate', [
-			'-q',
-			item.wmsXmlPath,
+		await extractWmsBlock(
+			{ wmsXmlPath: item.wmsXmlPath, x0: item.x0, y0: item.y0, x1: item.x1, y1: item.y1, blockPx: item.blockPx },
 			tifPath,
-			'-projwin',
-			String(item.x0),
-			String(item.y1),
-			String(item.x1),
-			String(item.y0),
-			'-projwin_srs',
-			'EPSG:3857',
-			'-outsize',
-			String(item.blockPx),
-			String(item.blockPx),
-			'-of',
-			'GTiff',
-			'-co',
-			'COMPRESS=DEFLATE',
-			'-co',
-			'PREDICTOR=2',
-			'-co',
-			'ALPHA=YES',
-		]);
+		);
 
 		return { srcPath: tifPath };
 	},

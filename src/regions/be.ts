@@ -6,7 +6,7 @@ import { safeRm } from '../lib/fs.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
 import { isValidRaster } from '../lib/validators.ts';
-import { runMosaicTile } from '../run/commands.ts';
+import { convertToTiledTiff, runMosaicTile } from '../run/commands.ts';
 
 const OPEN_ACCESS_URL = 'https://ac.ngi.be/catalogue/getopenaccess/ngi-standard-open';
 const INDEX_PATH = 'ngi-standard-open/Rasterdata/Orthos/Y2024/JP2';
@@ -92,25 +92,8 @@ export default defineTileRegion({
 			errors.add(`${id}.jp2 (${url})`);
 			return 'invalid';
 		}
-		// Convert JP2 to uncompressed tiled GeoTIFF — versatiles crashes reading JP2 directly.
-		// Uncompressed is fastest since the bottleneck is single-threaded JP2 decoding (OpenJPEG).
-		await runCommand('gdal_translate', [
-			'-q',
-			'-of',
-			'GTiff',
-			'-co',
-			'BIGTIFF=YES',
-			'-co',
-			'COMPRESS=LZW',
-			'-co',
-			'PREDICTOR=2',
-			'-co',
-			'TILED=YES',
-			'-co',
-			'NUM_THREADS=ALL_CPUS',
-			jp2Path,
-			tifPath,
-		]);
+		// Convert JP2 to tiled GeoTIFF — versatiles crashes reading JP2 directly.
+		await convertToTiledTiff(jp2Path, tifPath);
 		rmSync(jp2Path, { force: true });
 		return { tifPath };
 	},

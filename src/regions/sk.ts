@@ -2,12 +2,12 @@ import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { XMLParser } from 'fast-xml-parser';
-import { downloadFile, runCommand } from '../lib/command.ts';
+import { downloadFile } from '../lib/command.ts';
 import { safeRm } from '../lib/fs.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { RemoteZip } from '../lib/remote-zip.ts';
 import { withRetry } from '../lib/retry.ts';
-import { runMosaicTile } from '../run/commands.ts';
+import { convertToTiledTiff, runMosaicTile } from '../run/commands.ts';
 
 const ATOM_URL = 'https://inspirews.skgeodesy.sk/atom/7efad194-3006-408f-9e6c-c06dc79703bd_dataFeed.atom';
 
@@ -107,21 +107,7 @@ export default defineTileRegion({
 		}
 
 		// Convert to tiled GeoTIFF for faster random access
-		await runCommand('gdal_translate', [
-			'-q',
-			'-of',
-			'GTiff',
-			'-co',
-			'COMPRESS=DEFLATE',
-			'-co',
-			'PREDICTOR=2',
-			'-co',
-			'TILED=YES',
-			'-co',
-			'BIGTIFF=YES',
-			rawPath,
-			tifPath,
-		]);
+		await convertToTiledTiff(rawPath, tifPath);
 		safeRm(rawPath);
 		safeRm(rawPath.replace(/\.tif$/, '.tfw'));
 

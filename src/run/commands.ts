@@ -137,3 +137,25 @@ export async function runMosaicAssemble(
 	const result = await runCommand('versatiles', args, { quiet: options?.quiet, quietOnError: options?.quietOnError });
 	assertOutputContains(result, 'finished mosaic assemble', `runMosaicAssemble for "${filelistPath}"`);
 }
+
+/**
+ * Converts a raster file to a tiled, compressed GeoTIFF optimized for fast random access.
+ * Uses DEFLATE compression with predictor, BIGTIFF for large files.
+ */
+export async function convertToTiledTiff(input: string, output: string): Promise<void> {
+	await runCommand('gdal_translate', [
+		'-q',
+		'-of',
+		'GTiff',
+		'-co',
+		'COMPRESS=DEFLATE',
+		'-co',
+		'PREDICTOR=2',
+		'-co',
+		'TILED=YES',
+		'-co',
+		'BIGTIFF=YES',
+		input,
+		output,
+	]);
+}

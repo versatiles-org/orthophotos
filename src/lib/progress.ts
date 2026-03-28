@@ -43,10 +43,12 @@ export interface ProgressOptions {
 	barWidth?: number;
 	/** Non-TTY log interval (every N items). Default: 100. */
 	logInterval?: number;
+	/** Emit OSC 9;4 terminal progress sequences (for tab/titlebar progress). Default: false. */
+	terminalProgress?: boolean;
 }
 
 export function createProgress(total: number, options: ProgressOptions): Progress {
-	const { labels, barWidth = 30, logInterval = 100 } = options;
+	const { labels, barWidth = 30, logInterval = 100, terminalProgress = false } = options;
 	const counts = new Map<string, number>();
 	for (const l of labels) counts.set(l, 0);
 
@@ -70,16 +72,26 @@ export function createProgress(total: number, options: ProgressOptions): Progres
 		return `  ${renderBar(done, total, barWidth)} ${done}/${total} | ${stats}${eta}`;
 	}
 
-	draw();
+	function osc9(percent: number) {
+		if (isTTY && terminalProgress) process.stderr.write(`\x1b]9;4;1;${Math.round(percent)}\x07`);
+	}
+
+	function osc9Clear() {
+		if (isTTY && terminalProgress) process.stderr.write('\x1b]9;4;0;0\x07');
+	}
 
 	function draw() {
+		const done = totalDone();
 		const line = render();
 		if (isTTY) {
 			process.stderr.write(`\r${line}`);
-		} else if (totalDone() % logInterval === 0) {
+			osc9(total > 0 ? (done / total) * 100 : 0);
+		} else if (done % logInterval === 0) {
 			console.log(line);
 		}
 	}
+
+	draw();
 
 	return {
 		tick(label: string) {
@@ -92,6 +104,7 @@ export function createProgress(total: number, options: ProgressOptions): Progres
 		},
 
 		done() {
+			osc9Clear();
 			if (isTTY) process.stderr.write('\n');
 			const stats = labels.map((l) => `${counts.get(l) ?? 0} ${l}`).join(', ');
 			console.log(`  Done: ${stats}`);

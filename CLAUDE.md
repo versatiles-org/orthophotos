@@ -182,6 +182,8 @@ These are wrapped in `src/run/commands.ts` as `runMosaicTile()` and `runMosaicAs
 
 `runMosaicAssemble()` supports `lossless` option for lossless WebP encoding of translucent tiles.
 
+The `versatiles` CLI is developed in the sibling repo `versatiles-rs`. If a region scraper needs a feature that `versatiles mosaic tile` or `versatiles mosaic assemble` doesn't support yet (e.g., a new CLI flag, a different output format, or improved input handling), the feature can be added to `versatiles-rs` and a new release built.
+
 ### VPL Generation and Region Masks
 
 `generateVPL()` in `src/server/vpl.ts` builds a VPL file that stacks orthophoto layers (via SFTP) over satellite imagery. Each released region can have a GeoJSON mask (`data/{region_id}.geojson.gz`) for clean border clipping via `raster_mask`. Regions can set `maskBuffer` in their metadata to adjust the mask buffer distance (negative values shrink the mask).

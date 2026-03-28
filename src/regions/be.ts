@@ -42,8 +42,9 @@ export default defineTileRegion({
 			await generateWmsXml(WMS_URL, LAYER, wmsXmlPath);
 		}
 
-		const { bbox, maxWidth, maxHeight } = await parseWmsCapabilities(capsPath, LAYER);
-		const { items, blockPx } = computeWmsBlocks(bbox, MAX_ZOOM, maxWidth, maxHeight);
+		const { bbox } = await parseWmsCapabilities(capsPath, LAYER);
+		// Server MaxWidth/MaxHeight is 4000 (from WMS 1.3.0 caps) but not advertised in 1.1.1
+		const { items, blockPx } = computeWmsBlocks(bbox, MAX_ZOOM, 4000, 4000);
 		console.log(`  ${items.length} blocks at ${blockPx}x${blockPx}px`);
 
 		return items.map((item) => ({ ...item, wmsXmlPath, blockPx }));
@@ -53,16 +54,20 @@ export default defineTileRegion({
 		const tifPath = join(tempDir, `${item.id}.tif`);
 
 		try {
-			await extractWmsBlock(
-				{
-					wmsXmlPath: item.wmsXmlPath as string,
-					x0: item.x0,
-					y0: item.y0,
-					x1: item.x1,
-					y1: item.y1,
-					blockPx: item.blockPx,
-				},
-				tifPath,
+			await withRetry(
+				() =>
+					extractWmsBlock(
+						{
+							wmsXmlPath: item.wmsXmlPath as string,
+							x0: item.x0,
+							y0: item.y0,
+							x1: item.x1,
+							y1: item.y1,
+							blockPx: item.blockPx,
+						},
+						tifPath,
+					),
+				{ maxAttempts: 3 },
 			);
 
 			return { srcPath: tifPath };

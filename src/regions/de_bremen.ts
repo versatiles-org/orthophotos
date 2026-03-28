@@ -79,7 +79,7 @@ export default defineTileRegion({
 			mkdirSync(tilesDir, { recursive: true });
 			console.log(`  Converting ${imageFiles.length} image files...`);
 			const versatilesFiles: string[] = [];
-			await pipeline(imageFiles, { progress: { labels: ['converted'] } }).forEach(4, async (imgPath) => {
+			await pipeline(imageFiles, { progress: { labels: ['converted'] } }).forEach({ cores: 2 }, async (imgPath) => {
 				const tileName = basename(imgPath).replace(/\.[^.]+$/, '.versatiles');
 				const tilePath = join(tilesDir, tileName);
 				await runMosaicTile(imgPath, tilePath, { crs: '25832', nodata: '0,0,0' });

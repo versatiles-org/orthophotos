@@ -27,7 +27,7 @@ import { pipeline, skip } from './pipeline.ts';
 import { ErrorBucket, expectMinFiles } from './validators.ts';
 
 /** Limits for concurrency. The effective concurrency is the minimum of all applicable limits. */
-export interface ConcurrencyLimit {
+export interface ConcurrencyLimitObject {
 	/** CPU cores per process (default: 4). Concurrency = availableParallelism() / cores. */
 	cores?: number;
 	/** Hard maximum concurrency. */
@@ -36,7 +36,11 @@ export interface ConcurrencyLimit {
 	memoryGB?: number;
 }
 
+/** A number is shorthand for { concurrency: n }. */
+export type ConcurrencyLimit = number | ConcurrencyLimitObject;
+
 function resolveConcurrency(limit?: ConcurrencyLimit): number {
+	if (typeof limit === 'number') return Math.max(1, limit);
 	const cpuLimit = Math.floor(availableParallelism() / (limit?.cores ?? 4));
 	const memLimit = limit?.memoryGB ? Math.floor(totalmem() / 1e9 / limit.memoryGB) : Infinity;
 	const hardLimit = limit?.concurrency ?? Infinity;

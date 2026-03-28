@@ -97,11 +97,11 @@ export function createProgress(total: number, options: ProgressOptions): Progres
 	}
 
 	function setTitle(text: string) {
-		writeOsc(`\x1b]2;${text}\x07`);
+		writeOsc(`\x1b]1;${text}\x07`);
 	}
 
 	function clearTitle() {
-		writeOsc('\x1b]2;\x07');
+		writeOsc('\x1b]1;\x07');
 	}
 
 	function updateTerminal() {

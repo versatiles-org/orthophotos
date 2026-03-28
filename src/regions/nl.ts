@@ -50,5 +50,5 @@ export default defineTileRegion({
 		await runMosaicTile(src, dest);
 		safeRm(src);
 	},
-	minFiles: 123456,
+	minFiles: 3500,
 });

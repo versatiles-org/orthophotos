@@ -99,7 +99,7 @@ export function createProgress(total: number, options: ProgressOptions): Progres
 		const line = render();
 		if (isTTY) {
 			process.stderr.write(`\r${line}`);
-			osc9(total > 0 ? (done / total) * 100 : 0);
+			osc9(total > 0 ? Math.min(done / total, 1) * 100 : 0);
 		} else if (done % logInterval === 0) {
 			console.log(line);
 		}

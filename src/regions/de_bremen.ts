@@ -1,12 +1,11 @@
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
-import { downloadFile, runCommand } from '../lib/command.ts';
-import { extractZipFile, safeRm } from '../lib/fs.ts';
+import { safeRm, extractZipFile } from '../lib/fs.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
-import { withRetry } from '../lib/retry.ts';
-import { runMosaicAssemble, runMosaicTile } from '../run/commands.ts';
 import { pipeline } from '../lib/pipeline.ts';
+import { RemoteZip } from '../lib/remote-zip.ts';
+import { runMosaicAssemble, runMosaicTile } from '../run/commands.ts';
 
 const BASE_URL = 'https://gdi2.geo.bremen.de/inspire/download/DOP/data/';
 const IMAGE_EXTS = ['.jpg', '.tif', '.jp2'];
@@ -24,6 +23,7 @@ export default defineTileRegion({
 			'Images are unnecessarily packed into container files, such as ZIP.',
 			'License requires attribution.',
 			'JPEGs with World files are provided, but not more convenient GeoTIFFs/JPEG2000.',
+			'Nested ZIP archives (outer ZIP contains inner ZIP with date suffix).',
 			'Rather than a national mosaic, inconsistent regional mosaics with different access and formats are available instead.',
 		],
 		entries: ['result'],
@@ -42,65 +42,60 @@ export default defineTileRegion({
 	init: async () => {
 		return DISTRICTS.map((d) => ({
 			id: d.name,
-			url: `${BASE_URL}${d.zip}`,
+			outerZipUrl: `${BASE_URL}${d.zip}`,
 		}));
 	},
-	download: async ({ url, id }, { tempDir }) => {
-		const zipPath = join(tempDir, `${id}.zip`);
-		console.log(`  Downloading ${id}.zip...`);
-		await withRetry(() => downloadFile(url, zipPath), { maxAttempts: 3 });
-		return { zipPath };
+	downloadConcurrency: 1,
+	download: async ({ outerZipUrl, id }, { tempDir }) => {
+		// Stream the inner ZIP out of the outer ZIP via RemoteZip
+		console.log(`  Reading ${id}...`);
+		const outerZip = await RemoteZip.open(outerZipUrl);
+		const innerEntry = outerZip.getEntries().find((e) => e.filename.endsWith('.zip'));
+		if (!innerEntry) throw new Error(`No inner ZIP found in ${outerZipUrl}`);
+
+		const innerZipPath = join(tempDir, `${id}_inner.zip`);
+		console.log(`  Downloading inner ZIP (~${(innerEntry.uncompressedSize / 1e9).toFixed(1)} GB)...`);
+		await outerZip.extractToFile(innerEntry, innerZipPath);
+
+		return { innerZipPath };
 	},
-	convertLimit: { memoryGB: 8 },
-	convert: async ({ zipPath }, { dest, tempDir }) => {
+	convertLimit: { concurrency: 1 },
+	convert: async ({ innerZipPath }, { dest, tempDir }) => {
 		const extractDir = join(tempDir, `extract_${Date.now()}`);
 		const tilesDir = join(tempDir, `tiles_${Date.now()}`);
+		try {
+			console.log(`  Extracting ${basename(innerZipPath)}...`);
+			await extractZipFile(innerZipPath, extractDir);
+			safeRm(innerZipPath);
 
-		console.log(`  Extracting ${basename(zipPath)}...`);
-		await extractZipFile(zipPath, extractDir);
-		rmSync(zipPath, { force: true });
+			const files = await readdir(extractDir, { recursive: true });
+			const imageFiles = files
+				.map((f) => (typeof f === 'string' ? f : String(f)))
+				.filter((f) => IMAGE_EXTS.some((ext) => f.endsWith(ext)))
+				.map((f) => join(extractDir, f));
 
-		// Find and extract the inner zip (name includes a date suffix that changes)
-		const outerFiles = await readdir(extractDir);
-		const innerZip = outerFiles.find((f) => f.endsWith('.zip'));
-		if (innerZip) {
-			console.log(`  Extracting inner ${innerZip}...`);
-			await runCommand('unzip', ['-qo', join(extractDir, innerZip), '-d', extractDir]);
-			rmSync(join(extractDir, innerZip), { force: true });
+			if (imageFiles.length === 0) throw new Error(`No image files found in ${extractDir}`);
+
+			mkdirSync(tilesDir, { recursive: true });
+			console.log(`  Converting ${imageFiles.length} image files...`);
+			const versatilesFiles: string[] = [];
+			await pipeline(imageFiles, { progress: { labels: ['converted'] } }).forEach(4, async (imgPath) => {
+				const tileName = basename(imgPath).replace(/\.[^.]+$/, '.versatiles');
+				const tilePath = join(tilesDir, tileName);
+				await runMosaicTile(imgPath, tilePath, { crs: '25832', nodata: '0,0,0' });
+				versatilesFiles.push(tilePath);
+				return 'converted';
+			});
+
+			const filelistPath = join(tempDir, 'filelist.txt');
+			writeFileSync(filelistPath, versatilesFiles.join('\n'));
+			await runMosaicAssemble(filelistPath, dest, { lossless: true });
+			safeRm(filelistPath);
+		} finally {
+			safeRm(innerZipPath);
+			safeRm(extractDir);
+			safeRm(tilesDir);
 		}
-
-		// Find all image files
-		const files = await readdir(extractDir, { recursive: true });
-		const imageFiles = files
-			.map((f) => (typeof f === 'string' ? f : String(f)))
-			.filter((f) => IMAGE_EXTS.some((ext) => f.endsWith(ext)))
-			.map((f) => join(extractDir, f));
-
-		if (imageFiles.length === 0) {
-			throw new Error(`No image files found in ${extractDir}`);
-		}
-
-		// Convert each image file to a .versatiles container individually
-		mkdirSync(tilesDir, { recursive: true });
-
-		console.log(`  Converting ${imageFiles.length} image files...`);
-		const versatilesFiles: string[] = [];
-		await pipeline(imageFiles, { progress: { labels: ['converted'] } }).forEach(4, async (imgPath) => {
-			const tileName = basename(imgPath).replace(/\.[^.]+$/, '.versatiles');
-			const tilePath = join(tilesDir, tileName);
-			await runMosaicTile(imgPath, tilePath, { crs: '25832' });
-			versatilesFiles.push(tilePath);
-			return 'converted';
-		});
-
-		// Write filelist and assemble into final output
-		const filelistPath = join(tempDir, 'filelist.txt');
-		writeFileSync(filelistPath, versatilesFiles.join('\n'));
-		await runMosaicAssemble(filelistPath, dest, { lossless: true });
-		safeRm(filelistPath);
-		safeRm(zipPath);
-		safeRm(extractDir);
-		safeRm(tilesDir);
 	},
 	minFiles: 2,
 });

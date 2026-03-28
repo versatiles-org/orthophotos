@@ -14,7 +14,7 @@ import { generateVPL } from './server/vpl.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const previewDir = resolve(__dirname, '../.preview');
-const vplFilename = 'orthophotos.vpl';
+const vplFilename = 'satellite.vpl';
 
 await downloadFrontend(previewDir);
 generateVPL(previewDir, vplFilename, true);

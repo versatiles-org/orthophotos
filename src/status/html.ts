@@ -90,7 +90,7 @@ export function generateStatusPage(
 	col.col-date { width: 100px; }
 	col.col-license { width: 150px; }
 	col.col-creator { }
-	col.col-notes { width: 100px; }
+	col.col-notes { width: 200px; }
 	td.notes { font-size: 12px; color: #8b949e; }
 	td.notes details summary { cursor: pointer; color: #8b949e; }
 	td.notes details summary:hover { color: #e6edf3; }

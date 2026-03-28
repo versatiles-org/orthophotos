@@ -108,6 +108,8 @@ interface StageDescriptor {
 
 interface PipelineOptions {
 	progress?: ProgressOptions;
+	/** Log errors immediately when they occur. Default: true */
+	logErrors?: boolean;
 }
 
 class PipelineBuilder<T> {
@@ -210,6 +212,9 @@ class PipelineBuilder<T> {
 					} catch (err) {
 						if (!firstError) {
 							firstError = err;
+							if (options.logErrors !== false) {
+								console.error(`\nPipeline error: ${err instanceof Error ? err.message : String(err)}`);
+							}
 							abortAll();
 						}
 						break;

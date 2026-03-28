@@ -72,7 +72,7 @@ export default defineTileRegion({
 		console.log(`  Generated ${items.length} grid cells`);
 		return items;
 	},
-	downloadConcurrency: 2,
+	downloadLimit: 2,
 	download: async (item, { tempDir, errors }) => {
 		const pngPath = join(tempDir, `${item.id}.png`);
 		const tifPath = join(tempDir, `${item.id}.tif`);

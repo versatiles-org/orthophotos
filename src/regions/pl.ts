@@ -131,7 +131,7 @@ export default defineTileRegion({
 
 		return [...bestByGrid.values()].map(({ url, gridRef }) => ({ id: gridRef, url }));
 	},
-	downloadConcurrency: 1,
+	downloadLimit: 1,
 	download: async ({ url, id }, { tempDir, errors }) => {
 		const tifPath = join(tempDir, `${id}.tif`);
 

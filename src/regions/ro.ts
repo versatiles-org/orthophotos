@@ -57,7 +57,7 @@ export default defineTileRegion({
 		const xml = await readFile(atomPath, 'utf-8');
 		return parseZipUrls(xml);
 	},
-	downloadConcurrency: 1,
+	downloadLimit: 1,
 	download: async ({ url, id }, { tempDir }) => {
 		const zipPath = join(tempDir, `${id}.zip`);
 		const extractDir = join(tempDir, id);

@@ -51,7 +51,7 @@ export default defineTileRegion({
 
 		return items.map((item) => ({ ...item, wmsXmlPath, blockPx }));
 	},
-	downloadConcurrency: 2,
+	downloadLimit: 2,
 	download: async (item, { tempDir }) => {
 		const tifPath = join(tempDir, `${item.id}.tif`);
 

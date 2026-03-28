@@ -73,7 +73,7 @@ export default defineTileRegion({
 		console.log(`  Found ${departments.length} départements`);
 		return departments;
 	},
-	downloadConcurrency: 1,
+	downloadLimit: 1,
 	download: async (item, { tempDir }) => {
 		const { urls, id } = item as DepartmentItem;
 		const extractDir = join(tempDir, id);

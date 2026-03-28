@@ -15,6 +15,7 @@
  *     });
  */
 
+import { type ConcurrencyLimit, resolveConcurrency } from './concurrency.ts';
 import { createProgress, type ProgressOptions } from './progress.ts';
 
 // --- Skip sentinel ---
@@ -120,13 +121,13 @@ class PipelineBuilder<T> {
 		private readonly options: PipelineOptions,
 	) {}
 
-	map<U>(concurrency: number, fn: (item: T) => Promise<U | Skip | null | undefined | void>): PipelineBuilder<U> {
-		this.stages.push({ concurrency, fn: fn as (item: unknown) => Promise<unknown> });
+	map<U>(limit: ConcurrencyLimit, fn: (item: T) => Promise<U | Skip | null | undefined | void>): PipelineBuilder<U> {
+		this.stages.push({ concurrency: resolveConcurrency(limit), fn: fn as (item: unknown) => Promise<unknown> });
 		return this as unknown as PipelineBuilder<U>;
 	}
 
-	async forEach(concurrency: number, fn: (item: T) => Promise<string | void>): Promise<void> {
-		this.stages.push({ concurrency, fn: fn as (item: unknown) => Promise<unknown> });
+	async forEach(limit: ConcurrencyLimit, fn: (item: T) => Promise<string | void>): Promise<void> {
+		this.stages.push({ concurrency: resolveConcurrency(limit), fn: fn as (item: unknown) => Promise<unknown> });
 		await this.execute();
 	}
 

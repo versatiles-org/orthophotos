@@ -45,7 +45,7 @@ export default defineTileRegion({
 			outerZipUrl: `${BASE_URL}${d.zip}`,
 		}));
 	},
-	downloadConcurrency: 1,
+	downloadLimit: 1,
 	download: async ({ outerZipUrl, id }, { tempDir }) => {
 		// Stream the inner ZIP out of the outer ZIP via RemoteZip
 		console.log(`  Reading ${id}...`);

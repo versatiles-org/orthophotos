@@ -19,33 +19,12 @@
 
 import { createReadStream, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { createInterface } from 'node:readline';
-import { availableParallelism, totalmem } from 'node:os';
 import { join } from 'node:path';
 import { shuffle } from './array.ts';
+import { type ConcurrencyLimit, resolveConcurrency } from './concurrency.ts';
 import type { RegionMetadata, RegionPipeline, StepContext } from './framework.ts';
 import { pipeline, skip } from './pipeline.ts';
 import { ErrorBucket, expectMinFiles } from './validators.ts';
-
-/** Limits for concurrency. The effective concurrency is the minimum of all applicable limits. */
-export interface ConcurrencyLimitObject {
-	/** CPU cores per process (default: 4). Concurrency = availableParallelism() / cores. */
-	cores?: number;
-	/** Hard maximum concurrency. */
-	concurrency?: number;
-	/** GB of RAM per process. Concurrency = totalMemoryGB / memoryGB. */
-	memoryGB?: number;
-}
-
-/** A number is shorthand for { concurrency: n }. */
-export type ConcurrencyLimit = number | ConcurrencyLimitObject;
-
-function resolveConcurrency(limit?: ConcurrencyLimit): number {
-	if (typeof limit === 'number') return Math.max(1, limit);
-	const cpuLimit = Math.floor(availableParallelism() / (limit?.cores ?? 4));
-	const memLimit = limit?.memoryGB ? Math.floor(totalmem() / 1e9 / limit.memoryGB) : Infinity;
-	const hardLimit = limit?.concurrency ?? Infinity;
-	return Math.max(1, Math.min(cpuLimit, memLimit, hardLimit));
-}
 
 /** Items must have an `id` property used to derive output and skip-file paths. */
 export interface TileItem {
@@ -75,7 +54,8 @@ export interface TileRegionOptions<T extends TileItem, D> {
 	/** Generate the items to process */
 	init: (ctx: StepContext) => T[] | Promise<T[]>;
 	/** Download concurrency (default: 4) */
-	downloadConcurrency?: number;
+	/** Download concurrency limit. Default: 4. */
+	downloadLimit?: ConcurrencyLimit;
 	/** Download callback — returns data for the convert stage, 'empty'/'invalid' to skip, or void */
 	download: (item: T, ctx: TileContext) => Promise<D | 'empty' | 'invalid' | void>;
 	/** Limits for convert concurrency. Concurrency is the minimum of all applicable limits. */
@@ -142,7 +122,7 @@ async function processTiles<T extends TileItem, D>(
 		return existsSync(tileCtx.dest) || existsSync(tileCtx.skipDest);
 	};
 
-	const dlConcurrency = options.downloadConcurrency ?? 4;
+	const dlConcurrency = resolveConcurrency(options.downloadLimit);
 	const cvConcurrency = resolveConcurrency(options.convertLimit);
 
 	const { download, convert } = options;

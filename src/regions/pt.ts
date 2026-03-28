@@ -95,7 +95,7 @@ export default defineTileRegion({
 			'-of',
 			'GTiff',
 			'-expand',
-			'rgb',
+			'rgba',
 			'-a_srs',
 			'EPSG:3857',
 			'-a_ullr',
@@ -118,7 +118,7 @@ export default defineTileRegion({
 		return { tifPath };
 	},
 	convert: async ({ tifPath }, { dest }) => {
-		await runMosaicTile(tifPath, dest, { nodata: '0,0,0' });
+		await runMosaicTile(tifPath, dest);
 		safeRm(tifPath);
 	},
 	minFiles: 500,

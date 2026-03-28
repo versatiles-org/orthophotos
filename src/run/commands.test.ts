@@ -119,7 +119,7 @@ test('runMosaicTile - calls versatiles with correct args', async () => {
 
 	// Create a fake tmp output that renameSync expects
 	const output = join(testDir, 'out.versatiles');
-	const tmpOutput = join(testDir, 'tmp.out.versatiles');
+	const tmpOutput = join(testDir, '.tmp.out.versatiles');
 	mockRunCommand.mockImplementation(async () => {
 		writeFileSync(tmpOutput, 'fake');
 		return mockResult('info: finished mosaic tile');
@@ -139,7 +139,7 @@ test('runMosaicTile - passes all options', async () => {
 	const testDir = join(tmpdir(), `mosaic-opts-test-${Date.now()}`);
 	mkdirSync(testDir, { recursive: true });
 	const output = join(testDir, 'out.versatiles');
-	const tmpOutput = join(testDir, 'tmp.out.versatiles');
+	const tmpOutput = join(testDir, '.tmp.out.versatiles');
 	mockRunCommand.mockImplementation(async () => {
 		writeFileSync(tmpOutput, 'fake');
 		return mockResult('info: finished mosaic tile');
@@ -176,7 +176,7 @@ test('runMosaicTile - cleans up tmp file on error', async () => {
 	mockRunCommand.mockRejectedValue(new Error('versatiles failed'));
 
 	await expect(runMosaicTile('/input.tif', output)).rejects.toThrow('runMosaicTile failed');
-	expect(existsSync(join(testDir, 'tmp.out.versatiles'))).toBe(false);
+	expect(existsSync(join(testDir, '.tmp.out.versatiles'))).toBe(false);
 });
 
 test('runMosaicAssemble - calls versatiles with correct args', async () => {

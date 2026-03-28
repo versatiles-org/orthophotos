@@ -109,7 +109,7 @@ export async function runMosaicTile(
 	if (options?.cacheDirectory) {
 		args.push('--cache-dir', options.cacheDirectory);
 	}
-	const tmpOutput = join(dirname(output), `tmp.${basename(output)}`);
+	const tmpOutput = join(dirname(output), `.tmp.${basename(output)}`);
 	args.push(input, tmpOutput);
 	try {
 		const result = await runCommand('versatiles', args, { quiet: true });

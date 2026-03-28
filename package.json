@@ -3,7 +3,7 @@
 	"version": "1.0.0",
 	"type": "module",
 	"scripts": {
-		"check": "npm run lint && npm run format:check && npm run typecheck && npm run test",
+		"check": "npm run format:check && npm run lint && npm run typecheck && npm run test",
 		"lint": "eslint 'src/**/*.ts'",
 		"format:check": "prettier --check 'src/**/*.ts'",
 		"format": "prettier --log-level warn --write 'src/**/*.ts'",

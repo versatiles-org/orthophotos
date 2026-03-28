@@ -80,6 +80,20 @@ export function createProgress(total: number, options: ProgressOptions): Progres
 		if (isTTY && terminalProgress) process.stderr.write('\x1b]9;4;0;0\x07');
 	}
 
+	// Clear OSC progress on process exit/kill
+	if (terminalProgress) {
+		const cleanup = () => osc9Clear();
+		process.on('exit', cleanup);
+		process.on('SIGINT', () => {
+			cleanup();
+			process.exit(130);
+		});
+		process.on('SIGTERM', () => {
+			cleanup();
+			process.exit(143);
+		});
+	}
+
 	function draw() {
 		const done = totalDone();
 		const line = render();

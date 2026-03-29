@@ -58,7 +58,12 @@ export default defineTileRegion<MtItem, MtDownload>({
 	name: 'mt',
 	meta: {
 		status: 'released',
-		notes: ['WMS returns paletted PNG, no EPSG:3857 support.', 'Black border treated as nodata.'],
+		notes: [
+			'WMS returns paletted PNG',
+			'low resolution and bad quality',
+			'no EPSG:3857 support',
+			'black border around the island',
+		],
 		entries: ['result'],
 		license: {
 			name: 'No limitations',

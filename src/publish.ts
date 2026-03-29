@@ -9,6 +9,7 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getConfig } from './config.ts';
 import { runCommand } from './lib/command.ts';
+import { runSshCommand } from './run/commands.ts';
 import { generateVPL } from './server/vpl.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -24,14 +25,24 @@ generateVPL(outputDir, vplFilename);
 
 const vplPath = resolve(outputDir, vplFilename);
 const { host, port, keyFile } = config.ssh;
-const sftpUrl = `sftp://${host}:${port ?? ''}/home/incoming/satellite.versatiles`;
+const remotePath = '/home/incoming/satellite.versatiles';
+const tmpRemotePath = '/home/incoming/.tmp.satellite.versatiles';
+const sftpTmpUrl = `sftp://${host}:${port ?? ''}${tmpRemotePath}`;
 
 const args = ['convert'];
 if (keyFile) {
 	args.push('--ssh-identity', keyFile);
 }
-args.push(vplPath, sftpUrl);
+args.push(vplPath, sftpTmpUrl);
 
-console.log(`Publishing to ${sftpUrl}...`);
-await runCommand('versatiles', args);
-console.log('Done.');
+console.log(`Publishing to ${remotePath}...`);
+try {
+	await runCommand('versatiles', args);
+	await runSshCommand(`mv '${tmpRemotePath}' '${remotePath}'`);
+	console.log('Done.');
+} catch (err) {
+	try {
+		await runSshCommand(`rm -f '${tmpRemotePath}'`);
+	} catch {}
+	throw err;
+}

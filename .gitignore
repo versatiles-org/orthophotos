@@ -1,5 +1,6 @@
 .DS_Store
 .preview/
+.publish/
 config.env
 coverage/
 node_modules/

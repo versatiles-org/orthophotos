@@ -131,7 +131,30 @@ export function createProgress(total: number, options: ProgressOptions): Progres
 		});
 	}
 
+	let lastDrawTime = 0;
+	let drawPending = false;
+
 	function draw() {
+		const now = performance.now();
+		const elapsed = now - lastDrawTime;
+
+		if (elapsed < 1000) {
+			// Schedule a deferred draw if not already pending
+			if (!drawPending) {
+				drawPending = true;
+				setTimeout(() => {
+					drawPending = false;
+					drawNow();
+				}, 1000 - elapsed);
+			}
+			return;
+		}
+
+		drawNow();
+	}
+
+	function drawNow() {
+		lastDrawTime = performance.now();
 		const line = render();
 		if (isTTY) {
 			process.stderr.write(`\r${line}`);
@@ -141,7 +164,7 @@ export function createProgress(total: number, options: ProgressOptions): Progres
 		}
 	}
 
-	draw();
+	drawNow();
 
 	return {
 		tick(label: string) {

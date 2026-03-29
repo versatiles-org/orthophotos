@@ -13,7 +13,7 @@ const GEOJSON_URL =
 export default defineTileRegion({
 	name: 'nl',
 	meta: {
-		status: 'scraping',
+		status: 'released',
 		notes: ['License requires attribution.'],
 		entries: ['result'],
 		license: {
@@ -26,7 +26,7 @@ export default defineTileRegion({
 			url: 'https://www.beeldmateriaal.nl/dataroom',
 		},
 		date: '2025',
-		releaseDate: '2025-10-04',
+		releaseDate: '2026-03-29',
 	},
 	init: async (ctx) => {
 		const geojsonPath = join(ctx.tempDir, 'features.geojson');

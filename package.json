@@ -14,7 +14,8 @@
 		"test": "vitest run",
 		"coverage": "vitest run --coverage",
 		"typecheck": "npx tsc --noEmit",
-		"upgrade": "npm-check-updates -u && npm install"
+		"upgrade": "npm-check-updates -u && npm install",
+		"prepare": "git config core.hooksPath .githooks"
 	},
 	"dependencies": {
 		"fast-xml-parser": "^5.5.9",

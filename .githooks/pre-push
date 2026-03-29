@@ -1,0 +1,7 @@
+#!/bin/sh
+
+echo "Running format check..."
+npm run format:check || exit 1
+
+echo "Running lint..."
+npm run lint || exit 1

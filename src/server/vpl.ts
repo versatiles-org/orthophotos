@@ -9,18 +9,34 @@ import { loadKnownRegions } from '../status/geojson.ts';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = resolve(__dirname, '../../data');
 
+export interface VPLOptions {
+	/** If true, shows all orthophoto layers with level_min = 0 for debugging. */
+	debug?: boolean;
+	/** When set, VPL references local files instead of SFTP URLs. Orthophoto sources at {localDir}/regions/, satellite at {localDir}/satellite/. */
+	localDir?: string;
+}
+
 /**
  * Generates a VersaTiles Pipeline Language (VPL) configuration file.
- * Stacks orthophoto containers (via sftp) from all successful regions onto satellite imagery.
+ * Stacks orthophoto containers from all successful regions onto satellite imagery.
  * Uses GeoJSON masks (from NUTS or custom files) to cleanly clip the raster data at region borders.
  * @param outputDir - Directory to write VPL and mask files into
  * @param filename - Output filename for the VPL file
- * @param debug - If true, shows all orthophoto layers with level_min = 0 for debugging purposes.
+ * @param options - VPL generation options
  */
-export function generateVPL(outputDir: string, filename: string, debug = false): void {
-	const { host, port, dir } = getConfig().ssh!;
+export function generateVPL(outputDir: string, filename: string, options: VPLOptions | boolean = {}): void {
+	// Support legacy boolean parameter for debug
+	if (typeof options === 'boolean') options = { debug: options };
+	const { debug = false, localDir } = options;
 
-	function sftpUrl(path: string): string {
+	const ssh = getConfig().ssh;
+
+	function sourceUrl(path: string): string {
+		if (localDir) {
+			return resolve(localDir, path);
+		}
+		if (!ssh) throw new Error('SSH configuration is required for VPL generation without localDir.');
+		const { host, port } = ssh;
 		path = path.replace(/\/\/+/g, '/');
 		if (!path.startsWith('/')) path = '/' + path;
 		return `sftp://${host}:${port ?? ''}${path}`;
@@ -46,7 +62,8 @@ export function generateVPL(outputDir: string, filename: string, debug = false):
 
 		const entries = meta.entries ?? ['result'];
 		for (const entry of entries) {
-			let layer = `from_container filename="${sftpUrl(`${dir}/${id}/${entry}.versatiles`)}"`;
+			const containerPath = localDir ? `regions/${id}/${entry}.versatiles` : `${ssh!.dir}/${id}/${entry}.versatiles`;
+			let layer = `from_container filename="${sourceUrl(containerPath)}"`;
 
 			if (meta.mask) {
 				const maskId = id.replace(/\//g, '_');
@@ -81,10 +98,16 @@ export function generateVPL(outputDir: string, filename: string, debug = false):
 		}
 	}
 
-	// Add satellite base layers via sftp
-	layers.push(`from_container filename="${sftpUrl('/home/satellite/s2gm/s2gm_overview.versatiles')}"`);
+	// Add satellite base layers
+	const s2gmPath = localDir
+		? 'satellite/s2gm/s2gm_overview.versatiles'
+		: '/home/satellite/s2gm/s2gm_overview.versatiles';
+	const bluemarblePath = localDir
+		? 'satellite/bluemarble/bluemarble.versatiles'
+		: '/home/satellite/bluemarble/bluemarble.versatiles';
+	layers.push(`from_container filename="${sourceUrl(s2gmPath)}"`);
 	layers.push(
-		`from_container filename="${sftpUrl('/home/satellite/bluemarble/bluemarble.versatiles')}" | raster_levels gamma=0.8 brightness=0.2 contrast=0.8`,
+		`from_container filename="${sourceUrl(bluemarblePath)}" | raster_levels gamma=0.8 brightness=0.2 contrast=0.8`,
 	);
 
 	const vpl = `from_stacked_raster auto_overscale=true [

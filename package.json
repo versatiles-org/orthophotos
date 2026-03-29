@@ -10,6 +10,7 @@
 		"run": "node --env-file=config.env --import tsx/esm src/run.ts",
 		"preview": "node --env-file=config.env --import tsx/esm src/preview.ts",
 		"publish-world": "node --env-file=config.env --import tsx/esm src/publish-world.ts",
+		"publish-world-local": "node --env-file=config.env --import tsx/esm src/publish-world-local.ts",
 		"status": "node --env-file=config.env --import tsx/esm src/status-check.ts && open web/index.html",
 		"status-check": "node --env-file=config.env --import tsx/esm src/status-check.ts",
 		"test": "vitest run",

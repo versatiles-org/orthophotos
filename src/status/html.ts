@@ -74,8 +74,11 @@ export function generateStatusPage(
 	.summary { margin-bottom: 16px; font-size: 14px; color: #8b949e; }
 	a { color: #58a6ff; text-decoration: none; }
 	a:hover { text-decoration: underline; }
+	details { line-height: 1.2; }
 	details summary { cursor: pointer; }
 	details summary:hover { color: #58a6ff; }
+	details ul { padding-left:18px; font-size: 0.8rem; }
+	details li { margin:4px 0; }
 	#grid { height: calc(100vh - 80px); }
 </style>
 </head>
@@ -102,9 +105,8 @@ function LinkCellRenderer(params) {
 function NotesCellRenderer(params) {
 	const notes = params.value;
 	if (!notes || notes.length === 0) return '';
-	if (notes.length === 1) return '<span>' + notes[0] + '</span>';
 	const list = notes.map(n => '<li>' + n + '</li>').join('');
-	return '<details><summary>' + notes.length + ' notes</summary><ul style="margin:4px 0;padding-left:18px">' + list + '</ul></details>';
+	return '<details><summary>' + notes.length + ' notes</summary><ul>' + list + '</ul></details>';
 }
 
 const columnDefs = [

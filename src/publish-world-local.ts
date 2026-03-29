@@ -24,7 +24,8 @@ if (!config.ssh) {
 
 const { host, port, keyFile, dir } = config.ssh;
 const localDir = resolve(config.dirData, 'publish');
-mkdirSync(localDir, { recursive: true });
+mkdirSync(resolve(localDir, 'satellite/s2gm/'), { recursive: true });
+mkdirSync(resolve(localDir, 'satellite/bluemarble/'), { recursive: true });
 
 // Build rsync SSH transport command
 const sshCmd = ['ssh'];

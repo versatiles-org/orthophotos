@@ -131,11 +131,10 @@ export default defineTileRegion({
 
 		return [...bestByGrid.values()].map(({ url, gridRef }) => ({ id: gridRef, url }));
 	},
-	downloadLimit: 1,
+	downloadLimit: 2,
 	download: async ({ url, id }, { tempDir, errors }) => {
 		const tifPath = join(tempDir, `${id}.tif`);
 
-		console.log(`  Downloading ${url}`);
 		await withRetry(() => downloadFile(url, tifPath), { maxAttempts: 5, initialDelayMs: 3000 });
 		if (!(await isValidRaster(tifPath))) {
 			errors.add(`${id}.tif (${url})`);
@@ -147,5 +146,5 @@ export default defineTileRegion({
 		await runMosaicTile(tifPath, dest);
 		safeRm(tifPath);
 	},
-	minFiles: 330000,
+	minFiles: 58000,
 });

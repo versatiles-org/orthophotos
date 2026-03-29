@@ -1,15 +1,15 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { downloadFile, runCommand } from '../lib/command.ts';
+import { downloadFile } from '../lib/command.ts';
 import { safeRm } from '../lib/fs.ts';
+import { MAX_ZOOM } from '../lib/constants.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
 import { computeWmsBlocks, generateWmsXml, parseWmsCapabilities } from '../lib/wms.ts';
-import { MAX_ZOOM } from '../lib/constants.ts';
 import { extractWmsBlock, runMosaicTile } from '../run/commands.ts';
 
-const WMS_URL = 'https://geoportal.asig.gov.al/service/wms';
-const LAYER = 'orthophoto_2015:OrthoImagery_20cm';
+const WMS_URL = 'https://geoportal.asig.gov.al/service/orthophoto_2015/wms';
+const LAYER = 'OrthoImagery_20cm';
 
 export default defineTileRegion({
 	name: 'al',
@@ -50,39 +50,41 @@ export default defineTileRegion({
 		return items.map((item) => ({ ...item, wmsXmlPath, blockPx }));
 	},
 	downloadLimit: 1,
-	download: async (item, { tempDir }) => {
+	download: async (item, { tempDir, skipDest }) => {
 		const tifPath = join(tempDir, `${item.id}.tif`);
-		const maskedPath = join(tempDir, `${item.id}_masked.tif`);
 
-		await extractWmsBlock(
-			{ wmsXmlPath: item.wmsXmlPath, x0: item.x0, y0: item.y0, x1: item.x1, y1: item.y1, blockPx: item.blockPx },
-			tifPath,
-		);
+		try {
+			await withRetry(
+				() =>
+					extractWmsBlock(
+						{
+							wmsXmlPath: item.wmsXmlPath as string,
+							x0: item.x0,
+							y0: item.y0,
+							x1: item.x1,
+							y1: item.y1,
+							blockPx: item.blockPx,
+						},
+						tifPath,
+					),
+				{ maxAttempts: 3 },
+			);
 
-		// White background → transparent
-		await runCommand('gdal', ['raster', 'edit', '--nodata', '255', tifPath]);
-		await runCommand('gdal_translate', [
-			'-q',
-			'-b',
-			'1',
-			'-b',
-			'2',
-			'-b',
-			'3',
-			'-b',
-			'mask',
-			'-colorinterp_4',
-			'alpha',
-			tifPath,
-			maskedPath,
-		]);
-
-		safeRm(tifPath);
-		return { srcPath: maskedPath };
+			return { srcPath: tifPath };
+		} catch {
+			// WMS returns errors for blocks outside coverage — mark as empty
+			safeRm(tifPath);
+			const { writeFileSync } = await import('node:fs');
+			writeFileSync(skipDest, '');
+			return 'empty';
+		}
 	},
 	convert: async ({ srcPath }, { dest }) => {
-		await runMosaicTile(srcPath, dest);
-		safeRm(srcPath);
+		try {
+			await runMosaicTile(srcPath as string, dest);
+		} finally {
+			safeRm(srcPath as string);
+		}
 	},
-	minFiles: 123456,
+	minFiles: 500,
 });

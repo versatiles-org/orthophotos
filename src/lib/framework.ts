@@ -34,6 +34,12 @@ interface RegionMetadataBase {
 	license?: RegionLicense;
 	creator?: RegionCreator;
 	date?: string;
+	/**
+	 * GeoJSON mask for clipping raster data at region borders in the VPL.
+	 * - `true`: use the region's MultiPolygon from the NUTS TopoJSON
+	 * - string: path to a `.geojson.gz` file in `data/` (e.g. `'de_berlin.geojson.gz'`)
+	 */
+	mask?: boolean | string;
 	/** Override the buffer distance (in meters) for the raster_mask in the VPL. Default: 0 */
 	maskBuffer?: number;
 }

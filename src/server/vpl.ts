@@ -1,17 +1,18 @@
 import { dirname, relative, resolve } from 'node:path';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import { getConfig } from '../config.ts';
 import { getAllRegionMetadata } from '../regions/index.ts';
+import { loadKnownRegions } from '../status/geojson.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const GEOJSON_DIR = resolve(__dirname, '../../data');
+const DATA_DIR = resolve(__dirname, '../../data');
 
 /**
  * Generates a VersaTiles Pipeline Language (VPL) configuration file.
  * Stacks orthophoto containers (via sftp) from all successful regions onto satellite imagery.
- * Uses GeoJSON mask files from data/ to cleanly clip the raster data at region borders.
+ * Uses GeoJSON masks (from NUTS or custom files) to cleanly clip the raster data at region borders.
  * @param outputDir - Directory to write VPL and mask files into
  * @param filename - Output filename for the VPL file
  * @param debug - If true, shows all orthophoto layers with level_min = 0 for debugging purposes.
@@ -29,6 +30,13 @@ export function generateVPL(outputDir: string, filename: string, debug = false):
 	const masksDir = resolve(outputDir, 'masks');
 	mkdirSync(masksDir, { recursive: true });
 
+	// Lazy-load NUTS regions only when needed
+	let nutsRegions: ReturnType<typeof loadKnownRegions> | undefined;
+	function getNutsRegions() {
+		if (!nutsRegions) nutsRegions = loadKnownRegions(DATA_DIR);
+		return nutsRegions;
+	}
+
 	const layers: string[] = [];
 	const allMetadata = getAllRegionMetadata();
 	const levelMin = debug ? 0 : 11;
@@ -40,13 +48,29 @@ export function generateVPL(outputDir: string, filename: string, debug = false):
 		for (const entry of entries) {
 			let layer = `from_container filename="${sftpUrl(`${dir}/${id}/${entry}.versatiles`)}"`;
 
-			// Check for a high-accuracy GeoJSON mask in data/
-			const maskId = id.replace(/\//g, '_');
-			const gzPath = resolve(GEOJSON_DIR, `${maskId}.geojson.gz`);
-			if (existsSync(gzPath)) {
+			if (meta.mask) {
+				const maskId = id.replace(/\//g, '_');
 				const maskPath = resolve(masksDir, `${maskId}.geojson`);
-				const geojson = gunzipSync(readFileSync(gzPath)).toString('utf-8');
-				writeFileSync(maskPath, geojson);
+
+				if (meta.mask === true) {
+					// Use region geometry from NUTS TopoJSON
+					const region = getNutsRegions().find((r) => r.properties.id === id);
+					if (!region) {
+						throw new Error(`No NUTS geometry found for region '${id}'`);
+					}
+					const fc = {
+						type: 'FeatureCollection',
+						features: [{ type: 'Feature', geometry: region.geometry, properties: {} }],
+					};
+					const geojson = JSON.stringify(fc);
+					writeFileSync(maskPath, geojson);
+				} else {
+					// Use custom .geojson.gz file from data/
+					const gzPath = resolve(DATA_DIR, meta.mask);
+					const geojson = gunzipSync(readFileSync(gzPath)).toString('utf-8');
+					writeFileSync(maskPath, geojson);
+				}
+
 				const buffer = meta.maskBuffer ?? 0;
 				layer += ` | raster_mask geojson="${relative(outputDir, maskPath)}"`;
 				if (buffer !== 0) layer += ` buffer=${buffer}`;

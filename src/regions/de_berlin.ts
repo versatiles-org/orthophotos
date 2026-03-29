@@ -48,6 +48,7 @@ export default defineTileRegion({
 			url: 'https://daten.berlin.de/datensaetze/orthofotografie-im-inspire-datenmodell-truedop20rgbi-2025-sommer-f9369d23',
 		},
 		date: '2025',
+		mask: 'de_berlin.geojson.gz',
 		releaseDate: '2026-03-24',
 	},
 	init: async (ctx) => {

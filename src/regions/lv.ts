@@ -26,6 +26,7 @@ export default defineTileRegion({
 			url: 'https://www.lgia.gov.lv/lv/aerofotografesanas-6-cikls-2016-2018-g',
 		},
 		date: '2016-2018',
+		mask: 'lv.geojson.gz',
 		maskBuffer: -1000,
 		releaseDate: '2025-10-04',
 	},

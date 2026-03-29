@@ -109,7 +109,7 @@
 		style.sources.satellite.tiles = ['http://localhost:8080/tiles/satellite/{z}/{x}/{y}'];
 
 		// Remove streets and boundaries — show only raster imagery
-		style.layers = style.layers.filter(l => l.type === 'raster' || l.type === 'background');
+		style.layers = style.layers.filter(l => l.type === 'raster' || l.type === 'symbol');
 
 		const map = new maplibregl.Map({
 			container: 'map',

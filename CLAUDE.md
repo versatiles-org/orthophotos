@@ -204,6 +204,10 @@ Regions can also set `maskBuffer` to adjust the mask buffer distance in meters (
 - `quiet: true` — suppresses stdout/stderr during execution (still captured for error messages)
 - `quietOnError: true` — also suppresses output in error messages
 
+### Data Source Research
+
+The EU INSPIRE Geoportal orthoimagery theme is the best starting point for finding orthophoto data sources for EU countries: https://inspire-geoportal.ec.europa.eu/srv/eng/catalog.search#/overview?view=themeOverview&theme=oi
+
 ### External CLI Dependencies
 
 Required tools: `7z`, `curl`, `gdal_translate`, `gdalbuildvrt`, `ssh`, `unzip`, `versatiles`

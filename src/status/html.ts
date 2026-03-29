@@ -73,6 +73,8 @@ export function generateStatusPage(
 	.summary { margin-bottom: 16px; font-size: 14px; color: #8b949e; }
 	a { color: #58a6ff; text-decoration: none; }
 	a:hover { text-decoration: underline; }
+	details summary { cursor: pointer; }
+	details summary:hover { color: #58a6ff; }
 	#grid { height: calc(100vh - 80px); }
 </style>
 </head>
@@ -99,7 +101,9 @@ function LinkCellRenderer(params) {
 function NotesCellRenderer(params) {
 	const notes = params.value;
 	if (!notes || notes.length === 0) return '';
-	return '<span title="' + notes.map(n => n.replace(/"/g, '&quot;')).join('\\n') + '">' + notes.length + ' note' + (notes.length > 1 ? 's' : '') + '</span>';
+	if (notes.length === 1) return '<span>' + notes[0] + '</span>';
+	const list = notes.map(n => '<li>' + n + '</li>').join('');
+	return '<details><summary>' + notes.length + ' notes</summary><ul style="margin:4px 0;padding-left:18px">' + list + '</ul></details>';
 }
 
 const columnDefs = [
@@ -110,7 +114,7 @@ const columnDefs = [
 	{ field: 'date', headerName: 'Date', width: 110, filter: true },
 	{ field: 'licenseName', headerName: 'License', width: 140, cellRenderer: LinkCellRenderer, filter: true },
 	{ field: 'creatorName', headerName: 'Creator', flex: 1, minWidth: 150, cellRenderer: LinkCellRenderer, filter: true },
-	{ field: 'notes', headerName: 'Notes', width: 100, cellRenderer: NotesCellRenderer, sortable: false },
+	{ field: 'notes', headerName: 'Notes', minWidth: 200, flex: 1, cellRenderer: NotesCellRenderer, sortable: false, autoHeight: true, wrapText: true },
 ];
 
 const gridOptions = {

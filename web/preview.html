@@ -108,6 +108,9 @@
 		});
 		style.sources.satellite.tiles = ['http://localhost:8080/tiles/satellite/{z}/{x}/{y}'];
 
+		// Remove streets and boundaries — show only raster imagery
+		style.layers = style.layers.filter(l => l.type === 'raster' || l.type === 'background');
+
 		const map = new maplibregl.Map({
 			container: 'map',
 			//bounds: [-23.213, 34.9, 45.112, 62.671],

@@ -9,7 +9,7 @@
 		"format": "prettier --log-level warn --write 'src/**/*.ts'",
 		"run": "node --env-file=config.env --import tsx/esm src/run.ts",
 		"preview": "node --env-file=config.env --import tsx/esm src/preview.ts",
-		"publish": "node --env-file=config.env --import tsx/esm src/publish.ts",
+		"publish-world": "node --env-file=config.env --import tsx/esm src/publish-world.ts",
 		"status": "node --env-file=config.env --import tsx/esm src/status-check.ts && open web/index.html",
 		"status-check": "node --env-file=config.env --import tsx/esm src/status-check.ts",
 		"test": "vitest run",

@@ -55,6 +55,7 @@ export default defineTileRegion({
 		},
 		date: '2024-2025',
 		releaseDate: '2026-03-25',
+		mask: true,
 	},
 	init: async (ctx) => {
 		const atomPath = join(ctx.tempDir, 'atom.xml');

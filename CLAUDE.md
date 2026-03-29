@@ -162,7 +162,7 @@ Region fetch implementations should follow these patterns consistently:
 **Transparent borders:** Orthophoto tiles must not have black or white borders around the imagery. Borders cause visible rectangles when tiles are stacked. To ensure clean transparency:
 - **Alpha channel:** If the source has an alpha channel (e.g., WMS with `Transparent=TRUE`), use it directly — `versatiles mosaic tile` respects alpha.
 - **Nodata flag:** Use `runMosaicTile(input, output, { nodata: '0,0,0' })` to treat black as transparent, or `{ nodata: '255,255,255' }` for white. Multiple values can be joined with `;` (e.g., `{ nodata: '0,0,0;255,255,255' }`). Note: nodata only works reliably on lossless-compressed source data (e.g., DEFLATE, LZW, uncompressed). JPEG-compressed sources may have intermediate values at edges that don't match the exact nodata value.
-- **GeoJSON masks:** The VPL generator applies `raster_mask` with region border GeoJSON to clip edges at serving time. This is a final safety net but doesn't fix the source tiles.
+- **GeoJSON masks:** Set `mask: true` (NUTS border) or `mask: 'file.geojson.gz'` in region metadata to apply `raster_mask` clipping at serving time. This is a final safety net but doesn't fix the source tiles.
 - Always inspect the edges of a sample tile with `gdalinfo` + pixel value checks before assuming the border color.
 
 **Temp file cleanup:** Always clean up temp files in a `finally` block:
@@ -192,7 +192,11 @@ The `versatiles` CLI is developed in the sibling repo `versatiles-rs`. If a regi
 
 ### VPL Generation and Region Masks
 
-`generateVPL()` in `src/server/vpl.ts` builds a VPL file that stacks orthophoto layers (via SFTP) over satellite imagery. Each released region can have a GeoJSON mask (`data/{region_id}.geojson.gz`) for clean border clipping via `raster_mask`. Regions can set `maskBuffer` in their metadata to adjust the mask buffer distance (negative values shrink the mask).
+`generateVPL()` in `src/server/vpl.ts` builds a VPL file that stacks orthophoto layers (via SFTP) over satellite imagery. Regions can opt into border clipping via `raster_mask` by setting `mask` in their metadata:
+- `mask: true` — uses the region's MultiPolygon from `data/NUTS_RG_03M_2024_4326.topojson.gz`
+- `mask: 'filename.geojson.gz'` — uses a custom GeoJSON file from `data/`
+
+Regions can also set `maskBuffer` to adjust the mask buffer distance in meters (negative values shrink the mask).
 
 ### Command Execution
 

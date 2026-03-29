@@ -14,7 +14,7 @@ const LAYER = 'orthoimage_coverage';
 export default defineTileRegion({
 	name: 'be',
 	meta: {
-		status: 'scraping',
+		status: 'released',
 		notes: ['License requires attribution.', 'JPEG2000 without alpha channel'],
 		entries: ['result'],
 		license: {
@@ -27,6 +27,7 @@ export default defineTileRegion({
 			url: 'https://www.ngi.be/en',
 		},
 		date: '2024',
+		releaseDate: '2026-03-29',
 	},
 	init: async (ctx) => {
 		const capsPath = join(ctx.tempDir, 'caps.xml');

@@ -10,7 +10,8 @@ import { mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { getConfig } from './config.ts';
 import { runCommand } from './lib/command.ts';
-import { runSshCommand } from './run/commands.ts';
+import { safeRm } from './lib/fs.ts';
+import { runScpUpload, runSshCommand } from './run/commands.ts';
 import { generateVPL } from './server/vpl.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -72,21 +73,28 @@ await runCommand('rsync', [
 // Generate VPL with local file paths
 generateVPL(outputDir, vplFilename, { localDir });
 
-// Convert and stream to remote
+// Convert locally
 const vplPath = resolve(outputDir, vplFilename);
+const localOutput = resolve(localDir, 'satellite.versatiles');
+const tmpLocalOutput = resolve(localDir, '.tmp.satellite.versatiles');
+
+console.log('Converting VPL to .versatiles container...');
+try {
+	await runCommand('versatiles', ['convert', vplPath, tmpLocalOutput]);
+	const { renameSync } = await import('node:fs');
+	renameSync(tmpLocalOutput, localOutput);
+} catch (err) {
+	safeRm(tmpLocalOutput);
+	throw err;
+}
+
+// Upload to remote
 const remotePath = '/home/incoming/satellite.versatiles';
 const tmpRemotePath = '/home/incoming/.tmp.satellite.versatiles';
-const sftpTmpUrl = `sftp://${host}:${port ?? ''}${tmpRemotePath}`;
 
-const args = ['convert'];
-if (keyFile) {
-	args.push('--ssh-identity', keyFile);
-}
-args.push(vplPath, sftpTmpUrl);
-
-console.log(`Publishing to ${remotePath}...`);
+console.log(`Uploading to ${remotePath}...`);
 try {
-	await runCommand('versatiles', args);
+	await runScpUpload(localOutput, tmpRemotePath);
 	await runSshCommand(`mv '${tmpRemotePath}' '${remotePath}'`);
 	console.log('Done.');
 } catch (err) {

@@ -16,6 +16,7 @@ import { downloadFile, runCommand } from '../lib/command.ts';
 import type { RegionMetadata, RegionPipeline } from '../lib/framework.ts';
 import { safeRm } from '../lib/fs.ts';
 import { pipeline } from '../lib/pipeline.ts';
+import { createProgress } from '../lib/progress.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
 import { runMosaicAssemble, runMosaicTile } from '../run/commands.ts';
@@ -91,8 +92,10 @@ function buildMeta(): RegionMetadata {
 export async function fetchIndexPages(cacheDir: string): Promise<string[]> {
 	mkdirSync(cacheDir, { recursive: true });
 
+	// Fetch page 1 up front so we can learn the total page count for the progress bar.
 	const firstPath = join(cacheDir, 'page_1.xml');
-	if (!existsSync(firstPath)) {
+	const firstWasCached = existsSync(firstPath);
+	if (!firstWasCached) {
 		await withRetry(() => downloadFile(`${FEED_BASE}?page=1`, firstPath), { maxAttempts: 3 });
 	}
 	const firstXml = await readFile(firstPath, 'utf-8');
@@ -100,15 +103,22 @@ export async function fetchIndexPages(cacheDir: string): Promise<string[]> {
 	if (!pageCountMatch) throw new Error('Could not determine page count from BD ORTHO ATOM feed');
 	const pageCount = parseInt(pageCountMatch[1], 10);
 
+	const progress = createProgress(pageCount, { labels: ['fetched', 'cached'], logInterval: 10 });
+	progress.tick(firstWasCached ? 'cached' : 'fetched');
+
 	const paths: string[] = [firstPath];
 	for (let i = 2; i <= pageCount; i++) {
 		const path = join(cacheDir, `page_${i}.xml`);
-		if (!existsSync(path)) {
+		if (existsSync(path)) {
+			progress.tick('cached');
+		} else {
 			await sleep(REQUEST_INTERVAL_MS);
 			await withRetry(() => downloadFile(`${FEED_BASE}?page=${i}`, path), { maxAttempts: 3 });
+			progress.tick('fetched');
 		}
 		paths.push(path);
 	}
+	progress.done();
 	return paths;
 }
 

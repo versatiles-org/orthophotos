@@ -11,6 +11,7 @@ import { existsSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'node:f
 import { readFile, readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { XMLParser } from 'fast-xml-parser';
+import { getConfig } from '../config.ts';
 import { downloadFile, runCommand } from '../lib/command.ts';
 import type { RegionMetadata, RegionPipeline } from '../lib/framework.ts';
 import { safeRm } from '../lib/fs.ts';
@@ -216,8 +217,10 @@ export function defineFrSubRegion(opts: FrSubRegionOptions): RegionPipeline {
 	return defineTileRegion<BdorthoItem, { extractDir: string }>({
 		name: opts.name,
 		meta: buildMeta(),
-		init: async (ctx) => {
-			const cacheDir = join(ctx.tempDir, 'index');
+		init: async () => {
+			// Cache the ATOM feed once, under the global temp dir, so all fr/* sub-regions
+			// share the same 141 page downloads instead of re-fetching them per region.
+			const cacheDir = join(getConfig().dirTemp, 'fr_shared', 'index');
 			console.log('  Fetching BD ORTHO ATOM feed...');
 			const pagePaths = await fetchIndexPages(cacheDir);
 

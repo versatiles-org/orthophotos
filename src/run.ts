@@ -16,7 +16,7 @@ import { resolve } from 'node:path';
 import { mkdirSync } from 'node:fs';
 import { getConfig } from './config.ts';
 import { getHelpText, parseArgs } from './run/args.ts';
-import { checkRequiredCommands, runSshCommand } from './run/commands.ts';
+import { checkRequiredCommands, remoteFileExists, runSshCommand } from './run/commands.ts';
 import { runTask, type TaskContext } from './run/tasks.ts';
 
 async function checkRemoteServer(): Promise<void> {
@@ -45,7 +45,18 @@ async function main(): Promise<void> {
 	console.log('Checking required commands...');
 	await checkRequiredCommands();
 
-	// If merge task is requested, verify remote is accessible before starting
+	// If fetch or merge is requested and the final file already exists on the
+	// remote, skip those tasks — nothing to scrape or re-upload.
+	const ssh = getConfig().ssh;
+	if (ssh && (args.tasks.includes(1) || args.tasks.includes(2))) {
+		const remotePath = `${ssh.dir}/${args.name}.versatiles`;
+		if (await remoteFileExists(remotePath)) {
+			console.log(`Remote file already exists at ${remotePath} — skipping fetch and merge.`);
+			args.tasks = args.tasks.filter((t) => t !== 1 && t !== 2);
+		}
+	}
+
+	// If merge task is still requested, verify remote is accessible before starting
 	if (args.tasks.includes(2)) {
 		await checkRemoteServer();
 	}

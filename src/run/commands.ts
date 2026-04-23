@@ -64,6 +64,34 @@ export async function runSshCommand(command: string): Promise<void> {
 	await runCommand('ssh', [...sshArgs, host, command]);
 }
 
+/**
+ * Returns true if a file exists on the remote server, false if it does not.
+ * Throws if the SSH connection itself fails (so the caller can surface a real
+ * connectivity issue rather than silently treat it as "file is missing").
+ */
+export async function remoteFileExists(remotePath: string): Promise<boolean> {
+	const sshConfig = getConfig().ssh;
+	if (!sshConfig) {
+		throw new Error('SSH configuration is missing');
+	}
+	const { host, port, keyFile } = sshConfig;
+	const sshArgs: string[] = ['-o', 'ConnectTimeout=10'];
+	if (port) sshArgs.push('-p', port);
+	if (keyFile) sshArgs.push('-i', keyFile);
+	const escaped = remotePath.replace(/'/g, `'\\''`);
+	try {
+		await runCommand('ssh', [...sshArgs, host, `test -f '${escaped}'`], { quiet: true, quietOnError: true });
+		return true;
+	} catch (err) {
+		// ssh itself uses exit code 255 for connection/auth failures; other codes come
+		// from the remote command (e.g. `test -f` exits 1 when the file is absent).
+		if (err instanceof Error && err.message.includes('Exit code: 255')) {
+			throw new Error(`Cannot reach remote server to check ${remotePath}`);
+		}
+		return false;
+	}
+}
+
 export async function runScpUpload(localPath: string, remotePath: string): Promise<void> {
 	const sshConfig = getConfig().ssh;
 	if (!sshConfig) {

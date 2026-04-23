@@ -60,42 +60,39 @@ export function generateVPL(outputDir: string, filename: string, options: VPLOpt
 	for (const [id, meta] of allMetadata) {
 		if (meta.status !== 'released') continue;
 
-		const entries = meta.entries ?? ['result'];
-		for (const entry of entries) {
-			const containerPath = localDir ? `regions/${id}/${entry}.versatiles` : `${ssh!.dir}/${id}/${entry}.versatiles`;
-			let layer = `from_container filename="${sourceUrl(containerPath)}"`;
+		const containerPath = localDir ? `regions/${id}.versatiles` : `${ssh!.dir}/${id}.versatiles`;
+		let layer = `from_container filename="${sourceUrl(containerPath)}"`;
 
-			if (meta.mask) {
-				const maskId = id.replace(/\//g, '_');
-				const maskPath = resolve(masksDir, `${maskId}.geojson`);
+		if (meta.mask) {
+			const maskId = id.replace(/\//g, '_');
+			const maskPath = resolve(masksDir, `${maskId}.geojson`);
 
-				if (meta.mask === true) {
-					// Use region geometry from NUTS TopoJSON
-					const region = getNutsRegions().find((r) => r.properties.id === id);
-					if (!region) {
-						throw new Error(`No NUTS geometry found for region '${id}'`);
-					}
-					const fc = {
-						type: 'FeatureCollection',
-						features: [{ type: 'Feature', geometry: region.geometry, properties: {} }],
-					};
-					const geojson = JSON.stringify(fc);
-					writeFileSync(maskPath, geojson);
-				} else {
-					// Use custom .geojson.gz file from data/
-					const gzPath = resolve(DATA_DIR, meta.mask);
-					const geojson = gunzipSync(readFileSync(gzPath)).toString('utf-8');
-					writeFileSync(maskPath, geojson);
+			if (meta.mask === true) {
+				// Use region geometry from NUTS TopoJSON
+				const region = getNutsRegions().find((r) => r.properties.id === id);
+				if (!region) {
+					throw new Error(`No NUTS geometry found for region '${id}'`);
 				}
-
-				const buffer = meta.maskBuffer ?? 0;
-				layer += ` | raster_mask geojson="${relative(outputDir, maskPath)}"`;
-				if (buffer !== 0) layer += ` buffer=${buffer}`;
+				const fc = {
+					type: 'FeatureCollection',
+					features: [{ type: 'Feature', geometry: region.geometry, properties: {} }],
+				};
+				const geojson = JSON.stringify(fc);
+				writeFileSync(maskPath, geojson);
+			} else {
+				// Use custom .geojson.gz file from data/
+				const gzPath = resolve(DATA_DIR, meta.mask);
+				const geojson = gunzipSync(readFileSync(gzPath)).toString('utf-8');
+				writeFileSync(maskPath, geojson);
 			}
 
-			layer += ` | filter level_min=${levelMin}`;
-			layers.push(layer);
+			const buffer = meta.maskBuffer ?? 0;
+			layer += ` | raster_mask geojson="${relative(outputDir, maskPath)}"`;
+			if (buffer !== 0) layer += ` buffer=${buffer}`;
 		}
+
+		layer += ` | filter level_min=${levelMin}`;
+		layers.push(layer);
 	}
 
 	// Add satellite base layers

@@ -44,7 +44,7 @@ await runCommand('rsync', [
 	`${host}:${dir}/`,
 	resolve(localDir, 'regions/'),
 	'--include=*/',
-	'--include=result.versatiles',
+	'--include=*.versatiles',
 	'--exclude=*',
 ]);
 

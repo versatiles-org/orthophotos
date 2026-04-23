@@ -5,7 +5,7 @@
 
 import { existsSync, mkdirSync, renameSync } from 'node:fs';
 import { createInterface } from 'node:readline';
-import { resolve } from 'node:path';
+import { posix, resolve } from 'node:path';
 import { runSshCommand, runMosaicAssemble, runScpUpload } from './commands.ts';
 import { TASK_NUMBER_TO_NAME } from './tasks.constants.ts';
 import { safeRm } from '../lib/fs.ts';
@@ -91,20 +91,22 @@ async function taskMerge(ctx: TaskContext): Promise<void> {
 		throw err;
 	}
 
-	await uploadToRemote(localFinal, ctx.name, 'result.versatiles');
+	await uploadToRemote(localFinal, ctx.name);
 }
 
 /**
  * Uploads a local file to the remote server via scp.
+ * The remote destination is `${ssh_dir}/${regionName}.versatiles`; the parent
+ * directory is created if needed (e.g. for slashed region IDs like `de/bayern`).
  * Writes to a temp file first, then atomically renames on success.
  */
-async function uploadToRemote(localPath: string, regionName: string, filename: string): Promise<void> {
+async function uploadToRemote(localPath: string, regionName: string): Promise<void> {
 	const { dir } = getConfig().ssh!;
-	const remoteDir = `${dir}/${regionName}`;
-	const finalRemote = `${remoteDir}/${filename}`;
+	const finalRemote = `${dir}/${regionName}.versatiles`;
 	const tmpRemote = `${finalRemote}.tmp`;
+	const parentDir = posix.dirname(finalRemote);
 
-	await runSshCommand(`mkdir -p '${remoteDir}'`);
+	await runSshCommand(`mkdir -p '${parentDir}'`);
 
 	console.log(`  Uploading to ${finalRemote}...`);
 	try {

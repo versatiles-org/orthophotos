@@ -127,11 +127,11 @@ test('runMosaicTile - calls versatiles with correct args', async () => {
 
 	await runMosaicTile('/input.tif', output);
 
-	expect(mockRunCommand).toHaveBeenCalledWith(
-		'versatiles',
-		expect.arrayContaining(['mosaic', 'tile', '--max-zoom', '17', '/input.tif']),
-		{ quiet: true },
-	);
+	expect(mockRunCommand).toHaveBeenCalledWith('versatiles', expect.arrayContaining(['mosaic', 'tile', '/input.tif']), {
+		quiet: true,
+	});
+	const call = mockRunCommand.mock.calls[0];
+	expect(call[1]).not.toContain('--max-zoom');
 	expect(existsSync(output)).toBe(true);
 });
 
@@ -191,8 +191,6 @@ test('runMosaicAssemble - calls versatiles with correct args', async () => {
 			'assemble',
 			'--max-buffer-size',
 			'50%',
-			'--max-zoom',
-			'17',
 			'--quality',
 			'70,16:50,17:30',
 			'@/filelist.txt',
@@ -214,8 +212,6 @@ test('runMosaicAssemble - passes lossless option', async () => {
 			'assemble',
 			'--max-buffer-size',
 			'50%',
-			'--max-zoom',
-			'17',
 			'--quality',
 			'70,16:50,17:30',
 			'--lossless',

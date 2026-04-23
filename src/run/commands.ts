@@ -104,7 +104,7 @@ export async function runScpUpload(localPath: string, remotePath: string): Promi
 	await runCommand('scp', [...scpArgs, localPath, `${host}:${remotePath}`]);
 }
 
-import { MAX_ZOOM, QUALITY } from '../lib/constants.ts';
+import { QUALITY } from '../lib/constants.ts';
 
 /**
  * Verifies that command output contains the expected success marker.
@@ -124,7 +124,10 @@ export async function runMosaicTile(
 	output: string,
 	options?: { bands?: string; nodata?: string; crs?: string; cacheDirectory?: string },
 ): Promise<void> {
-	const args = ['mosaic', 'tile', '--max-zoom', String(MAX_ZOOM), '--quality', QUALITY];
+	// Omit --max-zoom so versatiles auto-detects the base zoom from the source's
+	// ground resolution. A fixed ceiling would throw away detail on high-res sources
+	// (e.g. 15cm JP2s) and over-tile low-res ones.
+	const args = ['mosaic', 'tile', '--quality', QUALITY];
 	if (options?.bands) {
 		args.push('--bands', options.bands);
 	}
@@ -157,7 +160,8 @@ export async function runMosaicAssemble(
 	output: string,
 	options?: { lossless?: boolean; quiet?: boolean; quietOnError?: boolean },
 ): Promise<void> {
-	const args = ['mosaic', 'assemble', '--max-buffer-size', '50%', '--max-zoom', String(MAX_ZOOM), '--quality', QUALITY];
+	// No --max-zoom: include every zoom level present in the inputs.
+	const args = ['mosaic', 'assemble', '--max-buffer-size', '50%', '--quality', QUALITY];
 	if (options?.lossless) {
 		args.push('--lossless');
 	}

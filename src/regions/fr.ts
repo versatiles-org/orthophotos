@@ -7,7 +7,7 @@
  * shared pipeline logic (`defineFrSubRegion` and its helpers) both live here.
  */
 
-import { existsSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { XMLParser } from 'fast-xml-parser';
@@ -202,6 +202,29 @@ export function pickBestPerZone(entries: IndexEntry[]): Map<string, IndexEntry> 
 	return best;
 }
 
+/**
+ * Removes this item's transient scratch files from `tempDir`: the detail-feed
+ * XML and every `.7z` / `.7z.NNN` archive part (including any curl `.tmp`
+ * partial). Matching is scoped by `item.title` so concurrent items don't
+ * clobber each other. Safe to call whether or not the files actually exist.
+ */
+function cleanItemArtifacts(tempDir: string, item: { id: string; title: string }): void {
+	safeRm(join(tempDir, `${item.id}_detail.xml`));
+	let entries: string[];
+	try {
+		entries = readdirSync(tempDir);
+	} catch {
+		return;
+	}
+	for (const name of entries) {
+		if (!name.startsWith(item.title)) continue;
+		// Matches: foo.7z, foo.7z.001, foo.7z.tmp, foo.7z.001.tmp
+		if (/\.7z(?:\.\d+)?(?:\.tmp)?$/.test(name)) {
+			safeRm(join(tempDir, name));
+		}
+	}
+}
+
 /** Extracts 7z download URLs from a per-resource detail ATOM feed. */
 export function parseDetailFeed(xml: string): string[] {
 	const parsed = xmlParser.parse(xml) as Record<string, unknown>;
@@ -269,13 +292,22 @@ function defineFrSubRegion(opts: FrSubRegionOptions): RegionPipeline {
 		downloadLimit: 1,
 		download: async (item, { tempDir }) => {
 			const extractDir = join(tempDir, item.id);
-			if (existsSync(extractDir)) return { extractDir };
+			if (existsSync(extractDir)) {
+				// Extraction already done in a previous run. Sweep any archive parts
+				// that survived an interrupted cleanup so they don't linger forever.
+				cleanItemArtifacts(tempDir, item);
+				return { extractDir };
+			}
 
 			const detailPath = join(tempDir, `${item.id}_detail.xml`);
 			await sleep(REQUEST_INTERVAL_MS);
 			await withRetry(() => downloadFile(item.detailUrl, detailPath), { maxAttempts: 3 });
-			const urls = parseDetailFeed(await readFile(detailPath, 'utf-8'));
-			rmSync(detailPath, { force: true });
+			let urls: string[];
+			try {
+				urls = parseDetailFeed(await readFile(detailPath, 'utf-8'));
+			} finally {
+				rmSync(detailPath, { force: true });
+			}
 			if (urls.length === 0) throw new Error(`No .7z archive listed for ${item.id}`);
 
 			const tmpExtractDir = `${extractDir}.tmp`;
@@ -303,9 +335,7 @@ function defineFrSubRegion(opts: FrSubRegionOptions): RegionPipeline {
 			await runCommand('7z', ['e', `-o${tmpExtractDir}`, '-bb0', '-aoa', mainPath]);
 			renameSync(tmpExtractDir, extractDir);
 
-			for (const url of urls) {
-				safeRm(join(tempDir, url.split('/').pop()!));
-			}
+			cleanItemArtifacts(tempDir, item);
 
 			return { extractDir };
 		},

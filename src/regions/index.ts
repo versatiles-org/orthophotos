@@ -99,3 +99,49 @@ export function getAllRegionMetadata(): Map<string, RegionMetadata> {
 	}
 	return map;
 }
+
+/**
+ * Returns up to `limit` registered region IDs that are similar to `name`,
+ * ranked by Levenshtein distance. Useful for "did you mean?" error messages.
+ * Matches that also contain `name` as a substring (or vice versa) are boosted,
+ * so typing `bayern` surfaces `de/bayern`.
+ */
+export function suggestSimilarRegions(name: string, limit = 5): string[] {
+	const lower = name.toLowerCase();
+	const scored: { id: string; score: number }[] = [];
+	for (const id of registry.keys()) {
+		const idLower = id.toLowerCase();
+		const d = levenshtein(lower, idLower);
+		// Soft boost when either string contains the other — catches missing prefixes
+		// (e.g. `bayern` vs `de/bayern`) without drowning out close edit-distance matches.
+		const containsBoost = idLower.includes(lower) || lower.includes(idLower) ? -2 : 0;
+		scored.push({ id, score: d + containsBoost });
+	}
+	scored.sort((a, b) => a.score - b.score);
+	// Tight threshold so short typos (e.g. "xx") don't surface every 2-letter code.
+	const threshold = Math.max(1, Math.floor(name.length / 3));
+	return scored
+		.filter((s) => s.score <= threshold)
+		.slice(0, limit)
+		.map((s) => s.id);
+}
+
+/** Levenshtein edit distance. O(m*n) time, O(min(m,n)) space. */
+export function levenshtein(a: string, b: string): number {
+	if (a === b) return 0;
+	if (a.length === 0) return b.length;
+	if (b.length === 0) return a.length;
+	// Keep `b` as the shorter string so the inner array stays small.
+	if (a.length < b.length) [a, b] = [b, a];
+	let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+	let cur = new Array<number>(b.length + 1);
+	for (let i = 1; i <= a.length; i++) {
+		cur[0] = i;
+		for (let j = 1; j <= b.length; j++) {
+			const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+			cur[j] = Math.min(cur[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost);
+		}
+		[prev, cur] = [cur, prev];
+	}
+	return prev[b.length];
+}

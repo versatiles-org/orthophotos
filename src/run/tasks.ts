@@ -9,13 +9,24 @@ import { posix, resolve } from 'node:path';
 import { runSshCommand, runMosaicAssemble, runScpUpload } from './commands.ts';
 import { TASK_NUMBER_TO_NAME } from './tasks.constants.ts';
 import { safeRm } from '../lib/fs.ts';
-import { getRegionPipeline } from '../regions/index.ts';
+import { getRegionPipeline, suggestSimilarRegions } from '../regions/index.ts';
 import { getConfig } from '../config.ts';
 
 export interface TaskContext {
 	name: string; // Region identifier (e.g., "de/bw")
 	dataDir: string; // Path to $dir_data/<name>
 	tempDir: string; // Path to $dir_temp/<name>
+}
+
+/**
+ * Builds a "No pipeline defined …" error message enriched with fuzzy suggestions.
+ * Exported so `src/run.ts` can fail fast with the same wording before any I/O.
+ */
+export function formatUnknownRegionError(name: string): string {
+	const suggestions = suggestSimilarRegions(name);
+	const base = `No pipeline defined for region "${name}"`;
+	if (suggestions.length === 0) return base;
+	return `${base}. Did you mean: ${suggestions.join(', ')}?`;
 }
 
 /**
@@ -51,7 +62,7 @@ async function taskFetch(ctx: TaskContext): Promise<void> {
 
 	const pipeline = getRegionPipeline(ctx.name);
 	if (!pipeline?.run) {
-		throw new Error(`No pipeline defined for region "${ctx.name}"`);
+		throw new Error(formatUnknownRegionError(ctx.name));
 	}
 
 	await pipeline.run({

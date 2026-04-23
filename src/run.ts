@@ -17,7 +17,8 @@ import { mkdirSync } from 'node:fs';
 import { getConfig } from './config.ts';
 import { getHelpText, parseArgs } from './run/args.ts';
 import { checkRequiredCommands, remoteFileExists, runSshCommand } from './run/commands.ts';
-import { runTask, type TaskContext } from './run/tasks.ts';
+import { formatUnknownRegionError, runTask, type TaskContext } from './run/tasks.ts';
+import { getRegionPipeline } from './regions/index.ts';
 
 async function checkRemoteServer(): Promise<void> {
 	console.log('Checking remote server...');
@@ -39,6 +40,11 @@ async function main(): Promise<void> {
 	if (args === null) {
 		console.log(getHelpText());
 		process.exit(0);
+	}
+
+	// Fail fast (before SSH/command checks) if the region name isn't registered.
+	if (!getRegionPipeline(args.name)) {
+		throw new Error(formatUnknownRegionError(args.name));
 	}
 
 	// Check required commands

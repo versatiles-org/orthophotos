@@ -17,7 +17,7 @@ import ee from './ee.ts';
 import el from './el.ts';
 import es from './es.ts';
 import fi from './fi.ts';
-import fr from './fr.ts';
+import * as fr from './fr.ts';
 import hr from './hr.ts';
 import hu from './hu.ts';
 import ie from './ie.ts';
@@ -50,7 +50,7 @@ const pipelines: RegionPipeline[] = [
 	el,
 	es,
 	fi,
-	fr,
+	...Object.values(fr),
 	hr,
 	hu,
 	ie,

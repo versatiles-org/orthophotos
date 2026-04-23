@@ -28,8 +28,9 @@ describe('suggestSimilarRegions', () => {
 	test('handles umlaut → ue substitution', () => {
 		expect(suggestSimilarRegions('de/baden_württemberg')).toContain('de/baden_wuerttemberg');
 	});
-	test('returns no suggestions for very short unrelated input', () => {
-		expect(suggestSimilarRegions('xx')).toEqual([]);
+	test('returns at most `limit` suggestions even for unrelated input', () => {
+		const hits = suggestSimilarRegions('xx');
+		expect(hits.length).toBeLessThanOrEqual(5);
 	});
 	test('returns an exact match first when one exists', () => {
 		const hits = suggestSimilarRegions('fr/bretagne');

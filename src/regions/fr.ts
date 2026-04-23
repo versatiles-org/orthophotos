@@ -381,7 +381,7 @@ interface FrRegion {
 	departmentCodes: string[];
 }
 
-const FR_REGIONS: FrRegion[] = [
+export default [
 	{
 		name: 'fr/auvergne_rhone_alpes',
 		// Ain, Allier, Ardèche, Cantal, Drôme, Isère, Loire, Haute-Loire,
@@ -474,6 +474,4 @@ const FR_REGIONS: FrRegion[] = [
 	{ name: 'fr/guyane', departmentCodes: ['D973'] },
 	{ name: 'fr/la_reunion', departmentCodes: ['D974'] },
 	{ name: 'fr/mayotte', departmentCodes: ['D976'] },
-];
-
-export const frRegions: RegionPipeline[] = FR_REGIONS.map(defineFrSubRegion);
+].map(defineFrSubRegion);

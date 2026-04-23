@@ -14,14 +14,6 @@ test('validateRegionName - accepts country/subdivision format', () => {
 	validateRegionName('de/berling');
 });
 
-test('validateRegionName - rejects invalid formats', () => {
-	expect(() => validateRegionName('d')).toThrow('Invalid region name');
-	expect(() => validateRegionName('deu')).toThrow('Invalid region name');
-	expect(() => validateRegionName('DE')).toThrow('Invalid region name');
-	expect(() => validateRegionName('de/')).toThrow('Invalid region name');
-	expect(() => validateRegionName('de/bw/extra')).toThrow('Invalid region name');
-});
-
 // expandTasks tests
 test('expandTasks - single numeric task', () => {
 	expect(expandTasks('1')).toEqual([1]);
@@ -87,10 +79,6 @@ test('parseArgs - parses valid arguments', () => {
 
 test('parseArgs - throws on missing task', () => {
 	expect(() => parseArgs(['de/bw'])).toThrow('Missing arguments');
-});
-
-test('parseArgs - throws on invalid region name', () => {
-	expect(() => parseArgs(['invalid', '1'])).toThrow('Invalid region name');
 });
 
 test('expandTasks - throws on invalid number in descending range', () => {

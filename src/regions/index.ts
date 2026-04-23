@@ -114,16 +114,11 @@ export function suggestSimilarRegions(name: string, limit = 5): string[] {
 		const d = levenshtein(lower, idLower);
 		// Soft boost when either string contains the other — catches missing prefixes
 		// (e.g. `bayern` vs `de/bayern`) without drowning out close edit-distance matches.
-		const containsBoost = idLower.includes(lower) || lower.includes(idLower) ? -2 : 0;
+		const containsBoost = idLower.includes(lower) ? -100 : 0;
 		scored.push({ id, score: d + containsBoost });
 	}
 	scored.sort((a, b) => a.score - b.score);
-	// Tight threshold so short typos (e.g. "xx") don't surface every 2-letter code.
-	const threshold = Math.max(1, Math.floor(name.length / 3));
-	return scored
-		.filter((s) => s.score <= threshold)
-		.slice(0, limit)
-		.map((s) => s.id);
+	return scored.slice(0, limit).map((s) => s.id);
 }
 
 /** Levenshtein edit distance. O(m*n) time, O(min(m,n)) space. */

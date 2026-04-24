@@ -132,19 +132,20 @@ export function createProgress(total: number, options: ProgressOptions): Progres
 	}
 
 	let lastDrawTime = 0;
-	let drawPending = false;
+	let pendingTimer: NodeJS.Timeout | null = null;
+	let finished = false;
 
 	function draw() {
+		if (finished) return;
 		const now = performance.now();
 		const elapsed = now - lastDrawTime;
 
 		if (elapsed < 1000) {
 			// Schedule a deferred draw if not already pending
-			if (!drawPending) {
-				drawPending = true;
-				setTimeout(() => {
-					drawPending = false;
-					drawNow();
+			if (pendingTimer === null) {
+				pendingTimer = setTimeout(() => {
+					pendingTimer = null;
+					if (!finished) drawNow();
 				}, 1000 - elapsed);
 			}
 			return;
@@ -179,8 +180,13 @@ export function createProgress(total: number, options: ProgressOptions): Progres
 		},
 
 		done() {
+			finished = true;
+			if (pendingTimer !== null) {
+				clearTimeout(pendingTimer);
+				pendingTimer = null;
+			}
 			clearTerminal();
-			if (isTTY) process.stderr.write('\n');
+			if (isTTY) process.stderr.write(`\r\x1b[K`);
 			const stats = labels.map((l) => `${counts.get(l) ?? 0} ${l}`).join(', ');
 			console.log(`  Done: ${stats}`);
 		},

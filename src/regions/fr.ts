@@ -329,7 +329,9 @@ function defineFrSubRegion(opts: FrSubRegionOptions): RegionPipeline {
 			const mainPath = join(tempDir, mainName);
 
 			console.log(`  Extracting ${item.id}...`);
-			await runCommand('7z', ['e', `-o${tmpExtractDir}`, '-bb0', '-aoa', mainPath]);
+			await runCommand('7z', ['e', `-o${tmpExtractDir}`, '-bb0', '-bso0', '-bsp0', '-aoa', mainPath], {
+				quiet: true,
+			});
 			renameSync(tmpExtractDir, extractDir);
 
 			cleanItemArtifacts(tempDir, item);

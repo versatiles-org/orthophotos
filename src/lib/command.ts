@@ -55,7 +55,18 @@ export async function runCommand(cmd: string, args: string[], options?: CommandO
 			if (stderrMode === 'inherit') process.stderr.write(chunk);
 		});
 
-		child.on('error', reject);
+		child.on('error', (err) =>
+			reject(
+				new Error(
+					[
+						`Failed to start command: ${cmd} ${args.join(' ')}`,
+						`${err.message}`,
+						`${Buffer.concat(stdoutChunks).toString()}`,
+						`${Buffer.concat(stderrChunks).toString()}`,
+					].join('\n'),
+				),
+			),
+		);
 
 		child.on('close', (code) => {
 			const exitCode = code ?? 1;

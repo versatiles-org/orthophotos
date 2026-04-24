@@ -157,7 +157,9 @@ export function createProgress(total: number, options: ProgressOptions): Progres
 		lastDrawTime = performance.now();
 		const line = render();
 		if (isTTY) {
-			process.stderr.write(`\r${line}`);
+			// \x1b[K clears from cursor to end of line, so shorter re-renders don't
+			// leave trailing chars from the previous draw (e.g. "ETA: 0sss").
+			process.stderr.write(`\r${line}\x1b[K`);
 			updateTerminal();
 		} else if (getState().done % logInterval === 0) {
 			console.log(line);

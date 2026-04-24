@@ -12,7 +12,7 @@ import { readFile, readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { XMLParser } from 'fast-xml-parser';
 import { getConfig } from '../config.ts';
-import { downloadFile, runCommand } from '../lib/command.ts';
+import { downloadFile, downloadFiles, runCommand } from '../lib/command.ts';
 import type { RegionMetadata, RegionPipeline } from '../lib/framework.ts';
 import { safeRm } from '../lib/fs.ts';
 import { pipeline } from '../lib/pipeline.ts';
@@ -313,16 +313,13 @@ function defineFrSubRegion(opts: FrSubRegionOptions): RegionPipeline {
 			const tmpExtractDir = `${extractDir}.tmp`;
 			safeRm(tmpExtractDir);
 
-			console.log(`  Downloading ${item.id} (${urls.length} part${urls.length === 1 ? '' : 's'})...`);
-			for (const url of urls) {
-				const filename = url.split('/').pop()!;
-				const filePath = join(tempDir, filename);
-				if (!existsSync(filePath)) {
-					await withRetry(() => downloadFile(url, filePath, { minSize: 1024, continue: true }), {
-						maxAttempts: 3,
-					});
-				}
-			}
+			await downloadFiles(
+				urls.map((url) => ({ url, dest: join(tempDir, url.split('/').pop()!) })),
+				{
+					progress: 'size',
+					title: `Downloading ${item.id} (${urls.length} part${urls.length === 1 ? '' : 's'})`,
+				},
+			);
 
 			// Pick the entry point: the single .7z or the .7z.001 part.
 			const mainName = urls

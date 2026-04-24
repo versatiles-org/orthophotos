@@ -71,6 +71,10 @@ async function withTestServer<T>(routes: Record<string, Buffer>, fn: (baseUrl: s
 			return;
 		}
 		res.setHeader('Content-Length', body.length);
+		if (req.method === 'HEAD') {
+			res.end();
+			return;
+		}
 		res.end(body);
 	});
 	await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -138,6 +142,26 @@ test('downloadFiles - works with size-based progress', async () => {
 		});
 		expect(statSync(join(dir, 'x')).size).toBe(3);
 		expect(statSync(join(dir, 'y')).size).toBe(5);
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+});
+
+test('downloadFiles - size mode fetches missing sizes via HEAD', async () => {
+	const dir = mkdtempSync(join(tmpdir(), 'downloadFiles-'));
+	try {
+		const routes = { '/x': Buffer.from('abc'), '/y': Buffer.from('defghij') };
+		await withTestServer(routes, async (base) => {
+			await downloadFiles(
+				[
+					{ url: `${base}/x`, dest: join(dir, 'x') },
+					{ url: `${base}/y`, dest: join(dir, 'y'), size: 7 },
+				],
+				{ progress: 'size' },
+			);
+		});
+		expect(statSync(join(dir, 'x')).size).toBe(3);
+		expect(statSync(join(dir, 'y')).size).toBe(7);
 	} finally {
 		rmSync(dir, { recursive: true, force: true });
 	}

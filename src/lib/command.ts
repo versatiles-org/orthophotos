@@ -123,7 +123,7 @@ export async function downloadFile(url: string, dest: string, options?: Download
 export interface DownloadFilesItem {
 	url: string;
 	dest: string;
-	/** File size in bytes. Required when `progress: 'size'`; ignored otherwise. */
+	/** File size in bytes. Used when `progress: 'size'`; fetched via HEAD if omitted. */
 	size?: number;
 }
 
@@ -137,16 +137,39 @@ export interface DownloadFilesOptions {
 }
 
 /**
+ * Fetches the `Content-Length` of a URL via `curl -ILsf`. Returns `0` if not reported.
+ */
+async function fetchContentLength(url: string): Promise<number> {
+	const result = await runCommand('curl', ['-ILsf', url], { stdout: 'piped', stderr: 'piped' });
+	const headers = new TextDecoder().decode(result.stdout);
+	let size = 0;
+	for (const line of headers.split(/\r?\n/)) {
+		const m = /^content-length:\s*(\d+)\s*$/i.exec(line);
+		if (m) size = Number(m[1]);
+	}
+	return size;
+}
+
+/**
  * Downloads multiple files sequentially, optionally rendering a progress bar.
+ * For size-weighted progress, any item without a `size` is resolved via a HEAD request first.
  */
 export async function downloadFiles(items: DownloadFilesItem[], options?: DownloadFilesOptions): Promise<void> {
 	const mode = options?.progress;
+
+	const sizes = new Map<DownloadFilesItem, number>();
+	if (mode === 'size') {
+		for (const item of items) {
+			sizes.set(item, item.size ?? (await fetchContentLength(item.url)));
+		}
+	}
+
 	const tracker =
 		mode === 'count'
 			? createProgress(items.length, { labels: ['downloaded'], title: options?.title })
 			: mode === 'size'
 				? createProgress(
-						items.reduce((s, it) => s + (it.size ?? 0), 0),
+						items.reduce((s, it) => s + (sizes.get(it) ?? 0), 0),
 						{ labels: ['bytes'], title: options?.title },
 					)
 				: undefined;
@@ -154,7 +177,7 @@ export async function downloadFiles(items: DownloadFilesItem[], options?: Downlo
 	for (const item of items) {
 		await downloadFile(item.url, item.dest, options?.download);
 		if (mode === 'count') tracker!.tick('downloaded');
-		else if (mode === 'size') tracker!.tick('bytes', item.size ?? 0);
+		else if (mode === 'size') tracker!.tick('bytes', sizes.get(item) ?? 0);
 	}
 
 	tracker?.done();

@@ -19,7 +19,7 @@ import { pipeline } from '../lib/pipeline.ts';
 import { createProgress } from '../lib/progress.ts';
 import { defineTileRegion } from '../lib/process_tiles.ts';
 import { withRetry } from '../lib/retry.ts';
-import { runMosaicAssemble, runMosaicTile } from '../run/commands.ts';
+import { convertToTiledTiff, runMosaicAssemble, runMosaicTile } from '../run/commands.ts';
 
 // ---------------------------------------------------------------------------
 // Shared pipeline helpers
@@ -357,23 +357,13 @@ function defineFrSubRegion(opts: FrSubRegionOptions): RegionPipeline {
 						// Decompress JP2 → tiled LZW GeoTIFF first. GDAL's JP2 decoder is
 						// more robust than versatiles's; tiled + light compression keeps the
 						// intermediate both fast to write and efficient to random-access.
-						await runCommand(
-							'gdal_translate',
-							[
-								'-q',
-								'-of',
-								'GTiff',
-								'-co',
-								'TILED=YES',
-								'-co',
-								'COMPRESS=LZW',
-								'-co',
-								'BIGTIFF=IF_NEEDED',
-								jp2Path,
-								tifPath,
-							],
-							{ quiet: true },
-						);
+						await convertToTiledTiff(jp2Path, tifPath, {
+							compress: 'lzw',
+							predictor: false,
+							alpha: false,
+							bigtiff: 'if_needed',
+							quiet: true,
+						});
 						await runMosaicTile(tifPath, tilePath);
 						versatilesFiles.push(tilePath);
 						return 'converted';

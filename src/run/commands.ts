@@ -177,31 +177,43 @@ export interface TiledTiffOptions {
 	srs?: string;
 	/** Assign upper-left / lower-right corners [ulx, uly, lrx, lry] */
 	ullr?: [number, number, number, number];
+	/** Compression codec. Default: 'deflate'. Use 'lzw' or 'none' for faster, minimal compression. */
+	compress?: 'deflate' | 'lzw' | 'none';
+	/** Apply horizontal differencing predictor (PREDICTOR=2). Default: true. Ignored when compress='none'. */
+	predictor?: boolean;
+	/** Mark last band as alpha (ALPHA=YES). Default: true. Set false for RGB-only sources like JP2. */
+	alpha?: boolean;
+	/** BIGTIFF mode. Default: 'yes'. Use 'if_needed' when the output is likely small. */
+	bigtiff?: 'yes' | 'no' | 'if_needed';
+	/** Suppress stdout/stderr during execution. Default: false. */
+	quiet?: boolean;
 }
 
 /**
- * Converts a raster file to a tiled, compressed GeoTIFF optimized for fast random access.
- * Uses DEFLATE compression with predictor, BIGTIFF and ALPHA support.
+ * Converts a raster file to a tiled GeoTIFF optimized for random access.
+ * Defaults: DEFLATE + PREDICTOR=2 + BIGTIFF=YES + ALPHA=YES.
+ * Pass `{ compress: 'lzw', predictor: false, alpha: false, bigtiff: 'if_needed' }`
+ * for a fast, minimal intermediate (e.g. JP2 → TIFF as a pre-versatiles step).
  */
 export async function convertToTiledTiff(input: string, output: string, options?: TiledTiffOptions): Promise<void> {
+	const compress = options?.compress ?? 'deflate';
+	const predictor = options?.predictor ?? true;
+	const alpha = options?.alpha ?? true;
+	const bigtiff = options?.bigtiff ?? 'yes';
+
 	const args = ['-q', '-of', 'GTiff'];
 	if (options?.expand) args.push('-expand', options.expand);
 	if (options?.srs) args.push('-a_srs', options.srs);
 	if (options?.ullr) args.push('-a_ullr', ...options.ullr.map(String));
-	args.push(
-		'-co',
-		'COMPRESS=DEFLATE',
-		'-co',
-		'PREDICTOR=2',
-		'-co',
-		'TILED=YES',
-		'-co',
-		'BIGTIFF=YES',
-		'-co',
-		'ALPHA=YES',
-	);
+	args.push('-co', 'TILED=YES');
+	if (compress !== 'none') {
+		args.push('-co', `COMPRESS=${compress.toUpperCase()}`);
+		if (predictor) args.push('-co', 'PREDICTOR=2');
+	}
+	args.push('-co', `BIGTIFF=${bigtiff.toUpperCase()}`);
+	if (alpha) args.push('-co', 'ALPHA=YES');
 	args.push(input, output);
-	await runCommand('gdal_translate', args);
+	await runCommand('gdal_translate', args, { quiet: options?.quiet });
 }
 
 export interface WmsBlockExtractOptions {

@@ -372,12 +372,6 @@ function defineFrSubRegion(opts: FrSubRegionOptions): RegionPipeline {
 // NUTS-1 région → département mapping
 // ---------------------------------------------------------------------------
 
-interface FrRegion {
-	name: string;
-	/** IGN zone codes (INSEE département codes padded to 3 chars, prefixed with `D`). */
-	departmentCodes: string[];
-}
-
 export default [
 	{
 		name: 'fr/auvergne_rhone_alpes',

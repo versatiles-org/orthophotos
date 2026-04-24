@@ -1,5 +1,9 @@
 import { expect, test } from 'vitest';
-import { runCommand, runCommandWithRetry } from './command.ts';
+import { mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { createServer, type Server } from 'node:http';
+import { downloadFiles, runCommand, runCommandWithRetry } from './command.ts';
 
 test('runCommand - executes successful command', async () => {
 	const result = await runCommand('echo', ['hello'], { stdout: 'piped' });
@@ -56,4 +60,101 @@ test('runCommandWithRetry - throws after max attempts on persistent failure', as
 	await expect(runCommandWithRetry('false', [], { maxAttempts: 2, initialDelayMs: 10 })).rejects.toThrow(
 		'Command failed',
 	);
+});
+
+async function withTestServer<T>(routes: Record<string, Buffer>, fn: (baseUrl: string) => Promise<T>): Promise<T> {
+	const server: Server = createServer((req, res) => {
+		const body = routes[req.url ?? ''];
+		if (!body) {
+			res.statusCode = 404;
+			res.end();
+			return;
+		}
+		res.setHeader('Content-Length', body.length);
+		res.end(body);
+	});
+	await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+	const addr = server.address();
+	const port = typeof addr === 'object' && addr ? addr.port : 0;
+	try {
+		return await fn(`http://127.0.0.1:${port}`);
+	} finally {
+		await new Promise<void>((resolve) => server.close(() => resolve()));
+	}
+}
+
+test('downloadFiles - downloads all files sequentially', async () => {
+	const dir = mkdtempSync(join(tmpdir(), 'downloadFiles-'));
+	try {
+		const routes = {
+			'/a.bin': Buffer.from('hello'),
+			'/b.bin': Buffer.from('world!'),
+		};
+		await withTestServer(routes, async (base) => {
+			await downloadFiles([
+				{ url: `${base}/a.bin`, dest: join(dir, 'a.bin') },
+				{ url: `${base}/b.bin`, dest: join(dir, 'b.bin') },
+			]);
+		});
+		expect(readFileSync(join(dir, 'a.bin'), 'utf-8')).toBe('hello');
+		expect(readFileSync(join(dir, 'b.bin'), 'utf-8')).toBe('world!');
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+});
+
+test('downloadFiles - works with count-based progress', async () => {
+	const dir = mkdtempSync(join(tmpdir(), 'downloadFiles-'));
+	try {
+		const routes = { '/x': Buffer.from('x'), '/y': Buffer.from('yy') };
+		await withTestServer(routes, async (base) => {
+			await downloadFiles(
+				[
+					{ url: `${base}/x`, dest: join(dir, 'x') },
+					{ url: `${base}/y`, dest: join(dir, 'y') },
+				],
+				{ progress: 'count' },
+			);
+		});
+		expect(statSync(join(dir, 'x')).size).toBe(1);
+		expect(statSync(join(dir, 'y')).size).toBe(2);
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+});
+
+test('downloadFiles - works with size-based progress', async () => {
+	const dir = mkdtempSync(join(tmpdir(), 'downloadFiles-'));
+	try {
+		const routes = { '/x': Buffer.from('abc'), '/y': Buffer.from('defgh') };
+		await withTestServer(routes, async (base) => {
+			await downloadFiles(
+				[
+					{ url: `${base}/x`, dest: join(dir, 'x'), size: 3 },
+					{ url: `${base}/y`, dest: join(dir, 'y'), size: 5 },
+				],
+				{ progress: 'size' },
+			);
+		});
+		expect(statSync(join(dir, 'x')).size).toBe(3);
+		expect(statSync(join(dir, 'y')).size).toBe(5);
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+});
+
+test('downloadFiles - propagates download errors', async () => {
+	const dir = mkdtempSync(join(tmpdir(), 'downloadFiles-'));
+	try {
+		await withTestServer({ '/ok': Buffer.from('ok') }, async (base) => {
+			await expect(
+				downloadFiles([
+					{ url: `${base}/ok`, dest: join(dir, 'ok') },
+					{ url: `${base}/missing`, dest: join(dir, 'missing') },
+				]),
+			).rejects.toThrow();
+		});
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
 });

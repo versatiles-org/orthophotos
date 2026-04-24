@@ -5,6 +5,7 @@
 import { spawn } from 'node:child_process';
 import { type RetryOptions, withRetry } from './retry.ts';
 import { renameSync, rmSync, statSync } from 'node:fs';
+import { createProgress } from './progress.ts';
 
 interface CommandOutput {
 	success: boolean;
@@ -117,4 +118,44 @@ export async function downloadFile(url: string, dest: string, options?: Download
 		}
 	}
 	renameSync(tmp, dest);
+}
+
+export interface DownloadFilesItem {
+	url: string;
+	dest: string;
+	/** File size in bytes. Required when `progress: 'size'`; ignored otherwise. */
+	size?: number;
+}
+
+export interface DownloadFilesOptions {
+	/** Show a progress bar: `'count'` weights each file equally, `'size'` weights by bytes (uses `item.size`). */
+	progress?: 'count' | 'size';
+	/** Title prefix shown in the terminal window title (passed through to the progress bar). */
+	title?: string;
+	/** Options forwarded to each underlying `downloadFile` call. */
+	download?: DownloadOptions;
+}
+
+/**
+ * Downloads multiple files sequentially, optionally rendering a progress bar.
+ */
+export async function downloadFiles(items: DownloadFilesItem[], options?: DownloadFilesOptions): Promise<void> {
+	const mode = options?.progress;
+	const tracker =
+		mode === 'count'
+			? createProgress(items.length, { labels: ['downloaded'], title: options?.title })
+			: mode === 'size'
+				? createProgress(
+						items.reduce((s, it) => s + (it.size ?? 0), 0),
+						{ labels: ['bytes'], title: options?.title },
+					)
+				: undefined;
+
+	for (const item of items) {
+		await downloadFile(item.url, item.dest, options?.download);
+		if (mode === 'count') tracker!.tick('downloaded');
+		else if (mode === 'size') tracker!.tick('bytes', item.size ?? 0);
+	}
+
+	tracker?.done();
 }

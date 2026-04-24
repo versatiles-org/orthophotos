@@ -28,8 +28,8 @@ function renderBar(done: number, total: number, width: number): string {
 }
 
 export interface Progress {
-	/** Record one completed item. */
-	tick(label: string): void;
+	/** Record progress. `amount` defaults to 1; pass a byte count for size-weighted progress. */
+	tick(label: string, amount?: number): void;
 	/** Get the current count for a label. */
 	count(label: string): number;
 	/** Print final summary and newline. */
@@ -167,8 +167,8 @@ export function createProgress(total: number, options: ProgressOptions): Progres
 	drawNow();
 
 	return {
-		tick(label: string) {
-			counts.set(label, (counts.get(label) ?? 0) + 1);
+		tick(label: string, amount: number = 1) {
+			counts.set(label, (counts.get(label) ?? 0) + amount);
 			draw();
 		},
 

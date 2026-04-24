@@ -374,23 +374,32 @@ function defineFrSubRegion(opts: FrSubRegionOptions): RegionPipeline {
 				mkdirSync(tilesDir, { recursive: true });
 				console.log(`  Converting ${jp2Files.length} JP2 files...`);
 				const versatilesFiles: string[] = [];
-				await pipeline(jp2Files, { progress: { labels: ['converted'] } }).forEach(2, async (jp2Path) => {
-					const baseName = basename(jp2Path, '.jp2');
-					const tifPath = join(tilesDir, `${baseName}.tif`);
-					const tilePath = join(tilesDir, `${baseName}.versatiles`);
-					try {
-						// Decompress JP2 → tiled LZW GeoTIFF first. GDAL's JP2 decoder is
-						// more robust than versatiles's; tiled + light compression keeps the
-						// intermediate both fast to write and efficient to random-access.
-						await convertToTiledTiff(jp2Path, tifPath, { compress: 'lzw', predictor: false, alpha: true });
-						await runMosaicTile(tifPath, tilePath);
-						versatilesFiles.push(tilePath);
-						return 'converted';
-					} finally {
-						safeRm(tifPath);
-						safeRm(jp2Path);
-					}
-				});
+				// Two-stage pipeline: up to 4 concurrent JP2 → TIFF decodes (GDAL-bound,
+				// parallelizes well) feed a single-slot TIFF → .versatiles tile step
+				// (versatiles mosaic tile already uses all cores internally).
+				await pipeline(jp2Files, { progress: { labels: ['converted'] } })
+					.map(4, async (jp2Path) => {
+						const baseName = basename(jp2Path, '.jp2');
+						const tifPath = join(tilesDir, `${baseName}.tif`);
+						try {
+							// Decompress JP2 → tiled LZW GeoTIFF first. GDAL's JP2 decoder is
+							// more robust than versatiles's; tiled + light compression keeps the
+							// intermediate both fast to write and efficient to random-access.
+							await convertToTiledTiff(jp2Path, tifPath, { compress: 'lzw', predictor: false, alpha: true });
+						} finally {
+							safeRm(jp2Path);
+						}
+						return { tifPath, tilePath: join(tilesDir, `${baseName}.versatiles`) };
+					})
+					.forEach(1, async ({ tifPath, tilePath }) => {
+						try {
+							await runMosaicTile(tifPath, tilePath);
+							versatilesFiles.push(tilePath);
+							return 'converted';
+						} finally {
+							safeRm(tifPath);
+						}
+					});
 
 				const filelistPath = join(tempDir, `filelist_${Date.now()}.txt`);
 				writeFileSync(filelistPath, versatilesFiles.join('\n'));

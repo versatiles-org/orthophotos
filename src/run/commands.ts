@@ -198,8 +198,8 @@ export interface TiledTiffOptions {
 export async function convertToTiledTiff(input: string, output: string, options?: TiledTiffOptions): Promise<void> {
 	const compress = options?.compress ?? 'deflate';
 	const predictor = options?.predictor ?? true;
-	const alpha = options?.alpha ?? true;
-	const bigtiff = options?.bigtiff ?? 'yes';
+	const alpha = options?.alpha ?? false;
+	const bigtiff = options?.bigtiff ?? 'if_needed';
 
 	const args = ['-q', '-of', 'GTiff'];
 	if (options?.expand) args.push('-expand', options.expand);
@@ -213,7 +213,7 @@ export async function convertToTiledTiff(input: string, output: string, options?
 	args.push('-co', `BIGTIFF=${bigtiff.toUpperCase()}`);
 	if (alpha) args.push('-co', 'ALPHA=YES');
 	args.push(input, output);
-	await runCommand('gdal_translate', args, { quiet: options?.quiet });
+	await runCommand('gdal_translate', args, { quiet: options?.quiet ?? true });
 }
 
 export interface WmsBlockExtractOptions {

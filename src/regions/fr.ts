@@ -362,9 +362,10 @@ function defineFrSubRegion(opts: FrSubRegionOptions): RegionPipeline {
 				await runMosaicAssemble(filelistPath, dest, { lossless: true, quiet: true });
 				rmSync(filelistPath, { force: true });
 			} finally {
-				safeRm(extractDir);
+				// Always drop the per-run tilesDir (partial .versatiles are never reused).
 				safeRm(tilesDir);
 			}
+			safeRm(extractDir);
 		},
 		minFiles: opts.departmentCodes.length,
 	});

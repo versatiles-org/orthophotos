@@ -4,7 +4,7 @@
 
 import { spawn } from 'node:child_process';
 import { type RetryOptions, withRetry } from './retry.ts';
-import { renameSync, rmSync, statSync } from 'node:fs';
+import { createWriteStream, renameSync, rmSync, statSync } from 'node:fs';
 import { createProgress } from './progress.ts';
 
 interface CommandOutput {
@@ -137,22 +137,76 @@ export interface DownloadFilesOptions {
 }
 
 /**
- * Fetches the `Content-Length` of a URL via `curl -ILsf`. Returns `0` if not reported.
+ * Fetches the `Content-Length` of a URL via a HEAD request. Returns `0` if not reported.
  */
 async function fetchContentLength(url: string): Promise<number> {
-	const result = await runCommand('curl', ['-ILsf', url], { stdout: 'piped', stderr: 'piped' });
-	const headers = new TextDecoder().decode(result.stdout);
-	let size = 0;
-	for (const line of headers.split(/\r?\n/)) {
-		const m = /^content-length:\s*(\d+)\s*$/i.exec(line);
-		if (m) size = Number(m[1]);
+	const res = await fetch(url, { method: 'HEAD', redirect: 'follow' });
+	if (!res.ok) throw new Error(`HEAD ${url} failed: ${res.status} ${res.statusText}`);
+	const len = res.headers.get('content-length');
+	return len ? Number(len) : 0;
+}
+
+/**
+ * Streams a download to `dest`, atomically renaming from `${dest}.tmp` on success.
+ * Calls `onBytes(n)` for each chunk received so callers can update progress continuously.
+ */
+async function streamDownload(
+	url: string,
+	dest: string,
+	onBytes: (n: number) => void,
+	options?: DownloadOptions,
+): Promise<void> {
+	const tmp = `${dest}.tmp`;
+	const resumeFrom = options?.continue ? statSizeOrZero(tmp) : 0;
+
+	const headers: Record<string, string> = {};
+	if (resumeFrom > 0) headers['Range'] = `bytes=${resumeFrom}-`;
+
+	const res = await fetch(url, { headers, redirect: 'follow' });
+	if (!res.ok) throw new Error(`Download failed: ${url} (${res.status} ${res.statusText})`);
+	if (!res.body) throw new Error(`No response body: ${url}`);
+
+	const append = resumeFrom > 0 && res.status === 206;
+	const out = createWriteStream(tmp, { flags: append ? 'a' : 'w' });
+	try {
+		for await (const chunk of res.body) {
+			const buf = chunk as Uint8Array;
+			if (!out.write(buf)) await new Promise<void>((resolve) => out.once('drain', resolve));
+			onBytes(buf.byteLength);
+		}
+		await new Promise<void>((resolve, reject) => {
+			out.once('finish', resolve);
+			out.once('error', reject);
+			out.end();
+		});
+	} catch (err) {
+		out.destroy();
+		throw err;
 	}
-	return size;
+
+	if (options?.minSize) {
+		const size = statSync(tmp).size;
+		if (size < options.minSize) {
+			rmSync(tmp, { force: true });
+			throw new Error(`Downloaded file is too small (${size} bytes, expected >= ${options.minSize}): ${url}`);
+		}
+	}
+	renameSync(tmp, dest);
+}
+
+function statSizeOrZero(path: string): number {
+	try {
+		return statSync(path).size;
+	} catch {
+		return 0;
+	}
 }
 
 /**
  * Downloads multiple files sequentially, optionally rendering a progress bar.
- * For size-weighted progress, any item without a `size` is resolved via a HEAD request first.
+ * - `progress: 'count'` ticks once per completed file.
+ * - `progress: 'size'` streams each download and updates the bar continuously as bytes arrive.
+ *   Missing `item.size` values are resolved via HEAD requests up front.
  */
 export async function downloadFiles(items: DownloadFilesItem[], options?: DownloadFilesOptions): Promise<void> {
 	const mode = options?.progress;
@@ -175,9 +229,12 @@ export async function downloadFiles(items: DownloadFilesItem[], options?: Downlo
 				: undefined;
 
 	for (const item of items) {
-		await downloadFile(item.url, item.dest, options?.download);
-		if (mode === 'count') tracker!.tick('downloaded');
-		else if (mode === 'size') tracker!.tick('bytes', sizes.get(item) ?? 0);
+		if (mode === 'size') {
+			await streamDownload(item.url, item.dest, (n) => tracker!.tick('bytes', n), options?.download);
+		} else {
+			await downloadFile(item.url, item.dest, options?.download);
+			if (mode === 'count') tracker!.tick('downloaded');
+		}
 	}
 
 	tracker?.done();

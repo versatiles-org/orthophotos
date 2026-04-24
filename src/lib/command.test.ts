@@ -147,6 +147,36 @@ test('downloadFiles - works with size-based progress', async () => {
 	}
 });
 
+test('downloadFiles - size mode streams bytes continuously', async () => {
+	// Serve a chunked response so we can observe progress accumulate mid-file.
+	const dir = mkdtempSync(join(tmpdir(), 'downloadFiles-'));
+	try {
+		const chunks = [Buffer.alloc(1024, 0x61), Buffer.alloc(1024, 0x62), Buffer.alloc(1024, 0x63)];
+		const total = chunks.reduce((s, c) => s + c.length, 0);
+
+		const server: Server = createServer(async (req, res) => {
+			res.setHeader('Content-Length', total);
+			if (req.method === 'HEAD') return res.end();
+			for (const c of chunks) {
+				res.write(c);
+				await new Promise((r) => setTimeout(r, 20));
+			}
+			res.end();
+		});
+		await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
+		const port = (server.address() as { port: number }).port;
+
+		try {
+			await downloadFiles([{ url: `http://127.0.0.1:${port}/x`, dest: join(dir, 'x') }], { progress: 'size' });
+			expect(statSync(join(dir, 'x')).size).toBe(total);
+		} finally {
+			await new Promise<void>((r) => server.close(() => r()));
+		}
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+});
+
 test('downloadFiles - size mode fetches missing sizes via HEAD', async () => {
 	const dir = mkdtempSync(join(tmpdir(), 'downloadFiles-'));
 	try {

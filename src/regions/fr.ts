@@ -349,7 +349,7 @@ function defineFrSubRegion(opts: FrSubRegionOptions): RegionPipeline {
 				mkdirSync(tilesDir, { recursive: true });
 				console.log(`  Converting ${jp2Files.length} JP2 files...`);
 				const versatilesFiles: string[] = [];
-				await pipeline(jp2Files, { progress: { labels: ['converted'] } }).forEach(4, async (jp2Path) => {
+				await pipeline(jp2Files, { progress: { labels: ['converted'] } }).forEach(2, async (jp2Path) => {
 					const tileName = basename(jp2Path, '.jp2') + '.versatiles';
 					const tilePath = join(tilesDir, tileName);
 					await runMosaicTile(jp2Path, tilePath);

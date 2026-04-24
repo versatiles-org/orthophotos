@@ -357,7 +357,7 @@ function defineFrSubRegion(opts: FrSubRegionOptions): RegionPipeline {
 						// Decompress JP2 → tiled LZW GeoTIFF first. GDAL's JP2 decoder is
 						// more robust than versatiles's; tiled + light compression keeps the
 						// intermediate both fast to write and efficient to random-access.
-						await convertToTiledTiff(jp2Path, tifPath);
+						await convertToTiledTiff(jp2Path, tifPath, { compress: 'lzw', predictor: false, alpha: true });
 						await runMosaicTile(tifPath, tilePath);
 						versatilesFiles.push(tilePath);
 						return 'converted';

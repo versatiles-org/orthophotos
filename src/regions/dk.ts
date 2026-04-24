@@ -94,7 +94,7 @@ export default defineTileRegion<DkItem, { zipPath: string }>({
 			filename,
 		}));
 	},
-	downloadLimit: 4,
+	downloadLimit: 1,
 	download: async (item, { tempDir }) => {
 		const netrc = ensureNetrc(tempDir);
 		const zipPath = join(tempDir, `${item.id}.zip`);

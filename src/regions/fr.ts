@@ -275,7 +275,7 @@ function defineFrSubRegion(opts: FrSubRegionOptions): RegionPipeline {
 		init: async () => {
 			// Cache the ATOM feed once, under the global temp dir, so all fr/* sub-regions
 			// share the same 141 page downloads instead of re-fetching them per region.
-			const cacheDir = join(getConfig().dirTemp, 'fr_shared', 'index');
+			const cacheDir = join(getConfig().dirTemp, 'fr', 'index');
 			console.log('  Fetching BD ORTHO ATOM feed...');
 			const pagePaths = await fetchIndexPages(cacheDir);
 

@@ -93,6 +93,21 @@ export async function runCommand(cmd: string, args: string[], options?: CommandO
 }
 
 /**
+ * Formats an error (and its `cause` chain) as a multi-line string.
+ * Useful for surfacing stderr captured by `runCommand` when a wrapped error propagates up.
+ */
+export function formatErrorChain(err: unknown): string {
+	const parts: string[] = [];
+	let cur: unknown = err;
+	while (cur instanceof Error) {
+		parts.push(cur.message);
+		cur = (cur as { cause?: unknown }).cause;
+	}
+	if (cur !== undefined && !(cur instanceof Error)) parts.push(String(cur));
+	return parts.join('\n  Caused by: ');
+}
+
+/**
  * Executes a command with retry logic.
  */
 export function runCommandWithRetry(

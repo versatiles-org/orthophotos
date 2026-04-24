@@ -16,6 +16,7 @@ import { resolve } from 'node:path';
 import { mkdirSync } from 'node:fs';
 import { getConfig } from './config.ts';
 import { getHelpText, parseArgs } from './run/args.ts';
+import { formatErrorChain } from './lib/command.ts';
 import { checkRequiredCommands, remoteFileExists, runSshCommand } from './run/commands.ts';
 import { formatUnknownRegionError, runTask, type TaskContext } from './run/tasks.ts';
 import { getRegionPipeline } from './regions/index.ts';
@@ -93,6 +94,6 @@ async function main(): Promise<void> {
 
 // Run main
 main().catch((error) => {
-	console.error(`Error: ${error.message}`);
+	console.error(`Error: ${formatErrorChain(error)}`);
 	process.exit(1);
 });

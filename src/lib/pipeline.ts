@@ -15,6 +15,7 @@
  *     });
  */
 
+import { formatErrorChain } from './command.ts';
 import { type ConcurrencyLimit, resolveConcurrency } from './concurrency.ts';
 import { createProgress, type ProgressOptions } from './progress.ts';
 
@@ -214,7 +215,7 @@ class PipelineBuilder<T> {
 						if (!firstError) {
 							firstError = err;
 							if (options.logErrors !== false) {
-								console.error(`\nPipeline error: ${err instanceof Error ? err.message : String(err)}`);
+								console.error(`\nPipeline error: ${formatErrorChain(err)}`);
 							}
 							abortAll();
 						}

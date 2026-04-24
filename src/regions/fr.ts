@@ -340,7 +340,7 @@ function defineFrSubRegion(opts: FrSubRegionOptions): RegionPipeline {
 		},
 		convertLimit: { concurrency: 1 },
 		convert: async ({ extractDir }, { dest, tempDir }) => {
-			const tilesDir = join(tempDir, `tiles_${Date.now()}`);
+			const tilesDir = join(tempDir, `tiles`);
 			try {
 				const files = await readdir(extractDir);
 				const jp2Files = files.filter((f) => f.endsWith('.jp2')).map((f) => join(extractDir, f));

@@ -1,6 +1,7 @@
-import { describe, expect, test, vi } from 'vitest';
+import { describe, expect, test } from 'vitest';
 import type { RegionMetadata } from '../lib/framework.ts';
 import type { KnownRegion } from './geojson.ts';
+import { scanRegions } from './regions.ts';
 
 function makeKnownRegion(id: string, fullname: string): KnownRegion {
 	return {
@@ -21,43 +22,39 @@ function makeKnownRegion(id: string, fullname: string): KnownRegion {
 	};
 }
 
-vi.mock('../regions/index.ts', () => ({
-	getAllRegionMetadata: (): Map<string, RegionMetadata> => {
-		return new Map<string, RegionMetadata>([
-			[
-				'li',
-				{
-					status: 'released',
-					notes: ['Good quality'],
-					entries: ['tiles'],
-					license: { name: 'CC BY 4.0', url: 'https://example.com/license', requiresAttribution: true },
-					creator: { name: 'TestCreator', url: 'https://example.com/creator' },
-					date: '2024',
-					releaseDate: '2024-06-01',
-				},
-			],
-			[
-				'al',
-				{
-					status: 'planned',
-					notes: ['Not yet available'],
-				},
-			],
-		]);
-	},
-}));
+function makeMetadata(): Map<string, RegionMetadata> {
+	return new Map<string, RegionMetadata>([
+		[
+			'li',
+			{
+				status: 'released',
+				notes: ['Good quality'],
+				entries: ['tiles'],
+				license: { name: 'CC BY 4.0', url: 'https://example.com/license', requiresAttribution: true },
+				creator: { name: 'TestCreator', url: 'https://example.com/creator' },
+				date: '2024',
+				releaseDate: '2024-06-01',
+			},
+		],
+		[
+			'al',
+			{
+				status: 'planned',
+				notes: ['Not yet available'],
+			},
+		],
+	]);
+}
 
 describe('scanRegions', () => {
-	test('returns regions matched with known regions', async () => {
-		const { scanRegions } = await import('./regions.ts');
-
+	test('returns regions matched with known regions', () => {
 		const knownRegions: KnownRegion[] = [
 			makeKnownRegion('li', 'Liechtenstein'),
 			makeKnownRegion('al', 'Albania'),
 			makeKnownRegion('de', 'Germany'),
 		];
 
-		const result = scanRegions(knownRegions);
+		const result = scanRegions(knownRegions, makeMetadata());
 
 		expect(result).toHaveLength(2);
 
@@ -79,34 +76,26 @@ describe('scanRegions', () => {
 		expect(alRegion!.status.notes).toEqual(['Not yet available']);
 	});
 
-	test('throws on unknown region ID', async () => {
-		const { scanRegions } = await import('./regions.ts');
-
+	test('throws on unknown region ID', () => {
 		// Provide known regions that don't include 'li' or 'al'
 		const knownRegions: KnownRegion[] = [makeKnownRegion('de', 'Germany')];
 
-		expect(() => scanRegions(knownRegions)).toThrow('Unknown region ID');
+		expect(() => scanRegions(knownRegions, makeMetadata())).toThrow('Unknown region ID');
 	});
 
-	test('uses default entries when not specified in metadata', async () => {
-		const { scanRegions } = await import('./regions.ts');
-
+	test('uses default entries when not specified in metadata', () => {
 		const knownRegions: KnownRegion[] = [makeKnownRegion('li', 'Liechtenstein'), makeKnownRegion('al', 'Albania')];
 
-		const result = scanRegions(knownRegions);
+		const result = scanRegions(knownRegions, makeMetadata());
 		// 'al' has status 'planned' -> metadataToStatus returns error status
 		const alRegion = result.find((r) => r.id === 'al');
 		expect(alRegion!.status.status).toBe('error');
 	});
 
-	test('released metadata without entries defaults to result', async () => {
-		// We need a fresh mock for this - but our mock already has 'li' with entries.
-		// The 'li' entry has entries: ['tiles'], let's verify it maps correctly.
-		const { scanRegions } = await import('./regions.ts');
-
+	test('released metadata without entries defaults to result', () => {
 		const knownRegions: KnownRegion[] = [makeKnownRegion('li', 'Liechtenstein'), makeKnownRegion('al', 'Albania')];
 
-		const result = scanRegions(knownRegions);
+		const result = scanRegions(knownRegions, makeMetadata());
 		const liRegion = result.find((r) => r.id === 'li');
 		expect(liRegion!.status.status).toBe('success');
 		if (liRegion!.status.status === 'success') {

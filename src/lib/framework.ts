@@ -42,6 +42,12 @@ interface RegionMetadataBase {
 	mask?: boolean | string;
 	/** Override the buffer distance (in meters) for the raster_mask in the VPL. Default: 0 */
 	maskBuffer?: number;
+	/**
+	 * Roll this region up under a parent ID for status display (e.g. `'fr'` for all `fr/*`
+	 * sub-régions). The pipeline still runs per-child; only `getAggregatedRegionMetadata()`
+	 * collapses children into the named parent. Does not affect VPL generation.
+	 */
+	aggregateUnder?: string;
 }
 
 interface RegionMetadataReleased extends RegionMetadataBase {

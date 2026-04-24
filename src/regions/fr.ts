@@ -91,6 +91,7 @@ function buildMeta(): RegionMetadata {
 		date: FR_DATE_RANGE,
 		releaseDate: '2026-04-23',
 		mask: true,
+		aggregateUnder: 'fr',
 	};
 }
 

@@ -1,7 +1,6 @@
 import type { Status } from './status.ts';
 import { KnownRegion } from './geojson.ts';
 import type { RegionMetadata } from '../lib/framework.ts';
-import { getAllRegionMetadata } from '../regions/index.ts';
 
 export interface Region {
 	id: string;
@@ -46,14 +45,14 @@ function metadataToStatus(meta: RegionMetadata): Status {
 }
 
 /**
- * Builds region entries from the TypeScript region registry and matches them with known regions.
+ * Builds region entries from the given metadata map and matches them with known regions.
  * @param knownRegions - Array of known NUTS regions to match against
+ * @param allMetadata - Map of region IDs to metadata (raw or aggregated view)
  * @returns Array of regions with their status and geometry
  * @throws Error if a region ID doesn't match any known region
  */
-export function scanRegions(knownRegions: KnownRegion[]): Region[] {
+export function scanRegions(knownRegions: KnownRegion[], allMetadata: Map<string, RegionMetadata>): Region[] {
 	const knownRegionIds = new Map<string, KnownRegion>(knownRegions.map((r) => [r.properties.id, r]));
-	const allMetadata = getAllRegionMetadata();
 	const entries: Region[] = [];
 
 	for (const [id, metadata] of allMetadata) {

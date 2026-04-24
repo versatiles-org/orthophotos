@@ -130,8 +130,10 @@ export default defineTileRegion<DkItem, { zipPath: string }>({
 				return;
 			}
 
-			// Danish orthophoto grid is ETRS89 / UTM zone 32N.
-			await runMosaicTile(vrtPath, dest, { crs: '25832' });
+			// Danish orthophoto grid is ETRS89 / UTM zone 32N. Cap GDAL concurrency
+			// to 2 — the VRT fans out to many per-tile GDAL readers and can swamp
+			// the machine otherwise.
+			await runMosaicTile(vrtPath, dest, { crs: '25832', gdalConcurrency: 2 });
 		} finally {
 			safeRm(zipPath);
 			safeRm(extractDir);

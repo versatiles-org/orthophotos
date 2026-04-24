@@ -122,7 +122,7 @@ function assertOutputContains(result: { stderr: Uint8Array }, marker: string, co
 export async function runMosaicTile(
 	input: string,
 	output: string,
-	options?: { bands?: string; nodata?: string; crs?: string; cacheDirectory?: string },
+	options?: { bands?: string; nodata?: string; crs?: string; cacheDirectory?: string; gdalConcurrency?: number },
 ): Promise<void> {
 	// Always cap at MAX_ZOOM so output pyramids across regions are consistent —
 	// sources finer than that (e.g. 12.5cm DK, 15cm FR) stop at the same zoom
@@ -139,6 +139,9 @@ export async function runMosaicTile(
 	}
 	if (options?.cacheDirectory) {
 		args.push('--cache-dir', options.cacheDirectory);
+	}
+	if (options?.gdalConcurrency !== undefined) {
+		args.push('--gdal-concurrency', String(options.gdalConcurrency));
 	}
 	const tmpOutput = join(dirname(output), `.tmp.${basename(output)}`);
 	args.push(input, tmpOutput);

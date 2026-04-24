@@ -350,11 +350,37 @@ function defineFrSubRegion(opts: FrSubRegionOptions): RegionPipeline {
 				console.log(`  Converting ${jp2Files.length} JP2 files...`);
 				const versatilesFiles: string[] = [];
 				await pipeline(jp2Files, { progress: { labels: ['converted'] } }).forEach(2, async (jp2Path) => {
-					const tileName = basename(jp2Path, '.jp2') + '.versatiles';
-					const tilePath = join(tilesDir, tileName);
-					await runMosaicTile(jp2Path, tilePath);
-					versatilesFiles.push(tilePath);
-					return 'converted';
+					const baseName = basename(jp2Path, '.jp2');
+					const tifPath = join(tilesDir, `${baseName}.tif`);
+					const tilePath = join(tilesDir, `${baseName}.versatiles`);
+					try {
+						// Decompress JP2 → tiled LZW GeoTIFF first. GDAL's JP2 decoder is
+						// more robust than versatiles's; tiled + light compression keeps the
+						// intermediate both fast to write and efficient to random-access.
+						await runCommand(
+							'gdal_translate',
+							[
+								'-q',
+								'-of',
+								'GTiff',
+								'-co',
+								'TILED=YES',
+								'-co',
+								'COMPRESS=LZW',
+								'-co',
+								'BIGTIFF=IF_NEEDED',
+								jp2Path,
+								tifPath,
+							],
+							{ quiet: true },
+						);
+						await runMosaicTile(tifPath, tilePath);
+						versatilesFiles.push(tilePath);
+						return 'converted';
+					} finally {
+						safeRm(tifPath);
+						safeRm(jp2Path);
+					}
 				});
 
 				const filelistPath = join(tempDir, `filelist_${Date.now()}.txt`);

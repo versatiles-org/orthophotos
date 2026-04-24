@@ -104,7 +104,7 @@ export async function runScpUpload(localPath: string, remotePath: string): Promi
 	await runCommand('scp', [...scpArgs, localPath, `${host}:${remotePath}`]);
 }
 
-import { QUALITY } from '../lib/constants.ts';
+import { MAX_ZOOM, QUALITY } from '../lib/constants.ts';
 
 /**
  * Verifies that command output contains the expected success marker.
@@ -124,10 +124,10 @@ export async function runMosaicTile(
 	output: string,
 	options?: { bands?: string; nodata?: string; crs?: string; cacheDirectory?: string },
 ): Promise<void> {
-	// Omit --max-zoom so versatiles auto-detects the base zoom from the source's
-	// ground resolution. A fixed ceiling would throw away detail on high-res sources
-	// (e.g. 15cm JP2s) and over-tile low-res ones.
-	const args = ['mosaic', 'tile', '--quality', QUALITY];
+	// Always cap at MAX_ZOOM so output pyramids across regions are consistent —
+	// sources finer than that (e.g. 12.5cm DK, 15cm FR) stop at the same zoom
+	// instead of producing extra levels nobody serves.
+	const args = ['mosaic', 'tile', '--quality', QUALITY, '--max-zoom', String(MAX_ZOOM)];
 	if (options?.bands) {
 		args.push('--bands', options.bands);
 	}

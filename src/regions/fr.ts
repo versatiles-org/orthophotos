@@ -30,6 +30,11 @@ export const FEED_BASE = 'https://data.geopf.fr/telechargement/resource/BDORTHO'
 // Géoplateforme enforces ~1 req/s per client on this endpoint.
 const REQUEST_INTERVAL_MS = 1200;
 
+// Date range covered by the BD ORTHO feed, derived from editionDate years of all
+// zones. Verified at init time against the feed and surfaced via buildMeta(). If
+// the check fails with a new range, update this constant.
+const FR_DATE_RANGE = '2021-2025';
+
 const xmlParser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
 
 function sleep(ms: number): Promise<void> {
@@ -83,7 +88,7 @@ function buildMeta(): RegionMetadata {
 			name: "Institut national de l'information géographique et forestière (IGN-F)",
 			url: 'https://geoservices.ign.fr/documentation/donnees/ortho/bdortho',
 		},
-		date: '2021-2025',
+		date: FR_DATE_RANGE,
 		releaseDate: '2026-04-23',
 		mask: true,
 	};
@@ -203,6 +208,18 @@ export function pickBestPerZone(entries: IndexEntry[]): Map<string, IndexEntry> 
 }
 
 /**
+ * Returns the year range spanned by a list of YYYY-MM-DD edition dates,
+ * formatted as `'YYYY'` (single year) or `'YYYY-YYYY'` (min-max).
+ */
+export function computeDateRange(editionDates: string[]): string {
+	if (editionDates.length === 0) throw new Error('computeDateRange: no edition dates');
+	const years = editionDates.map((d) => d.slice(0, 4));
+	const min = years.reduce((a, b) => (a < b ? a : b));
+	const max = years.reduce((a, b) => (a > b ? a : b));
+	return min === max ? min : `${min}-${max}`;
+}
+
+/**
  * Removes this item's transient scratch files from `tempDir`: the detail-feed
  * XML and every `.7z` / `.7z.NNN` archive part (including any curl `.tmp`
  * partial). Matching is scoped by `item.title` so concurrent items don't
@@ -266,6 +283,14 @@ function defineFrSubRegion(opts: FrSubRegionOptions): RegionPipeline {
 				allEntries.push(...parseIndexPage(await readFile(p, 'utf-8')));
 			}
 			const bestPerZone = pickBestPerZone(allEntries);
+
+			const observedRange = computeDateRange(Array.from(bestPerZone.values()).map((e) => e.editionDate));
+			if (observedRange !== FR_DATE_RANGE) {
+				throw new Error(
+					`BD ORTHO feed now covers ${observedRange}, but FR_DATE_RANGE is set to '${FR_DATE_RANGE}'. ` +
+						`Please update FR_DATE_RANGE in src/regions/fr.ts.`,
+				);
+			}
 
 			const items: BdorthoItem[] = [];
 			const missing: string[] = [];

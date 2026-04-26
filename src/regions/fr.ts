@@ -375,6 +375,10 @@ function defineFrSubRegion(opts: FrSubRegionOptions): RegionPipeline {
 				{
 					progress: 'size',
 					title: `Downloading ${item.id} (${urls.length} part${urls.length === 1 ? '' : 's'})`,
+					// Géoplateforme rate-limits to ~1 req/s and serves 429s otherwise.
+					// Throttle proactively, and back off generously on 429/5xx.
+					intervalMs: REQUEST_INTERVAL_MS,
+					retry: { maxAttempts: 5, initialDelayMs: 5000, maxDelayMs: 60000, backoffMultiplier: 2 },
 				},
 			);
 

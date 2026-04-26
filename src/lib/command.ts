@@ -7,6 +7,10 @@ import { type RetryOptions, withRetry } from './retry.ts';
 import { createWriteStream, renameSync, rmSync, statSync } from 'node:fs';
 import { createProgress } from './progress.ts';
 
+function sleep(ms: number): Promise<void> {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 interface CommandOutput {
 	success: boolean;
 	code: number;
@@ -160,6 +164,10 @@ export interface DownloadFilesOptions {
 	title?: string;
 	/** Options forwarded to each underlying `downloadFile` call. */
 	download?: DownloadOptions;
+	/** Sleep this many ms before each request (incl. HEADs). Use to respect rate limits. */
+	intervalMs?: number;
+	/** Wrap each download in `withRetry` (so transient 429/5xx are retried with backoff). */
+	retry?: RetryOptions;
 }
 
 /**
@@ -236,11 +244,17 @@ function statSizeOrZero(path: string): number {
  */
 export async function downloadFiles(items: DownloadFilesItem[], options?: DownloadFilesOptions): Promise<void> {
 	const mode = options?.progress;
+	const interval = options?.intervalMs;
 
 	const sizes = new Map<DownloadFilesItem, number>();
 	if (mode === 'size') {
 		for (const item of items) {
-			sizes.set(item, item.size ?? (await fetchContentLength(item.url)));
+			if (item.size === undefined) {
+				if (interval) await sleep(interval);
+				sizes.set(item, await fetchContentLength(item.url));
+			} else {
+				sizes.set(item, item.size);
+			}
 		}
 	}
 
@@ -254,13 +268,19 @@ export async function downloadFiles(items: DownloadFilesItem[], options?: Downlo
 					)
 				: undefined;
 
-	for (const item of items) {
+	const runOnce = async (item: DownloadFilesItem): Promise<void> => {
 		if (mode === 'size') {
 			await streamDownload(item.url, item.dest, (n) => tracker!.tick('bytes', n), options?.download);
 		} else {
 			await downloadFile(item.url, item.dest, options?.download);
-			if (mode === 'count') tracker!.tick('downloaded');
 		}
+	};
+
+	for (const item of items) {
+		if (interval) await sleep(interval);
+		if (options?.retry) await withRetry(() => runOnce(item), options.retry);
+		else await runOnce(item);
+		if (mode === 'count') tracker!.tick('downloaded');
 	}
 
 	tracker?.done();

@@ -1,10 +1,8 @@
 import { resolve, dirname } from 'node:path';
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { scanRegions } from './status/regions.ts';
-import { loadKnownRegions } from './status/geojson.ts';
+import { generateStatusPage, loadKnownRegions, scanRegions } from './status/index.ts';
 import { getAggregatedRegionMetadata } from './regions/index.ts';
-import { generateStatusPage } from './status/html.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 

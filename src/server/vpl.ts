@@ -4,7 +4,7 @@ import { gunzipSync } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import { getConfig } from '../config.ts';
 import { getAllRegionMetadata } from '../regions/index.ts';
-import { loadKnownRegions } from '../status/geojson.ts';
+import { loadKnownRegions } from '../status/index.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = resolve(__dirname, '../../data');

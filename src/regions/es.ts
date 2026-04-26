@@ -1,4 +1,4 @@
-import type { RegionPipeline } from '../lib/framework.ts';
+import { type RegionPipeline } from './lib.ts';
 
 // https://centrodedescargas.cnig.es/CentroDescargas/ortofoto-pnoa-maxima-actualidad
 export default {

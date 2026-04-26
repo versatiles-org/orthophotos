@@ -1,10 +1,15 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { safeRm } from '../lib/fs.ts';
-import { defineTileRegion } from '../lib/process_tiles.ts';
-import { computeWmsBlocks, generateWmsXml, type WmsBbox } from '../lib/wms.ts';
-import { MAX_ZOOM } from '../lib/constants.ts';
-import { extractWmsBlock, runMosaicTile } from '../run/commands.ts';
+import {
+	computeWmsBlocks,
+	defineTileRegion,
+	extractWmsBlock,
+	generateWmsXml,
+	MAX_ZOOM,
+	runMosaicTile,
+	safeRm,
+	type WmsBbox,
+} from './lib.ts';
 
 const WMS_URL = 'http://inspire.mzh.government.bg:8080/geoserver/ows';
 

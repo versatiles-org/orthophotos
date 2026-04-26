@@ -1,11 +1,14 @@
 import { rmSync } from 'node:fs';
 import { join } from 'node:path';
-import { downloadFile } from '../lib/command.ts';
-import { safeRm } from '../lib/fs.ts';
-import { defineTileRegion } from '../lib/process_tiles.ts';
-import { withRetry } from '../lib/retry.ts';
-import { isValidRaster } from '../lib/validators.ts';
-import { convertToTiledTiff, runMosaicTile } from '../run/commands.ts';
+import {
+	convertToTiledTiff,
+	defineTileRegion,
+	downloadFile,
+	isValidRaster,
+	runMosaicTile,
+	safeRm,
+	withRetry,
+} from './lib.ts';
 
 const OGC_API_MAP_URL = 'https://ogcapi.dgterritorio.gov.pt/collections/ortos-rgb/map';
 const CRS_3857 = 'http://www.opengis.net/def/crs/EPSG/0/3857';

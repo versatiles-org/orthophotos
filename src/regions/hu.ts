@@ -1,4 +1,4 @@
-import type { RegionPipeline } from '../lib/framework.ts';
+import { type RegionPipeline } from './lib.ts';
 
 export default {
 	id: 'hu',

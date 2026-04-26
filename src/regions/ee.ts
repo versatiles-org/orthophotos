@@ -1,11 +1,7 @@
 import { existsSync, readdirSync, writeFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { downloadFile, runCommand } from '../lib/command.ts';
-import { extractZipFile, safeRm } from '../lib/fs.ts';
-import { defineTileRegion } from '../lib/process_tiles.ts';
-import { withRetry } from '../lib/retry.ts';
-import { runMosaicTile } from '../run/commands.ts';
+import { defineTileRegion, downloadFile, extractZipFile, runCommand, runMosaicTile, safeRm, withRetry } from './lib.ts';
 
 const INDEX_URL = 'https://geoportaal.maaamet.ee/docs/Avaandmed/epk10_eng.zip';
 const API_URL = 'https://geoportaal.maaamet.ee/index.php?lang_id=2&plugin_act=otsing&page_id=662';

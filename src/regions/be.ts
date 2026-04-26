@@ -1,12 +1,17 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { downloadFile } from '../lib/command.ts';
-import { safeRm } from '../lib/fs.ts';
-import { MAX_ZOOM } from '../lib/constants.ts';
-import { defineTileRegion } from '../lib/process_tiles.ts';
-import { withRetry } from '../lib/retry.ts';
-import { computeWmsBlocks, generateWmsXml, parseWmsCapabilities } from '../lib/wms.ts';
-import { extractWmsBlock, runMosaicTile } from '../run/commands.ts';
+import {
+	computeWmsBlocks,
+	defineTileRegion,
+	downloadFile,
+	extractWmsBlock,
+	generateWmsXml,
+	MAX_ZOOM,
+	parseWmsCapabilities,
+	runMosaicTile,
+	safeRm,
+	withRetry,
+} from './lib.ts';
 
 const WMS_URL = 'https://wms.ngi.be/inspire/ortho/service';
 const LAYER = 'orthoimage_coverage';

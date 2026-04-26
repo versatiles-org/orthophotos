@@ -33,7 +33,7 @@ const REQUEST_INTERVAL_MS = 1200;
 // Date range covered by the BD ORTHO feed, derived from editionDate years of all
 // zones. Verified at init time against the feed and surfaced via buildMeta(). If
 // the check fails with a new range, update this constant.
-const FR_DATE_RANGE = '2021-2025';
+const FR_DATE_RANGE = '2004-2025';
 
 const xmlParser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
 

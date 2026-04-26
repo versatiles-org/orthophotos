@@ -145,4 +145,12 @@ describe('parseDetailFeed', () => {
 			'https://data.geopf.fr/telechargement/download/BDORTHO/x/x.7z.001',
 		]);
 	});
+
+	test('throws when the response is paginated (totalentries > entries)', () => {
+		const truncated = `<?xml version='1.0' encoding='UTF-8' standalone='yes'?>
+<feed xmlns:gpf_dl="https://data.geopf.fr/annexes/ressources/xsd/gpf_dl.xsd" xmlns="http://www.w3.org/2005/Atom" gpf_dl:page="1" gpf_dl:pagesize="10" gpf_dl:pagecount="3" gpf_dl:totalentries="23">
+  <entry><link href="https://x/x.7z.001" rel="alternate" type="application/x-7z-compressed"/></entry>
+</feed>`;
+		expect(() => parseDetailFeed(truncated)).toThrow(/paginated response — got 1 of 23/);
+	});
 });

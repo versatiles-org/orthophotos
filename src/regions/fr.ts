@@ -250,11 +250,28 @@ function cleanItemArtifacts(tempDir: string, item: { id: string; title: string }
 	}
 }
 
-/** Extracts 7z download URLs from a per-resource detail ATOM feed. */
+/**
+ * Extracts 7z download URLs from a per-resource detail ATOM feed.
+ *
+ * The detail endpoint paginates with a default page size of 10, so a region
+ * with many `.7z.NNN` parts (e.g. fr/guyane: 22 parts) will silently return a
+ * truncated list unless the caller fetches it with `?limit=N` set high enough.
+ * As a safety net, when the response advertises `gpf_dl:totalentries`, we
+ * compare against the parsed entry count and throw if anything is missing.
+ */
 export function parseDetailFeed(xml: string): string[] {
 	const parsed = xmlParser.parse(xml) as Record<string, unknown>;
 	const feed = parsed.feed as Record<string, unknown> | undefined;
 	const rawEntries: unknown[] = [feed?.entry ?? []].flat();
+
+	const totalRaw = feed?.['@_gpf_dl:totalentries'];
+	const total = typeof totalRaw === 'string' || typeof totalRaw === 'number' ? Number(totalRaw) : NaN;
+	if (Number.isFinite(total) && rawEntries.length < total) {
+		throw new Error(
+			`parseDetailFeed: paginated response — got ${rawEntries.length} of ${total} entries. ` +
+				`Refetch the detail URL with a higher ?limit=.`,
+		);
+	}
 
 	const urls: string[] = [];
 	for (const raw of rawEntries) {
@@ -268,6 +285,13 @@ export function parseDetailFeed(xml: string): string[] {
 		}
 	}
 	return urls.sort();
+}
+
+/** Returns the detail-feed URL with a generous `?limit=` so all parts come back in one page. */
+function detailUrlWithLimit(detailUrl: string): string {
+	const u = new URL(detailUrl);
+	u.searchParams.set('limit', '1000');
+	return u.toString();
 }
 
 /**
@@ -334,7 +358,7 @@ function defineFrSubRegion(opts: FrSubRegionOptions): RegionPipeline {
 
 			const detailPath = join(tempDir, `${item.id}_detail.xml`);
 			await sleep(REQUEST_INTERVAL_MS);
-			await withRetry(() => downloadFile(item.detailUrl, detailPath), { maxAttempts: 3 });
+			await withRetry(() => downloadFile(detailUrlWithLimit(item.detailUrl), detailPath), { maxAttempts: 3 });
 			let urls: string[];
 			try {
 				urls = parseDetailFeed(await readFile(detailPath, 'utf-8'));

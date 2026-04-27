@@ -310,7 +310,7 @@ export function defineFrSubRegion(opts: FrSubRegionOptions): RegionPipeline {
 				// parallelizes well) feed a single-slot TIFF → .versatiles tile step
 				// (versatiles mosaic tile already uses all cores internally).
 				await pipeline(jp2Files, { progress: { labels: ['converted'] } })
-					.map(4, async (jp2Path) => {
+					.map({ memoryGB: 5 }, async (jp2Path) => {
 						const baseName = basename(jp2Path, '.jp2');
 						const tifPath = join(tilesDir, `${baseName}.tif`);
 						try {
@@ -323,7 +323,7 @@ export function defineFrSubRegion(opts: FrSubRegionOptions): RegionPipeline {
 						}
 						return { tifPath, tilePath: join(tilesDir, `${baseName}.versatiles`) };
 					})
-					.forEach(1, async ({ tifPath, tilePath }) => {
+					.forEach({ memoryGB: 20 }, async ({ tifPath, tilePath }) => {
 						try {
 							await runMosaicTile(tifPath, tilePath);
 							versatilesFiles.push(tilePath);

@@ -22,6 +22,7 @@ export { createProgress, type Progress, type ProgressOptions } from '../lib/prog
 export { RemoteZip, type ZipEntry } from '../lib/remote-zip.ts';
 export { withRetry, type RetryOptions } from '../lib/retry.ts';
 export { ErrorBucket, isValidRaster } from '../lib/validators.ts';
+export { createXmlParser } from '../lib/xml.ts';
 export { computeWmsBlocks, generateWmsXml, parseWmsCapabilities, type WmsBbox } from '../lib/wms.ts';
 
 // External-tool wrappers

@@ -10,10 +10,10 @@
 import { existsSync, mkdirSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
-import { XMLParser } from 'fast-xml-parser';
 import {
 	convertToTiledTiff,
 	createProgress,
+	createXmlParser,
 	defineTileRegion,
 	downloadFile,
 	downloadFiles,
@@ -43,11 +43,7 @@ const REQUEST_INTERVAL_MS = 1200;
 // the check fails with a new range, update this constant.
 const FR_DATE_RANGE = '2004-2025';
 
-const xmlParser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
-
-function sleep(ms: number): Promise<void> {
-	return new Promise((resolve) => setTimeout(resolve, ms));
-}
+const xmlParser = createXmlParser();
 
 /** An entry parsed from the main BD ORTHO ATOM feed. */
 export interface IndexEntry {

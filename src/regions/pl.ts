@@ -1,15 +1,23 @@
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { XMLParser } from 'fast-xml-parser';
-import { defineTileRegion, downloadFile, isValidRaster, runCommand, runMosaicTile, safeRm, withRetry } from './lib.ts';
+import {
+	createXmlParser,
+	defineTileRegion,
+	downloadFile,
+	isValidRaster,
+	runCommand,
+	runMosaicTile,
+	safeRm,
+	withRetry,
+} from './lib.ts';
 
 const DATASET_FEED_URL =
 	'https://mapy.geoportal.gov.pl/wss/service/ATOM/httpauth/atom/OI?spatial_dataset_identifier_code=OI&spatial_dataset_identifier_namespace=PL.PZGiK.203';
 
 const MIN_YEAR = 2020;
 
-const xmlParser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
+const xmlParser = createXmlParser();
 
 interface YearEntry {
 	year: number;

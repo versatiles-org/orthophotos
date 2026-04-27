@@ -1,13 +1,20 @@
 import { existsSync, rmSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { XMLParser } from 'fast-xml-parser';
-import { defineTileRegion, downloadFile, extractZipFile, runMosaicTile, safeRm, withRetry } from './lib.ts';
+import {
+	createXmlParser,
+	defineTileRegion,
+	downloadFile,
+	extractZipFile,
+	runMosaicTile,
+	safeRm,
+	withRetry,
+} from './lib.ts';
 
 const ATOM_URL = 'https://atom.cuzk.gov.cz/OI/OI.xml';
 const ZIP_BASE_URL = 'https://openzu.cuzk.gov.cz/opendata/OI/';
 
-const xmlParser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
+const xmlParser = createXmlParser();
 
 /**
  * Parse tile IDs from the main Atom feed.

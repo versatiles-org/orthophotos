@@ -6,8 +6,8 @@
  */
 
 import { readFile } from 'node:fs/promises';
-import { XMLParser } from 'fast-xml-parser';
 import { runCommand } from './command.ts';
+import { createXmlParser } from './xml.ts';
 
 const WORLD_EXTENT = 20037508.342789244;
 const TILE_PX = 512;
@@ -59,7 +59,7 @@ export async function parseWmsCapabilities(
 	layerName: string,
 ): Promise<{ bbox: WmsBbox; maxWidth: number; maxHeight: number }> {
 	const xml = await readFile(capsPath, 'utf-8');
-	const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
+	const parser = createXmlParser();
 	const parsed = parser.parse(xml);
 
 	const cap = (parsed.WMT_MS_Capabilities ?? parsed.WMS_Capabilities) as Record<string, unknown> | undefined;

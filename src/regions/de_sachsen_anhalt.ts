@@ -1,14 +1,21 @@
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { XMLParser } from 'fast-xml-parser';
-import { defineTileRegion, downloadFile, isValidRaster, runMosaicTile, safeRm, withRetry } from './lib.ts';
+import {
+	createXmlParser,
+	defineTileRegion,
+	downloadFile,
+	isValidRaster,
+	runMosaicTile,
+	safeRm,
+	withRetry,
+} from './lib.ts';
 
 const ATOM_URL =
 	'https://geodatenportal.sachsen-anhalt.de/arcgisinspire/rest/directories/web/INSPIRE_ALKIS/ALKIS_OI_DOP20_MapServer/datasetoi.xml';
 const DOWNLOAD_BASE = 'https://www.geodatenportal.sachsen-anhalt.de/gfds_webshare/sec-download/LVermGeo/DOP20/';
 
-const xmlParser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
+const xmlParser = createXmlParser();
 
 export function parseTileIds(xml: string): string[] {
 	const parsed = xmlParser.parse(xml);

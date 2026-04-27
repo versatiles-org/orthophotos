@@ -1,13 +1,20 @@
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { XMLParser } from 'fast-xml-parser';
-import { defineTileRegion, downloadFile, isValidRaster, runMosaicTile, safeRm, withRetry } from './lib.ts';
+import {
+	createXmlParser,
+	defineTileRegion,
+	downloadFile,
+	isValidRaster,
+	runMosaicTile,
+	safeRm,
+	withRetry,
+} from './lib.ts';
 
 const ATOM_URL =
 	'https://geoportal.saarland.de/mapbender/php/mod_inspireDownloadFeed.php?id=e7995adf-2aeb-4fa4-a536-041e3cc8b24a&type=DATASET&generateFrom=wmslayer&layerid=46747';
 
-const xmlParser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
+const xmlParser = createXmlParser();
 
 export function parseAtomEntries(xml: string): { url: string; id: string }[] {
 	const parsed = xmlParser.parse(xml);

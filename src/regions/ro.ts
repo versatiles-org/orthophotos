@@ -1,13 +1,21 @@
 import { existsSync, rmSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
-import { XMLParser } from 'fast-xml-parser';
-import { defineTileRegion, downloadFile, extractZipFile, runCommand, runMosaicTile, safeRm, withRetry } from './lib.ts';
+import {
+	createXmlParser,
+	defineTileRegion,
+	downloadFile,
+	extractZipFile,
+	runCommand,
+	runMosaicTile,
+	safeRm,
+	withRetry,
+} from './lib.ts';
 
 const ATOM_URL =
 	'https://inspire.geomil.ro/network/rest/directories/arcgisforinspire/INSPIRE/OI_Download_MapServer/OI_Dataset.xml';
 
-const xmlParser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
+const xmlParser = createXmlParser();
 
 export function parseZipUrls(xml: string): { url: string; id: string }[] {
 	const parsed = xmlParser.parse(xml);

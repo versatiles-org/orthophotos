@@ -1,8 +1,8 @@
 import { existsSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
-import { XMLParser } from 'fast-xml-parser';
 import {
+	createXmlParser,
 	defineTileRegion,
 	downloadFile,
 	isValidRaster,
@@ -15,7 +15,7 @@ import {
 
 const KML_URL = 'https://geodaten.bayern.de/odd/a/dop20/meta/kml/gemeinde.kml';
 
-const xmlParser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
+const xmlParser = createXmlParser();
 
 export function parseMeta4Urls(kml: string): string[] {
 	const pattern = /https:\/\/geodaten\.bayern\.de\/odd\/a\/dop20\/meta\/metalink\/[0-9]+\.meta4/g;

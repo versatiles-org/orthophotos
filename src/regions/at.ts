@@ -1,8 +1,7 @@
 import { existsSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
-import { XMLParser } from 'fast-xml-parser';
-import { defineTileRegion, downloadFile, pipeline, runMosaicTile, safeRm, withRetry } from './lib.ts';
+import { createXmlParser, defineTileRegion, downloadFile, pipeline, runMosaicTile, safeRm, withRetry } from './lib.ts';
 
 const ATOM_URL =
 	'https://data.bev.gv.at/geonetwork/srv/atom/describe/service?uuid=7f047345-4ebf-45cd-8900-6edf50a84638';
@@ -13,7 +12,7 @@ const OPERATS = [
 	2024250, 2024260, 2024350, 2024450, 2024460, 2024470,
 ];
 
-const xmlParser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
+const xmlParser = createXmlParser();
 
 export function parseServiceFeed(xml: string, operats: number[]): { operat: number; feedUrl: string }[] {
 	const operatSet = new Set(operats.map(String));

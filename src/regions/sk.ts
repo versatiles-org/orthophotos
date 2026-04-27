@@ -1,9 +1,9 @@
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
-import { XMLParser } from 'fast-xml-parser';
 import {
 	convertToTiledTiff,
+	createXmlParser,
 	defineTileRegion,
 	downloadFile,
 	RemoteZip,
@@ -14,7 +14,7 @@ import {
 
 const ATOM_URL = 'https://inspirews.skgeodesy.sk/atom/7efad194-3006-408f-9e6c-c06dc79703bd_dataFeed.atom';
 
-const xmlParser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' });
+const xmlParser = createXmlParser();
 
 export function parseZipUrls(xml: string): { url: string; id: string }[] {
 	const parsed = xmlParser.parse(xml);

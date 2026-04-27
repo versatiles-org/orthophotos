@@ -4,7 +4,6 @@
  */
 
 import { existsSync, mkdirSync, renameSync } from 'node:fs';
-import { createInterface } from 'node:readline';
 import { posix, resolve } from 'node:path';
 import { runScpUpload, runSshCommand } from './commands.ts';
 import { runMosaicAssemble } from '../lib/versatiles.ts';
@@ -134,24 +133,12 @@ async function uploadToRemote(localPath: string, regionName: string): Promise<vo
 }
 
 /**
- * Task 3: Delete local data.
- * Asks for confirmation, then removes both data and temp directories.
+ * Task 3: Delete local data and temp directories for the region.
  */
 async function taskDelete(ctx: TaskContext): Promise<void> {
-	console.log(`This will delete:`);
+	console.log(`Deleting:`);
 	console.log(`  ${ctx.dataDir}`);
 	console.log(`  ${ctx.tempDir}`);
-
-	if (process.stdin.isTTY) {
-		const rl = createInterface({ input: process.stdin, output: process.stdout });
-		const answer = await new Promise<string>((resolve) => rl.question('Are you sure? (y/N) ', resolve));
-		rl.close();
-
-		if (answer.trim().toLowerCase() !== 'y') {
-			console.log('  Aborted.');
-			return;
-		}
-	}
 
 	safeRm(ctx.dataDir);
 	safeRm(ctx.tempDir);

@@ -33,7 +33,7 @@ import {
 // Shared pipeline helpers
 // ---------------------------------------------------------------------------
 
-export const FEED_BASE = 'https://data.geopf.fr/telechargement/resource/BDORTHO';
+const FEED_BASE = 'https://data.geopf.fr/telechargement/resource/BDORTHO';
 
 // Géoplateforme enforces ~1 req/s per client on this endpoint.
 const REQUEST_INTERVAL_MS = 1200;

@@ -17,6 +17,7 @@ import {
 	defineTileRegion,
 	downloadFile,
 	downloadFiles,
+	fetchWithInterval,
 	getConfig,
 	pipeline,
 	type RegionMetadata,
@@ -120,20 +121,21 @@ export async function fetchIndexPages(cacheDir: string): Promise<string[]> {
 	const progress = createProgress(pageCount, { labels: ['fetched', 'cached'], logInterval: 10 });
 	progress.tick(firstWasCached ? 'cached' : 'fetched');
 
-	const paths: string[] = [firstPath];
+	const items: { path: string; url: string }[] = [];
 	for (let i = 2; i <= pageCount; i++) {
-		const path = join(cacheDir, `page_${i}.xml`);
-		if (existsSync(path)) {
-			progress.tick('cached');
-		} else {
-			await sleep(REQUEST_INTERVAL_MS);
-			await withRetry(() => downloadFile(`${FEED_BASE}?page=${i}`, path), { maxAttempts: 3 });
-			progress.tick('fetched');
-		}
-		paths.push(path);
+		items.push({ path: join(cacheDir, `page_${i}.xml`), url: `${FEED_BASE}?page=${i}` });
 	}
+
+	await fetchWithInterval(items, ({ url, path }) => downloadFile(url, path), {
+		intervalMs: REQUEST_INTERVAL_MS,
+		retry: { maxAttempts: 3 },
+		shouldFetch: ({ path }) => !existsSync(path),
+		onSkip: () => progress.tick('cached'),
+		onFetch: () => progress.tick('fetched'),
+	});
+
 	progress.done();
-	return paths;
+	return [firstPath, ...items.map((it) => it.path)];
 }
 
 /**

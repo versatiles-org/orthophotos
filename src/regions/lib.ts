@@ -20,6 +20,7 @@ export { pipeline, skip, type Skip } from '../lib/pipeline.ts';
 export { defineTileRegion, type TileContext, type TileItem } from '../lib/process_tiles.ts';
 export { createProgress, type Progress, type ProgressOptions } from '../lib/progress.ts';
 export { RemoteZip, type ZipEntry } from '../lib/remote-zip.ts';
+export { fetchWithInterval, type FetchWithIntervalOptions } from '../lib/rate-limit.ts';
 export { withRetry, type RetryOptions } from '../lib/retry.ts';
 export { ErrorBucket, isValidRaster } from '../lib/validators.ts';
 export { createXmlParser } from '../lib/xml.ts';

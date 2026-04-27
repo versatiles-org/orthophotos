@@ -1,11 +1,11 @@
 /**
- * External command execution utilities for the run script.
+ * Remote-storage plumbing for the run script: required-CLI check + SSH/SCP wrappers.
+ *
+ * GDAL and versatiles wrappers live in `src/lib/gdal.ts` and `src/lib/versatiles.ts`
+ * — they're consumed by region scrapers via `src/regions/lib.ts`.
  */
 
-import { renameSync } from 'node:fs';
-import { dirname, basename, join } from 'node:path';
 import { runCommand } from '../lib/command.ts';
-import { safeRm } from '../lib/fs.ts';
 import { getConfig } from '../config.ts';
 
 /** Required CLI tools */
@@ -40,13 +40,6 @@ export async function checkRequiredCommands(): Promise<void> {
 		const list = missing.map((cmd) => `  - ${cmd}`).join('\n');
 		throw new Error(`Missing required commands:\n${list}`);
 	}
-}
-
-/**
- * Builds an sftp:// URL for remote storage.
- */
-export function buildSftpUrl(host: string, port: string, remotePath: string): string {
-	return `sftp://${host}:${port}/${remotePath}`;
 }
 
 /**
@@ -102,160 +95,4 @@ export async function runScpUpload(localPath: string, remotePath: string): Promi
 	if (port) scpArgs.push('-P', port);
 	if (keyFile) scpArgs.push('-i', keyFile);
 	await runCommand('scp', [...scpArgs, localPath, `${host}:${remotePath}`]);
-}
-
-import { MAX_ZOOM, QUALITY } from '../lib/constants.ts';
-
-/**
- * Verifies that command output contains the expected success marker.
- */
-function assertOutputContains(result: { stderr: Uint8Array }, marker: string, context: string): void {
-	const stderr = new TextDecoder().decode(result.stderr);
-	if (!stderr.includes(marker)) {
-		throw new Error(`${context}: expected "${marker}" in output but got:\n${stderr.trim()}`);
-	}
-}
-
-/**
- * Runs `versatiles mosaic tile` to tile a single raster image into a .versatiles container.
- */
-export async function runMosaicTile(
-	input: string,
-	output: string,
-	options?: { bands?: string; nodata?: string; crs?: string; cacheDirectory?: string; gdalConcurrency?: number },
-): Promise<void> {
-	// Always cap at MAX_ZOOM so output pyramids across regions are consistent —
-	// sources finer than that (e.g. 12.5cm DK, 15cm FR) stop at the same zoom
-	// instead of producing extra levels nobody serves.
-	const args = ['mosaic', 'tile', '--quality', QUALITY, '--max-zoom', String(MAX_ZOOM)];
-	if (options?.bands) {
-		args.push('--bands', options.bands);
-	}
-	if (options?.nodata) {
-		args.push('--nodata', options.nodata);
-	}
-	if (options?.crs) {
-		args.push('--crs', options.crs);
-	}
-	if (options?.cacheDirectory) {
-		args.push('--cache-dir', options.cacheDirectory);
-	}
-	if (options?.gdalConcurrency !== undefined) {
-		args.push('--gdal-concurrency', String(options.gdalConcurrency));
-	}
-	const tmpOutput = join(dirname(output), `.tmp.${basename(output)}`);
-	args.push(input, tmpOutput);
-	try {
-		const result = await runCommand('versatiles', args, { quiet: true });
-		assertOutputContains(result, 'finished mosaic tile', `runMosaicTile for "${input}"`);
-		renameSync(tmpOutput, output);
-	} catch (cause) {
-		safeRm(tmpOutput);
-		throw new Error(`runMosaicTile failed for "${input}"`, { cause });
-	}
-}
-
-/**
- * Runs `versatiles mosaic assemble` to assemble multiple tile containers into one.
- */
-export async function runMosaicAssemble(
-	filelistPath: string,
-	output: string,
-	options?: { lossless?: boolean; quiet?: boolean; quietOnError?: boolean },
-): Promise<void> {
-	// No --max-zoom: include every zoom level present in the inputs.
-	const args = ['mosaic', 'assemble', '--max-buffer-size', '50%', '--quality', QUALITY];
-	if (options?.lossless) {
-		args.push('--lossless');
-	}
-	args.push(`@${filelistPath}`, output);
-	const result = await runCommand('versatiles', args, { quiet: options?.quiet, quietOnError: options?.quietOnError });
-	assertOutputContains(result, 'finished mosaic assemble', `runMosaicAssemble for "${filelistPath}"`);
-}
-
-export interface TiledTiffOptions {
-	/** Expand palette to rgb or rgba (e.g., for paletted PNGs) */
-	expand?: 'rgb' | 'rgba';
-	/** Assign SRS (e.g., 'EPSG:3857') */
-	srs?: string;
-	/** Assign upper-left / lower-right corners [ulx, uly, lrx, lry] */
-	ullr?: [number, number, number, number];
-	/** Compression codec. Default: 'deflate'. Use 'lzw' or 'none' for faster, minimal compression. */
-	compress?: 'deflate' | 'lzw' | 'none';
-	/** Apply horizontal differencing predictor (PREDICTOR=2). Default: true. Ignored when compress='none'. */
-	predictor?: boolean;
-	/** Mark last band as alpha (ALPHA=YES). Default: true. Set false for RGB-only sources like JP2. */
-	alpha?: boolean;
-	/** BIGTIFF mode. Default: 'yes'. Use 'if_needed' when the output is likely small. */
-	bigtiff?: 'yes' | 'no' | 'if_needed';
-	/** Suppress stdout/stderr during execution. Default: false. */
-	quiet?: boolean;
-}
-
-/**
- * Converts a raster file to a tiled GeoTIFF optimized for random access.
- * Defaults: DEFLATE + PREDICTOR=2 + BIGTIFF=YES + ALPHA=YES.
- * Pass `{ compress: 'lzw', predictor: false, alpha: false, bigtiff: 'if_needed' }`
- * for a fast, minimal intermediate (e.g. JP2 → TIFF as a pre-versatiles step).
- */
-export async function convertToTiledTiff(input: string, output: string, options?: TiledTiffOptions): Promise<void> {
-	const compress = options?.compress ?? 'deflate';
-	const predictor = options?.predictor ?? true;
-	const alpha = options?.alpha ?? false;
-	const bigtiff = options?.bigtiff ?? 'if_needed';
-
-	const args = ['-q', '-of', 'GTiff'];
-	if (options?.expand) args.push('-expand', options.expand);
-	if (options?.srs) args.push('-a_srs', options.srs);
-	if (options?.ullr) args.push('-a_ullr', ...options.ullr.map(String));
-	args.push('-co', 'TILED=YES');
-	if (compress !== 'none') {
-		args.push('-co', `COMPRESS=${compress.toUpperCase()}`);
-		if (predictor) args.push('-co', 'PREDICTOR=2');
-	}
-	args.push('-co', `BIGTIFF=${bigtiff.toUpperCase()}`);
-	if (alpha) args.push('-co', 'ALPHA=YES');
-	args.push(input, output);
-	await runCommand('gdal_translate', args, { quiet: options?.quiet ?? true });
-}
-
-export interface WmsBlockExtractOptions {
-	/** WMS XML config file path */
-	wmsXmlPath: string;
-	/** Block bounds in EPSG:3857 */
-	x0: number;
-	y0: number;
-	x1: number;
-	y1: number;
-	/** Output pixel size */
-	blockPx: number;
-}
-
-/**
- * Extracts a block from a WMS source as a tiled, compressed GeoTIFF with alpha.
- */
-export async function extractWmsBlock(options: WmsBlockExtractOptions, output: string): Promise<void> {
-	await runCommand('gdal_translate', [
-		'-q',
-		options.wmsXmlPath,
-		output,
-		'-projwin',
-		String(options.x0),
-		String(options.y1),
-		String(options.x1),
-		String(options.y0),
-		'-projwin_srs',
-		'EPSG:3857',
-		'-outsize',
-		String(options.blockPx),
-		String(options.blockPx),
-		'-of',
-		'GTiff',
-		'-co',
-		'COMPRESS=DEFLATE',
-		'-co',
-		'PREDICTOR=2',
-		'-co',
-		'ALPHA=YES',
-	]);
 }

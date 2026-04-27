@@ -26,7 +26,8 @@ export { createXmlParser } from '../lib/xml.ts';
 export { computeWmsBlocks, generateWmsXml, parseWmsCapabilities, type WmsBbox } from '../lib/wms.ts';
 
 // External-tool wrappers
-export { convertToTiledTiff, extractWmsBlock, runMosaicAssemble, runMosaicTile } from '../run/commands.ts';
+export { convertToTiledTiff, extractWmsBlock } from '../lib/gdal.ts';
+export { runMosaicAssemble, runMosaicTile } from '../lib/versatiles.ts';
 
 // Config
 export { getConfig } from '../config.ts';

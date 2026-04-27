@@ -51,6 +51,7 @@ export default [
 			notes: [
 				'Data source identified but scraper not yet implemented.',
 				'See http://wms.pcn.minambiente.it/ogc?map=/ms_ogc/WMS_v1.3/raster/ortofoto_colore_12.map',
+				'See https://www.dati.gov.it/node/192?tags=modello-digitale-del-terreno',
 			],
 		},
 	},

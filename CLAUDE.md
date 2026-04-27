@@ -151,6 +151,14 @@ Region fetch implementations should follow these patterns consistently:
 
 **Atomic ZIP extraction:** Use `extractZipFile()` from `src/lib/fs.ts` instead of calling `unzip` directly. It extracts to a `.tmp` directory first, then renames atomically. This prevents incomplete extraction directories from being treated as completed work on subsequent runs.
 
+**Network retries — required for every remote call:** National agency feeds and download endpoints regularly return 429s, 5xx, or close connections mid-stream. Every network operation in a region must be retried, or the pipeline will fail intermittently for reasons unrelated to the data.
+
+- Wrap single calls in `withRetry(() => downloadFile(url, dest), { maxAttempts: 3 })`. Built-in exponential backoff (1s → 2s → 4s, capped at 30s) is sufficient — don't tune unless you have a reason.
+- For lists of downloads, pass `retry: { maxAttempts: 3 }` to `downloadFiles({ ... })` rather than wrapping each call.
+- For paginated/rate-limited feeds, use `fetchWithInterval(items, fn, { intervalMs, retry: { maxAttempts: 3 } })` from `src/lib/rate-limit.ts`.
+- Same rule for ad-hoc `fetch()` calls (e.g. HEAD requests for sizing). Wrap them.
+- Exception: `gdal_translate` / `versatiles` invocations are local CPU work — do not retry (a failure is a real error, not transient).
+
 **Download validation:** After downloading a raster file (TIF/JP2), validate it with `isValidRaster()` from `src/lib/validators.ts` before converting. This uses `gdalinfo` to verify the file is GDAL-readable. Invalid files must be reported, not silently skipped.
 
 **Error collection:** When a downloaded image fails validation, use `ErrorBucket` from `src/lib/validators.ts`. Call `errors.add(msg)` with a single descriptive string (e.g., `errors.add(\`\${id}.tif (\${url})\`)`), return `'invalid'`. The pipeline calls `errors.throwIfAny()` after completion.
@@ -182,7 +190,7 @@ The project uses the `versatiles` CLI tool with the `mosaic` subcommand:
 - `versatiles mosaic tile <input> <output>` — tile a single raster into a `.versatiles` container
 - `versatiles mosaic assemble <filelist> <output>` — assemble multiple containers into one
 
-These are wrapped in `src/run/commands.ts` as `runMosaicTile()` and `runMosaicAssemble()`. Quality and max-zoom settings are defined as constants (`MAX_ZOOM`, `QUALITY`) in that file. Both run with `quiet: true` to suppress output during normal operation.
+These are wrapped in `src/lib/versatiles.ts` as `runMosaicTile()` and `runMosaicAssemble()`. Quality and max-zoom settings are defined as constants (`MAX_ZOOM`, `QUALITY`) in `src/lib/constants.ts`. Both run with `quiet: true` to suppress output during normal operation. (GDAL CLI wrappers — `convertToTiledTiff()`, `extractWmsBlock()` — live in `src/lib/gdal.ts`. Region scrapers should import all of these via `src/regions/lib.ts`, never directly.)
 
 `runMosaicTile()` supports options: `bands`, `nodata`, `crs`, `cacheDirectory`. Use `crs` to override the source CRS (e.g., `{ crs: '3045' }` for EPSG:3045) — this avoids needing `gdal raster edit` to assign CRS before conversion. Use `nodata` to treat specific pixel values as transparent (e.g., `{ nodata: '255,255,255' }` for white borders).
 

@@ -1,7 +1,9 @@
 /**
- * Side-effecting French BD ORTHO® scraper: fetches the ATOM feed, picks the
- * best resource per département, downloads + extracts the 7z archives, and
- * tiles the JP2 images into a `.versatiles` container per sub-région.
+ * Side-effecting French BD ORTHO® scraper: fetches the JSON feed (the
+ * Géoplateforme endpoint serves both ATOM XML and JSON via content
+ * negotiation; we use `Accept: application/json`), picks the best resource
+ * per département, downloads + extracts the 7z archives, and tiles the JP2
+ * images into a `.versatiles` container per sub-région.
  *
  * Pure parsers live in `parsers.ts`. The data table lives in `regions.ts`.
  * The assembly point that wires both together is `index.ts`.
@@ -28,7 +30,14 @@ import {
 	sleep,
 	withRetry,
 } from '../lib.ts';
-import { computeDateRange, type IndexEntry, parseDetailFeed, parseIndexPage, pickBestPerZone } from './parsers.ts';
+import {
+	type BdorthoDetailPart,
+	computeDateRange,
+	type IndexEntry,
+	parseDetailFeed,
+	parseIndexPage,
+	pickBestPerZone,
+} from './parsers.ts';
 
 // ---------------------------------------------------------------------------
 // Constants + types
@@ -91,33 +100,37 @@ function buildMeta(): RegionMetadata {
 // Index-feed phase (used by `init`)
 // ---------------------------------------------------------------------------
 
+const JSON_HEADERS = { Accept: 'application/json' };
+
 /**
- * Fetches every page of the BD ORTHO ATOM feed, caching each page in `cacheDir`.
- * Returns the list of cached page file paths, in order.
+ * Fetches every page of the BD ORTHO index, caching each page (as JSON) in `cacheDir`.
+ * Returns the list of cached page file paths, in order. Total page count is read from
+ * the first page's `pagecount` field.
  */
 export async function fetchIndexPages(cacheDir: string): Promise<string[]> {
 	mkdirSync(cacheDir, { recursive: true });
 
 	// Fetch page 1 up front so we can learn the total page count for the progress bar.
-	const firstPath = join(cacheDir, 'page_1.xml');
+	const firstPath = join(cacheDir, 'page_1.json');
 	const firstWasCached = existsSync(firstPath);
 	if (!firstWasCached) {
-		await withRetry(() => downloadFile(`${FEED_BASE}?page=1`, firstPath), { maxAttempts: 3 });
+		await withRetry(() => downloadFile(`${FEED_BASE}?page=1`, firstPath, { headers: JSON_HEADERS }), {
+			maxAttempts: 3,
+		});
 	}
-	const firstXml = await readFile(firstPath, 'utf-8');
-	const pageCountMatch = firstXml.match(/gpf_dl:pagecount="(\d+)"/);
-	if (!pageCountMatch) throw new Error('Could not determine page count from BD ORTHO ATOM feed');
-	const pageCount = parseInt(pageCountMatch[1], 10);
+	const firstBody = JSON.parse(await readFile(firstPath, 'utf-8')) as { pagecount?: number };
+	const pageCount = firstBody.pagecount;
+	if (typeof pageCount !== 'number') throw new Error('Could not determine page count from BD ORTHO index');
 
 	const progress = createProgress(pageCount, { labels: ['fetched', 'cached'], logInterval: 10 });
 	progress.tick(firstWasCached ? 'cached' : 'fetched');
 
 	const items: { path: string; url: string }[] = [];
 	for (let i = 2; i <= pageCount; i++) {
-		items.push({ path: join(cacheDir, `page_${i}.xml`), url: `${FEED_BASE}?page=${i}` });
+		items.push({ path: join(cacheDir, `page_${i}.json`), url: `${FEED_BASE}?page=${i}` });
 	}
 
-	await fetchWithInterval(items, ({ url, path }) => downloadFile(url, path), {
+	await fetchWithInterval(items, ({ url, path }) => downloadFile(url, path, { headers: JSON_HEADERS }), {
 		intervalMs: REQUEST_INTERVAL_MS,
 		retry: { maxAttempts: 3 },
 		shouldFetch: ({ path }) => !existsSync(path),
@@ -135,12 +148,12 @@ export async function fetchIndexPages(cacheDir: string): Promise<string[]> {
 
 /**
  * Removes this item's transient scratch files from `tempDir`: the detail-feed
- * XML and every `.7z` / `.7z.NNN` archive part (including any curl `.tmp`
+ * JSON and every `.7z` / `.7z.NNN` archive part (including any curl `.tmp`
  * partial). Matching is scoped by `item.title` so concurrent items don't
  * clobber each other. Safe to call whether or not the files actually exist.
  */
 function cleanItemArtifacts(tempDir: string, item: { id: string; title: string }): void {
-	safeRm(join(tempDir, `${item.id}_detail.xml`));
+	safeRm(join(tempDir, `${item.id}_detail.json`));
 	let entries: string[];
 	try {
 		entries = readdirSync(tempDir);
@@ -177,15 +190,15 @@ export function defineFrSubRegion(opts: FrSubRegionOptions): RegionPipeline {
 		name: opts.name,
 		meta: buildMeta(),
 		init: async () => {
-			// Cache the ATOM feed once, under the global temp dir, so all fr/* sub-regions
+			// Cache the index feed once, under the global temp dir, so all fr/* sub-regions
 			// share the same 141 page downloads instead of re-fetching them per region.
 			const cacheDir = join(getConfig().dirTemp, 'fr', 'index');
-			console.log('  Fetching BD ORTHO ATOM feed...');
+			console.log('  Fetching BD ORTHO index...');
 			const pagePaths = await fetchIndexPages(cacheDir);
 
 			const allEntries: IndexEntry[] = [];
 			for (const p of pagePaths) {
-				allEntries.push(...parseIndexPage(await readFile(p, 'utf-8')));
+				allEntries.push(...parseIndexPage(JSON.parse(await readFile(p, 'utf-8'))));
 			}
 			const bestPerZone = pickBestPerZone(allEntries);
 
@@ -229,25 +242,28 @@ export function defineFrSubRegion(opts: FrSubRegionOptions): RegionPipeline {
 				return { extractDir };
 			}
 
-			const detailPath = join(tempDir, `${item.id}_detail.xml`);
+			const detailPath = join(tempDir, `${item.id}_detail.json`);
 			await sleep(REQUEST_INTERVAL_MS);
-			await withRetry(() => downloadFile(detailUrlWithLimit(item.detailUrl), detailPath), { maxAttempts: 3 });
-			let urls: string[];
+			await withRetry(() => downloadFile(detailUrlWithLimit(item.detailUrl), detailPath, { headers: JSON_HEADERS }), {
+				maxAttempts: 3,
+			});
+			let parts: BdorthoDetailPart[];
 			try {
-				urls = parseDetailFeed(await readFile(detailPath, 'utf-8'));
+				parts = parseDetailFeed(JSON.parse(await readFile(detailPath, 'utf-8')));
 			} finally {
 				rmSync(detailPath, { force: true });
 			}
-			if (urls.length === 0) throw new Error(`No .7z archive listed for ${item.id}`);
+			if (parts.length === 0) throw new Error(`No .7z archive listed for ${item.id}`);
 
 			const tmpExtractDir = `${extractDir}.tmp`;
 			safeRm(tmpExtractDir);
 
 			await downloadFiles(
-				urls.map((url) => ({ url, dest: join(tempDir, url.split('/').pop()!) })),
+				// `size` from the feed lets `downloadFiles({progress: 'size'})` skip its HEAD probes.
+				parts.map(({ url, length }) => ({ url, dest: join(tempDir, url.split('/').pop()!), size: length })),
 				{
 					progress: 'size',
-					title: `Downloading ${item.id} (${urls.length} part${urls.length === 1 ? '' : 's'})`,
+					title: `Downloading ${item.id} (${parts.length} part${parts.length === 1 ? '' : 's'})`,
 					// Géoplateforme rate-limits to ~1 req/s and serves 429s otherwise.
 					// Throttle proactively, and back off generously on 429/5xx.
 					intervalMs: REQUEST_INTERVAL_MS,
@@ -256,9 +272,9 @@ export function defineFrSubRegion(opts: FrSubRegionOptions): RegionPipeline {
 			);
 
 			// Pick the entry point: the single .7z or the .7z.001 part.
-			const mainName = urls
-				.find((u) => u.endsWith('.7z') || u.endsWith('.7z.001'))!
-				.split('/')
+			const mainName = parts
+				.find(({ url }) => url.endsWith('.7z') || url.endsWith('.7z.001'))!
+				.url.split('/')
 				.pop()!;
 			const mainPath = join(tempDir, mainName);
 

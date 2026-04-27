@@ -1,63 +1,78 @@
 import { describe, expect, test } from 'vitest';
-import { parseDetailFeed, parseIndexPage, pickBestPerZone, type IndexEntry } from './parsers.ts';
+import {
+	type BdorthoDetailFeed,
+	type BdorthoIndexPage,
+	parseDetailFeed,
+	parseIndexPage,
+	pickBestPerZone,
+	type IndexEntry,
+} from './parsers.ts';
 
-const INDEX_FIXTURE = `<?xml version='1.0' encoding='UTF-8' standalone='yes'?>
-<feed xmlns:georss="http://www.georss.org/georss" xmlns:gpf_dl="https://data.geopf.fr/annexes/ressources/xsd/gpf_dl.xsd" xmlns="http://www.w3.org/2005/Atom" xml:lang="en" gpf_dl:page="1" gpf_dl:pagesize="10" gpf_dl:pagecount="3" gpf_dl:totalentries="6">
-  <title>BD ORTHO®</title>
-  <entry>
-    <title>BDORTHO_1-0_IRC-0M15_JP2-E080_LAMB93_D075_2021-01-01</title>
-    <link href="https://data.geopf.fr/telechargement/resource/BDORTHO/BDORTHO_1-0_IRC-0M15_JP2-E080_LAMB93_D075_2021-01-01" rel="alternate" type="application/atom+xml"/>
-    <gpf_dl:zone term="D075" label="D075 Paris"/>
-    <gpf_dl:editionDate>2021-01-01</gpf_dl:editionDate>
-  </entry>
-  <entry>
-    <title>BDORTHO_1-0_RVB-0M20_JP2-E080_LAMB93_D075_2021-01-01</title>
-    <link href="https://data.geopf.fr/telechargement/resource/BDORTHO/BDORTHO_1-0_RVB-0M20_JP2-E080_LAMB93_D075_2021-01-01" rel="alternate" type="application/atom+xml"/>
-    <gpf_dl:zone term="D075" label="D075 Paris"/>
-    <gpf_dl:editionDate>2021-01-01</gpf_dl:editionDate>
-  </entry>
-  <entry>
-    <title>BDORTHO_2-0_RVB-0M20_JP2-E080_LAMB93_D075_2024-01-01</title>
-    <link href="https://data.geopf.fr/telechargement/resource/BDORTHO/BDORTHO_2-0_RVB-0M20_JP2-E080_LAMB93_D075_2024-01-01" rel="alternate" type="application/atom+xml"/>
-    <gpf_dl:zone term="D075" label="D075 Paris"/>
-    <gpf_dl:editionDate>2024-01-01</gpf_dl:editionDate>
-  </entry>
-  <entry>
-    <title>BDORTHO_2-0_GRAPHE-MOSAIQUAGE_LAMB93_D075_2024-01-01</title>
-    <link href="https://data.geopf.fr/telechargement/resource/BDORTHO/BDORTHO_2-0_GRAPHE-MOSAIQUAGE_LAMB93_D075_2024-01-01" rel="alternate" type="application/atom+xml"/>
-    <gpf_dl:zone term="D075" label="D075 Paris"/>
-    <gpf_dl:editionDate>2024-01-01</gpf_dl:editionDate>
-  </entry>
-  <entry>
-    <title>BDORTHO_1-0_RVB-0M20_JP2-E080_LAMB93_D02A_2021-01-01</title>
-    <link href="https://data.geopf.fr/telechargement/resource/BDORTHO/BDORTHO_1-0_RVB-0M20_JP2-E080_LAMB93_D02A_2021-01-01" rel="alternate" type="application/atom+xml"/>
-    <gpf_dl:zone term="D02A" label="D02A Corse-du-Sud"/>
-    <gpf_dl:editionDate>2021-01-01</gpf_dl:editionDate>
-  </entry>
-  <entry>
-    <title>BDORTHO_2-0_RVB-0M50_JP2-E080_UTM20W84GUAD_D971_2022-01-01</title>
-    <link href="https://data.geopf.fr/telechargement/resource/BDORTHO/BDORTHO_2-0_RVB-0M50_JP2-E080_UTM20W84GUAD_D971_2022-01-01" rel="alternate" type="application/atom+xml"/>
-    <gpf_dl:zone term="D971" label="D971 Guadeloupe"/>
-    <gpf_dl:editionDate>2022-01-01</gpf_dl:editionDate>
-  </entry>
-</feed>`;
+function indexEntry(title: string, zone: string, editionDate: string) {
+	return {
+		title,
+		editionDate,
+		zone: [{ term: zone }],
+		link: [
+			{
+				href: `https://data.geopf.fr/telechargement/resource/BDORTHO/${title}`,
+				rel: 'alternate',
+				type: 'application/atom+xml',
+			},
+		],
+	};
+}
 
-const DETAIL_FIXTURE = `<?xml version='1.0' encoding='UTF-8' standalone='yes'?>
-<feed xmlns:gpf_dl="https://data.geopf.fr/annexes/ressources/xsd/gpf_dl.xsd" xmlns="http://www.w3.org/2005/Atom">
-  <title>BDORTHO_2-0_RVB-0M20_JP2-E080_LAMB93_D075_2024-01-01</title>
-  <entry>
-    <link href="https://data.geopf.fr/telechargement/download/BDORTHO/x/x.md5" rel="alternate" type="text/plain"/>
-  </entry>
-  <entry>
-    <link href="https://data.geopf.fr/telechargement/download/BDORTHO/x/x.7z" rel="alternate" type="application/x-7z-compressed"/>
-  </entry>
-  <entry>
-    <link href="https://data.geopf.fr/telechargement/download/BDORTHO/x/x.7z.001" rel="alternate" type="application/octet-stream"/>
-  </entry>
-  <entry>
-    <link href="https://data.geopf.fr/telechargement/download/BDORTHO/x/readme.pdf" rel="alternate" type="application/pdf"/>
-  </entry>
-</feed>`;
+const INDEX_FIXTURE: BdorthoIndexPage = {
+	pagecount: 3,
+	totalentries: 6,
+	entry: [
+		indexEntry('BDORTHO_1-0_IRC-0M15_JP2-E080_LAMB93_D075_2021-01-01', 'D075', '2021-01-01'),
+		indexEntry('BDORTHO_1-0_RVB-0M20_JP2-E080_LAMB93_D075_2021-01-01', 'D075', '2021-01-01'),
+		indexEntry('BDORTHO_2-0_RVB-0M20_JP2-E080_LAMB93_D075_2024-01-01', 'D075', '2024-01-01'),
+		indexEntry('BDORTHO_2-0_GRAPHE-MOSAIQUAGE_LAMB93_D075_2024-01-01', 'D075', '2024-01-01'),
+		indexEntry('BDORTHO_1-0_RVB-0M20_JP2-E080_LAMB93_D02A_2021-01-01', 'D02A', '2021-01-01'),
+		indexEntry('BDORTHO_2-0_RVB-0M50_JP2-E080_UTM20W84GUAD_D971_2022-01-01', 'D971', '2022-01-01'),
+	],
+};
+
+const DETAIL_FIXTURE: BdorthoDetailFeed = {
+	totalentries: 4,
+	entry: [
+		{
+			link: [
+				{ href: 'https://data.geopf.fr/telechargement/download/BDORTHO/x/x.md5', type: 'text/plain', length: 157 },
+			],
+		},
+		{
+			link: [
+				{
+					href: 'https://data.geopf.fr/telechargement/download/BDORTHO/x/x.7z',
+					type: 'application/x-7z-compressed',
+					length: 1000,
+				},
+			],
+		},
+		{
+			link: [
+				{
+					href: 'https://data.geopf.fr/telechargement/download/BDORTHO/x/x.7z.001',
+					type: 'application/octet-stream',
+					length: 2000,
+				},
+			],
+		},
+		{
+			link: [
+				{
+					href: 'https://data.geopf.fr/telechargement/download/BDORTHO/x/readme.pdf',
+					type: 'application/pdf',
+					length: 50,
+				},
+			],
+		},
+	],
+};
 
 describe('parseIndexPage', () => {
 	test('keeps only RVB entries and ignores IRC / GRAPHE-MOSAIQUAGE', () => {
@@ -77,18 +92,18 @@ describe('parseIndexPage', () => {
 		expect(d075v2?.detailUrl).toContain('/BDORTHO/BDORTHO_2-0_RVB-0M20_JP2-E080_LAMB93_D075_2024-01-01');
 	});
 
-	test('handles single entry (fast-xml-parser collapses to object)', () => {
-		const xml = `<feed xmlns:gpf_dl="x">
-			<entry>
-				<title>BDORTHO_2-0_RVB-0M20_JP2-E080_LAMB93_D075_2024-01-01</title>
-				<link href="https://example/detail" rel="alternate" type="application/atom+xml"/>
-				<gpf_dl:zone term="D075"/>
-				<gpf_dl:editionDate>2024-01-01</gpf_dl:editionDate>
-			</entry>
-		</feed>`;
-		const entries = parseIndexPage(xml);
+	test('handles a single-entry page', () => {
+		const page: BdorthoIndexPage = {
+			entry: [indexEntry('BDORTHO_2-0_RVB-0M20_JP2-E080_LAMB93_D075_2024-01-01', 'D075', '2024-01-01')],
+		};
+		const entries = parseIndexPage(page);
 		expect(entries).toHaveLength(1);
 		expect(entries[0].zone).toBe('D075');
+	});
+
+	test('returns [] when entry is missing or empty', () => {
+		expect(parseIndexPage({})).toEqual([]);
+		expect(parseIndexPage({ entry: [] })).toEqual([]);
 	});
 });
 
@@ -138,19 +153,26 @@ describe('pickBestPerZone', () => {
 });
 
 describe('parseDetailFeed', () => {
-	test('extracts .7z and .7z.NNN URLs, skipping md5/pdf', () => {
-		const urls = parseDetailFeed(DETAIL_FIXTURE);
-		expect(urls).toEqual([
-			'https://data.geopf.fr/telechargement/download/BDORTHO/x/x.7z',
-			'https://data.geopf.fr/telechargement/download/BDORTHO/x/x.7z.001',
+	test('extracts .7z and .7z.NNN parts (with byte lengths), skipping md5/pdf', () => {
+		const parts = parseDetailFeed(DETAIL_FIXTURE);
+		expect(parts).toEqual([
+			{ url: 'https://data.geopf.fr/telechargement/download/BDORTHO/x/x.7z', length: 1000 },
+			{ url: 'https://data.geopf.fr/telechargement/download/BDORTHO/x/x.7z.001', length: 2000 },
 		]);
 	});
 
 	test('throws when the response is paginated (totalentries > entries)', () => {
-		const truncated = `<?xml version='1.0' encoding='UTF-8' standalone='yes'?>
-<feed xmlns:gpf_dl="https://data.geopf.fr/annexes/ressources/xsd/gpf_dl.xsd" xmlns="http://www.w3.org/2005/Atom" gpf_dl:page="1" gpf_dl:pagesize="10" gpf_dl:pagecount="3" gpf_dl:totalentries="23">
-  <entry><link href="https://x/x.7z.001" rel="alternate" type="application/x-7z-compressed"/></entry>
-</feed>`;
+		const truncated: BdorthoDetailFeed = {
+			totalentries: 23,
+			entry: [{ link: [{ href: 'https://x/x.7z.001', type: 'application/x-7z-compressed', length: 100 }] }],
+		};
 		expect(() => parseDetailFeed(truncated)).toThrow(/paginated response — got 1 of 23/);
+	});
+
+	test('defaults length to 0 when missing from the feed', () => {
+		const noLength: BdorthoDetailFeed = {
+			entry: [{ link: [{ href: 'https://x/x.7z', type: 'application/x-7z-compressed' }] }],
+		};
+		expect(parseDetailFeed(noLength)).toEqual([{ url: 'https://x/x.7z', length: 0 }]);
 	});
 });

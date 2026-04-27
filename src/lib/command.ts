@@ -125,6 +125,8 @@ export interface DownloadOptions {
 	minSize?: number;
 	/** Resume a partially downloaded file instead of starting over. Default: false */
 	continue?: boolean;
+	/** Extra HTTP request headers (e.g. `{ Accept: 'application/json' }`). */
+	headers?: Record<string, string>;
 }
 
 /**
@@ -135,6 +137,9 @@ export async function downloadFile(url: string, dest: string, options?: Download
 	const tmp = `${dest}.tmp`;
 	const args = ['-sLo', tmp, '--fail'];
 	if (options?.continue) args.push('-C', '-');
+	if (options?.headers) {
+		for (const [k, v] of Object.entries(options.headers)) args.push('-H', `${k}: ${v}`);
+	}
 	args.push(url);
 	await runCommand('curl', args);
 	if (options?.minSize) {

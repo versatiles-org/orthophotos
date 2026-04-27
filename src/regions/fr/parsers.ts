@@ -1,15 +1,12 @@
 /**
- * Pure XML helpers for the IGN BD ORTHO® ATOM feed.
+ * Pure helpers for the IGN BD ORTHO® feed.
  *
- * No I/O, no globals — these functions take XML strings and return structured
- * data, so they're easy to unit-test (see `parsers.test.ts`).
+ * Both endpoints (index + per-resource detail) are consumed as JSON via
+ * `Accept: application/json`. Functions here take already-parsed objects and
+ * return structured data — no I/O, easy to unit-test.
  */
 
-import { createXmlParser } from '../lib.ts';
-
-const xmlParser = createXmlParser();
-
-/** An entry parsed from the main BD ORTHO ATOM feed. */
+/** Normalised entry derived from the BD ORTHO index page. */
 export interface IndexEntry {
 	title: string;
 	zone: string; // e.g. 'D075', 'D02A', 'D971'
@@ -20,20 +17,29 @@ export interface IndexEntry {
 	detailUrl: string; // ATOM feed URL for the per-resource detail
 }
 
+/** Shape of one page of the BD ORTHO index, as returned with `Accept: application/json`. */
+export interface BdorthoIndexPage {
+	pagecount?: number;
+	totalentries?: number;
+	entry?: BdorthoIndexEntryRaw[];
+}
+
+interface BdorthoIndexEntryRaw {
+	title?: string;
+	editionDate?: string;
+	zone?: { term?: string }[];
+	link?: { href?: string; type?: string; rel?: string }[];
+}
+
 /**
- * Parses one ATOM feed page into structured index entries.
+ * Parses one JSON index page into structured entries.
  * Returns only RVB (visible-light) entries; IRC/GRAPHE-MOSAIQUAGE are filtered out.
  */
-export function parseIndexPage(xml: string): IndexEntry[] {
-	const parsed = xmlParser.parse(xml) as Record<string, unknown>;
-	const feed = parsed.feed as Record<string, unknown> | undefined;
-	const rawEntries: unknown[] = [feed?.entry ?? []].flat();
-
+export function parseIndexPage(body: BdorthoIndexPage): IndexEntry[] {
 	const out: IndexEntry[] = [];
-	for (const raw of rawEntries) {
-		const entry = raw as Record<string, unknown>;
-		const title = typeof entry.title === 'string' ? entry.title : undefined;
-		if (!title) continue;
+	for (const entry of body.entry ?? []) {
+		const { title, editionDate } = entry;
+		if (!title || !editionDate) continue;
 
 		const parts = title.split('_');
 		// Expected: BDORTHO_<version>_<bands>_<format>_<projection>_<zone>_<date>
@@ -43,23 +49,10 @@ export function parseIndexPage(xml: string): IndexEntry[] {
 		if (bandParts[0] !== 'RVB') continue; // skip IRC, GRAPHE-MOSAIQUAGE, etc.
 		const resolution = bandParts[1];
 
-		const zoneElt = entry['gpf_dl:zone'] as { '@_term'?: string } | undefined;
-		const zone = zoneElt?.['@_term'];
+		const zone = entry.zone?.[0]?.term;
 		if (!zone) continue;
 
-		const editionDate = entry['gpf_dl:editionDate'];
-		if (typeof editionDate !== 'string') continue;
-
-		// <link rel="alternate" type="application/atom+xml" href="…"/> is the detail feed URL.
-		const links: unknown[] = [entry.link ?? []].flat();
-		let detailUrl: string | undefined;
-		for (const l of links) {
-			const link = l as { '@_href'?: string; '@_type'?: string; '@_rel'?: string };
-			if (link['@_type'] === 'application/atom+xml' && link['@_rel'] === 'alternate') {
-				detailUrl = link['@_href'];
-				break;
-			}
-		}
+		const detailUrl = entry.link?.find((l) => l.type === 'application/atom+xml' && l.rel === 'alternate')?.href;
 		if (!detailUrl) continue;
 
 		out.push({ title, zone, version, bands, resolution, editionDate, detailUrl });
@@ -108,39 +101,50 @@ export function computeDateRange(editionDates: string[]): string {
 	return min === max ? min : `${min}-${max}`;
 }
 
+/** A 7z archive part to download, with its byte length from the JSON feed. */
+export interface BdorthoDetailPart {
+	url: string;
+	/** Bytes; 0 if the feed didn't report it. Pipe through `downloadFiles({size})` to skip HEAD probes. */
+	length: number;
+}
+
+/** Shape of a per-resource detail feed, as returned with `Accept: application/json`. */
+export interface BdorthoDetailFeed {
+	totalentries?: number;
+	entry?: BdorthoDetailEntryRaw[];
+}
+
+interface BdorthoDetailEntryRaw {
+	link?: { href?: string; type?: string; length?: number }[];
+}
+
 /**
- * Extracts 7z download URLs from a per-resource detail ATOM feed.
+ * Extracts 7z download URLs (with byte lengths) from a per-resource JSON detail feed.
  *
  * The detail endpoint paginates with a default page size of 10, so a region
  * with many `.7z.NNN` parts (e.g. fr/guyane: 22 parts) will silently return a
  * truncated list unless the caller fetches it with `?limit=N` set high enough.
- * As a safety net, when the response advertises `gpf_dl:totalentries`, we
- * compare against the parsed entry count and throw if anything is missing.
+ * As a safety net, when the response advertises `totalentries`, we compare
+ * against the parsed entry count and throw if anything is missing.
  */
-export function parseDetailFeed(xml: string): string[] {
-	const parsed = xmlParser.parse(xml) as Record<string, unknown>;
-	const feed = parsed.feed as Record<string, unknown> | undefined;
-	const rawEntries: unknown[] = [feed?.entry ?? []].flat();
-
-	const totalRaw = feed?.['@_gpf_dl:totalentries'];
-	const total = typeof totalRaw === 'string' || typeof totalRaw === 'number' ? Number(totalRaw) : NaN;
-	if (Number.isFinite(total) && rawEntries.length < total) {
+export function parseDetailFeed(body: BdorthoDetailFeed): BdorthoDetailPart[] {
+	const entries = body.entry ?? [];
+	if (typeof body.totalentries === 'number' && entries.length < body.totalentries) {
 		throw new Error(
-			`parseDetailFeed: paginated response — got ${rawEntries.length} of ${total} entries. ` +
+			`parseDetailFeed: paginated response — got ${entries.length} of ${body.totalentries} entries. ` +
 				`Refetch the detail URL with a higher ?limit=.`,
 		);
 	}
 
-	const urls: string[] = [];
-	for (const raw of rawEntries) {
-		const entry = raw as Record<string, unknown>;
-		const links: unknown[] = [entry.link ?? []].flat();
-		for (const l of links) {
-			const link = l as { '@_href'?: string };
-			const href = link['@_href'];
+	const out: BdorthoDetailPart[] = [];
+	for (const entry of entries) {
+		for (const link of entry.link ?? []) {
+			const href = link.href;
 			if (!href) continue;
-			if (href.endsWith('.7z') || /\.7z\.\d+$/.test(href)) urls.push(href);
+			if (href.endsWith('.7z') || /\.7z\.\d+$/.test(href)) {
+				out.push({ url: href, length: link.length ?? 0 });
+			}
 		}
 	}
-	return urls.sort();
+	return out.sort((a, b) => a.url.localeCompare(b.url));
 }

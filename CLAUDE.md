@@ -85,9 +85,11 @@ All regions use `defineTileRegion()` from `src/lib/process_tiles.ts`. The pipeli
 
 - **`init`** must only return a list of items — it should NOT download or extract data. Fetching a small index/feed/API response and caching it in `tempDir` is fine, but heavy I/O belongs in `download`/`convert`.
 - **`download`** fetches data for a single item (e.g., downloads a ZIP or TIF). Returns data for `convert`, `'empty'`/`'invalid'` to skip, or `void`.
-- **`convert`** performs expensive processing (extraction, VRT building, versatiles conversion). Cleans up temp files in `finally` blocks.
+- **`convert`** performs expensive processing (extraction, VRT building, versatiles conversion). Register temp files via `tileCtx.tempFile(path)` and the framework will clean them up automatically — no manual `try/finally + safeRm` needed.
 
-**For regions with few large ZIP files** (e.g., `de/hamburg`, `de/bremen`): `init` returns one item per ZIP, `download` fetches the ZIP, `convert` extracts → builds VRT → converts to `.versatiles`.
+**For regions with few large ZIP files** (e.g., `de/hamburg`, `de/bremen`): `init` returns one item per ZIP, `download` fetches the ZIP, `convert` extracts → builds VRT → converts to `.versatiles`. Use `extractZipAndBuildVrt()` for the extract+VRT step.
+
+**Accepted exception — multi-file assembly inside `convert`:** Some source archives bundle a whole region's worth of imagery (e.g. `de/bremen`, `fr` BDORTHO). Splitting one item into many would force gigabytes of network re-fetches per output tile, so these regions do `extractZip → mosaicTile per inner image → mosaicAssemble` inside a single `convert`. New regions should not adopt this pattern unless the same "one giant archive per region" constraint applies.
 
 ```typescript
 export default defineTileRegion({
@@ -99,26 +101,14 @@ export default defineTileRegion({
         if (!existsSync(feedPath)) await downloadFile(FEED_URL, feedPath);
         return parseFeed(await readFile(feedPath, 'utf-8'));
     },
-    download: async (item, { tempDir, errors }) => {
-        const tifPath = join(tempDir, `${item.id}.tif`);
-        try {
-            await withRetry(() => downloadFile(item.url, tifPath), { maxAttempts: 3 });
-            if (!(await isValidRaster(tifPath))) {
-                errors.add(`${item.id}.tif (${item.url})`);
-                return 'invalid';
-            }
-            return { tifPath };
-        } catch (err) {
-            try { rmSync(tifPath, { force: true }); } catch {}
-            throw err;
-        }
+    download: async ({ url, id }, ctx) => {
+        const tifPath = ctx.tempFile(join(ctx.tempDir, `${id}.tif`));
+        const result = await downloadRaster(url, tifPath, ctx.errors, `${id}.tif`);
+        if (result === 'invalid') return 'invalid';
+        return { tifPath };
     },
     convert: async ({ tifPath }, { dest }) => {
-        try {
-            await runMosaicTile(tifPath, dest);
-        } finally {
-            try { rmSync(tifPath, { force: true }); } catch {}
-        }
+        await runMosaicTile(tifPath, dest);
     },
     minFiles: 50,
 });
@@ -128,18 +118,19 @@ export default defineTileRegion({
 - `name` — region ID (e.g. `'de/thueringen'`)
 - `meta` — region metadata (status, notes, license, creator, date)
 - `init(ctx)` — returns `T[]` of items to process. Each item must have an `id: string`. Receives `StepContext` for access to `tempDir`/`dataDir`. Handle all index fetching and caching here.
-- `downloadConcurrency?` — default: 4
+- `downloadLimit?` — concurrency for `download`. Number, or `{ concurrency, memoryGB }`. Default: 4.
 - `download(item, tileCtx)` — per-item download. Return data for `convert`, `'empty'` for missing tiles, `'invalid'` for bad downloads, or `void` for single-stage.
-- `convertCores?` — CPU cores per convert instance (default: 4). Concurrency is derived as `availableParallelism() / convertCores`.
+- `convertLimit?` — concurrency for `convert`. Same shape as `downloadLimit`. Use `{ memoryGB: N }` when each convert spawns parallel GDAL readers and you want to cap by host RAM.
 - `convert(data, tileCtx)` — receives non-empty download result. Produce the final `.versatiles` file at `tileCtx.dest`.
 - `minFiles` — minimum expected `*.versatiles` output files
 
 **`TileContext`** passed to download/convert callbacks:
 - `dest` — output path (`tiles/${id}.versatiles`)
-- `skipDest` — skip marker path (`tiles/${id}.skip`)
+- `skipDest` — skip marker path (`tiles/${id}.skip`) — write a marker here only for *probing* regions where a tile permanently doesn't exist
 - `tempDir` — temporary directory
 - `tilesDir` — output tiles directory
 - `errors` — `ErrorBucket` for collecting invalid download errors
+- `tempFile(path)` — register a path for automatic cleanup after this item finishes (success, error, or `'empty'`/`'invalid'`). Returns the path unchanged so it can be used inline.
 
 **Built-in behavior:** shuffles items, skips existing `.versatiles`/`.skip` files, shows progress bar, runs `expectMinFiles` after completion.
 
@@ -153,17 +144,18 @@ Region fetch implementations should follow these patterns consistently:
 
 **Network retries — required for every remote call:** National agency feeds and download endpoints regularly return 429s, 5xx, or close connections mid-stream. Every network operation in a region must be retried, or the pipeline will fail intermittently for reasons unrelated to the data.
 
-- Wrap single calls in `withRetry(() => downloadFile(url, dest), { maxAttempts: 3 })`. Built-in exponential backoff (1s → 2s → 4s, capped at 30s) is sufficient — don't tune unless you have a reason.
+- For raster downloads, prefer `downloadRaster(url, dest, errors, id)` — it composes `withRetry + downloadFile + isValidRaster` and returns `'invalid'` (with `errors.add`) if the file isn't a GDAL-readable raster. Pass a custom `{ retry: { ... } }` only if the default `maxAttempts: 3` doesn't fit.
+- For non-raster fetches (index files, feeds, sidecars): wrap in `withRetry(() => downloadFile(url, dest), { maxAttempts: 3 })`. Built-in exponential backoff (1s → 2s → 4s, capped at 30s) is sufficient — don't tune unless you have a reason.
 - For lists of downloads, pass `retry: { maxAttempts: 3 }` to `downloadFiles({ ... })` rather than wrapping each call.
 - For paginated/rate-limited feeds, use `fetchWithInterval(items, fn, { intervalMs, retry: { maxAttempts: 3 } })` from `src/lib/rate-limit.ts`.
 - Same rule for ad-hoc `fetch()` calls (e.g. HEAD requests for sizing). Wrap them.
 - Exception: `gdal_translate` / `versatiles` invocations are local CPU work — do not retry (a failure is a real error, not transient).
 
-**Download validation:** After downloading a raster file (TIF/JP2), validate it with `isValidRaster()` from `src/lib/validators.ts` before converting. This uses `gdalinfo` to verify the file is GDAL-readable. Invalid files must be reported, not silently skipped.
+**Download validation:** Every downloaded raster (TIF/JP2/etc.) must be validated. The simplest path is `downloadRaster()`, which validates internally. If you need a custom downloader (e.g. FTPS, insecure curl), call `isValidRaster()` from `src/lib/validators.ts` after the download and return `'invalid'` on failure.
 
-**Error collection:** When a downloaded image fails validation, use `ErrorBucket` from `src/lib/validators.ts`. Call `errors.add(msg)` with a single descriptive string (e.g., `errors.add(\`\${id}.tif (\${url})\`)`), return `'invalid'`. The pipeline calls `errors.throwIfAny()` after completion.
+**Error collection:** When a downloaded image fails validation, use `ErrorBucket` from `src/lib/validators.ts`. Call `errors.add(msg)` with a single descriptive string (e.g., `errors.add(\`\${id}.tif (\${url})\`)`), return `'invalid'`. The pipeline calls `errors.throwIfAny()` after completion. (`downloadRaster` does this for you.)
 
-**Skip files (.skip) — only for coordinate probing:** Some regions (e.g. `de/baden_wuerttemberg`, `de/thueringen`) probe a grid of coordinates where many tiles don't exist. Use `.skip` files only for these "tile doesn't exist" cases. Never use `.skip` for actual download failures.
+**Skip files (.skip) — only for coordinate probing:** Some regions (e.g. `de/baden_wuerttemberg`, `de/thueringen`, `pt`) probe a grid of coordinates or filenames where many tiles legitimately don't exist; the WMS-coverage regions `al`/`be` do the same when a block falls outside the served area. In those cases, write the marker via `writeFileSync(ctx.skipDest, '')` and return `'empty'` so re-runs skip the lookup. Never use `.skip` for transient download or validation failures — let those propagate via `withRetry` / `errors.add`.
 
 **Resumability:** The pipeline automatically skips items with existing `.versatiles` or `.skip` files. Use `shuffle()` to distribute load across servers.
 
@@ -173,16 +165,21 @@ Region fetch implementations should follow these patterns consistently:
 - **GeoJSON masks:** Set `mask: true` (NUTS border) or `mask: 'file.geojson.gz'` in region metadata to apply `raster_mask` clipping at serving time. This is a final safety net but doesn't fix the source tiles.
 - Always inspect the edges of a sample tile with `gdalinfo` + pixel value checks before assuming the border color.
 
-**Temp file cleanup:** Always clean up temp files in a `finally` block:
+**Temp file cleanup:** Register every per-item temp path with `tileCtx.tempFile(...)`. The framework deletes them after the item finishes, regardless of outcome (success, error, or `'empty'`/`'invalid'`):
+
 ```typescript
-try {
-    // download + convert
-} finally {
-    for (const p of [tifPath, jp2Path]) {
-        try { rmSync(p, { force: true }); } catch {}
-    }
-}
+download: async ({ url, id }, ctx) => {
+    const tifPath = ctx.tempFile(join(ctx.tempDir, `${id}.tif`));
+    const result = await downloadRaster(url, tifPath, ctx.errors, `${id}.tif`);
+    if (result === 'invalid') return 'invalid';
+    return { tifPath };
+},
+convert: async ({ tifPath }, { dest }) => {
+    await runMosaicTile(tifPath, dest);  // no try/finally needed
+},
 ```
+
+`tempFile()` returns the path unchanged so it can be used inline. Index files cached in `init` (e.g. `feed.xml`, `index.html`) are *not* item-scoped and should be cleaned up via `safeRm` if needed, or left for `task 3 (delete)` to remove.
 
 ### Versatiles CLI
 

@@ -1,7 +1,15 @@
 import { statSync, writeFileSync } from 'node:fs';
 import { readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { defineTileRegion, downloadFile, extractZipFile, runCommand, runMosaicTile, safeRm, withRetry } from './lib.ts';
+import {
+	defineTileRegion,
+	downloadFile,
+	extractZipFile,
+	runCommand,
+	runMosaicTile,
+	safeRm,
+	withRetry,
+} from '../lib.ts';
 
 const BASE_URL = 'https://opengeodata.lgl-bw.de/data/dop20/';
 

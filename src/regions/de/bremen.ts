@@ -9,7 +9,7 @@ import {
 	runMosaicAssemble,
 	runMosaicTile,
 	safeRm,
-} from './lib.ts';
+} from '../lib.ts';
 
 const BASE_URL = 'https://gdi2.geo.bremen.de/inspire/download/DOP/data/';
 const IMAGE_EXTS = ['.jpg', '.tif', '.jp2'];

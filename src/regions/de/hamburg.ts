@@ -1,7 +1,15 @@
 import { existsSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
-import { defineTileRegion, downloadFile, extractZipFile, runCommand, runMosaicTile, safeRm, withRetry } from './lib.ts';
+import {
+	defineTileRegion,
+	downloadFile,
+	extractZipFile,
+	runCommand,
+	runMosaicTile,
+	safeRm,
+	withRetry,
+} from '../lib.ts';
 
 const CKAN_API_URL =
 	'https://suche.transparenz.hamburg.de/api/3/action/package_show?id=luftbilder-hamburg-dop-zeitreihe-belaubt2';

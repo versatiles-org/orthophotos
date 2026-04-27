@@ -9,39 +9,39 @@ import {
 	runMosaicTile,
 	safeRm,
 	withRetry,
-} from './lib.ts';
+} from '../lib.ts';
 
 const ATOM_URL =
-	'https://geodatenportal.sachsen-anhalt.de/arcgisinspire/rest/directories/web/INSPIRE_ALKIS/ALKIS_OI_DOP20_MapServer/datasetoi.xml';
-const DOWNLOAD_BASE = 'https://www.geodatenportal.sachsen-anhalt.de/gfds_webshare/sec-download/LVermGeo/DOP20/';
+	'https://geoportal.saarland.de/mapbender/php/mod_inspireDownloadFeed.php?id=e7995adf-2aeb-4fa4-a536-041e3cc8b24a&type=DATASET&generateFrom=wmslayer&layerid=46747';
 
 const xmlParser = createXmlParser();
 
-export function parseTileIds(xml: string): string[] {
+export function parseAtomEntries(xml: string): { url: string; id: string }[] {
 	const parsed = xmlParser.parse(xml);
 	const entries: unknown[] = [parsed.feed?.entry ?? []].flat();
-	const ids = new Set<string>();
+	const tiles: { url: string; id: string }[] = [];
 	for (const entry of entries) {
 		const links: unknown[] = [(entry as Record<string, unknown>).link ?? []].flat();
 		for (const link of links) {
 			const attrs = link as Record<string, string>;
 			const href = (attrs['@_href'] ?? '').replace(/amp;/g, '');
-			const matches = href.match(/\d+/g);
-			if (matches) {
-				for (const m of matches) {
-					if (m.length >= 4) ids.add(m);
-				}
+			const title = attrs['@_title'] ?? '';
+			if (href.includes('mapbender')) continue;
+			const match = title.match(/Teil (\S+)/);
+			if (match && href) {
+				tiles.push({ url: href, id: match[1] });
 			}
 		}
 	}
-	return [...ids];
+	return tiles;
 }
 
 export default defineTileRegion({
-	name: 'de/sachsen_anhalt',
+	name: 'de/saarland',
 	meta: {
 		status: 'released',
 		notes: [
+			'Server is slow.',
 			'License requires attribution.',
 			'National license instead of an international standard.',
 			'Rather than a national mosaic, inconsistent regional mosaics with different access and formats are available instead.',
@@ -53,11 +53,11 @@ export default defineTileRegion({
 			requiresAttribution: true,
 		},
 		creator: {
-			name: 'GeoBasis-DE / LVermGeo ST',
-			url: 'https://www.lvermgeo.sachsen-anhalt.de/de/gdp-open-data.html',
+			name: 'GeoBasis DE/LVGL-SL (2025)',
+			url: 'https://geoportal.saarland.de/app-article/geobasisdatenuebersicht/',
 		},
-		date: '2020',
-		releaseDate: '2026-03-23',
+		date: '2023',
+		releaseDate: '2026-03-22',
 	},
 	init: async (ctx) => {
 		const atomPath = join(ctx.tempDir, 'atom.xml');
@@ -66,8 +66,7 @@ export default defineTileRegion({
 			await withRetry(() => downloadFile(ATOM_URL, atomPath), { maxAttempts: 3 });
 		}
 		const xml = await readFile(atomPath, 'utf-8');
-		const ids = parseTileIds(xml);
-		return ids.map((id) => ({ id, url: `${DOWNLOAD_BASE}${id}.tif` }));
+		return parseAtomEntries(xml);
 	},
 	download: async ({ url, id }, { tempDir, errors }) => {
 		const tifPath = join(tempDir, `${id}.tif`);
@@ -83,5 +82,5 @@ export default defineTileRegion({
 		await runMosaicTile(tifPath, dest);
 		safeRm(tifPath);
 	},
-	minFiles: 5400,
+	minFiles: 19000,
 });

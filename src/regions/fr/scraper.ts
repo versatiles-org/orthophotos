@@ -1,10 +1,10 @@
 /**
- * French orthophoto sub-régions (NUTS-1).
+ * Side-effecting French BD ORTHO® scraper: fetches the ATOM feed, picks the
+ * best resource per département, downloads + extracts the 7z archives, and
+ * tiles the JP2 images into a `.versatiles` container per sub-région.
  *
- * All 18 régions pull from the same IGN Géoplateforme BD ORTHO® ATOM feed
- * (https://data.geopf.fr/telechargement/resource/BDORTHO) and differ only in
- * which départements they cover — so the data table (`FR_REGIONS`) and the
- * shared pipeline logic (`defineFrSubRegion` and its helpers) both live here.
+ * Pure parsers live in `parsers.ts`. The data table lives in `regions.ts`.
+ * The assembly point that wires both together is `index.ts`.
  */
 
 import { existsSync, mkdirSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
@@ -13,7 +13,6 @@ import { basename, join } from 'node:path';
 import {
 	convertToTiledTiff,
 	createProgress,
-	createXmlParser,
 	defineTileRegion,
 	downloadFile,
 	downloadFiles,
@@ -28,10 +27,11 @@ import {
 	safeRm,
 	sleep,
 	withRetry,
-} from './lib.ts';
+} from '../lib.ts';
+import { computeDateRange, type IndexEntry, parseDetailFeed, parseIndexPage, pickBestPerZone } from './parsers.ts';
 
 // ---------------------------------------------------------------------------
-// Shared pipeline helpers
+// Constants + types
 // ---------------------------------------------------------------------------
 
 const FEED_BASE = 'https://data.geopf.fr/telechargement/resource/BDORTHO';
@@ -44,19 +44,6 @@ const REQUEST_INTERVAL_MS = 1200;
 // the check fails with a new range, update this constant.
 const FR_DATE_RANGE = '2004-2025';
 
-const xmlParser = createXmlParser();
-
-/** An entry parsed from the main BD ORTHO ATOM feed. */
-export interface IndexEntry {
-	title: string;
-	zone: string; // e.g. 'D075', 'D02A', 'D971'
-	version: string; // '1-0' or '2-0'
-	bands: string; // e.g. 'RVB-0M20', 'IRC-0M15'
-	resolution: string; // '0M15' | '0M20' | '0M50'
-	editionDate: string; // 'YYYY-MM-DD'
-	detailUrl: string; // ATOM feed URL for the per-resource detail
-}
-
 /** An item produced by init — one per selected département. */
 interface BdorthoItem {
 	id: string; // e.g. 'D075_2024-01-01'
@@ -67,7 +54,7 @@ interface BdorthoItem {
 	[key: string]: unknown;
 }
 
-interface FrSubRegionOptions {
+export interface FrSubRegionOptions {
 	name: string;
 	/** Exact IGN zone codes (e.g. ['D022', 'D029', 'D035', 'D056']). */
 	departmentCodes: string[];
@@ -99,6 +86,10 @@ function buildMeta(): RegionMetadata {
 		aggregateUnder: 'fr',
 	};
 }
+
+// ---------------------------------------------------------------------------
+// Index-feed phase (used by `init`)
+// ---------------------------------------------------------------------------
 
 /**
  * Fetches every page of the BD ORTHO ATOM feed, caching each page in `cacheDir`.
@@ -138,93 +129,9 @@ export async function fetchIndexPages(cacheDir: string): Promise<string[]> {
 	return [firstPath, ...items.map((it) => it.path)];
 }
 
-/**
- * Parses one ATOM feed page into structured index entries.
- * Returns only RVB (visible-light) entries; IRC/GRAPHE-MOSAIQUAGE are filtered out.
- */
-export function parseIndexPage(xml: string): IndexEntry[] {
-	const parsed = xmlParser.parse(xml) as Record<string, unknown>;
-	const feed = parsed.feed as Record<string, unknown> | undefined;
-	const rawEntries: unknown[] = [feed?.entry ?? []].flat();
-
-	const out: IndexEntry[] = [];
-	for (const raw of rawEntries) {
-		const entry = raw as Record<string, unknown>;
-		const title = typeof entry.title === 'string' ? entry.title : undefined;
-		if (!title) continue;
-
-		const parts = title.split('_');
-		// Expected: BDORTHO_<version>_<bands>_<format>_<projection>_<zone>_<date>
-		if (parts.length !== 7 || parts[0] !== 'BDORTHO') continue;
-		const [, version, bands] = parts;
-		const bandParts = bands.split('-');
-		if (bandParts[0] !== 'RVB') continue; // skip IRC, GRAPHE-MOSAIQUAGE, etc.
-		const resolution = bandParts[1];
-
-		const zoneElt = entry['gpf_dl:zone'] as { '@_term'?: string } | undefined;
-		const zone = zoneElt?.['@_term'];
-		if (!zone) continue;
-
-		const editionDate = entry['gpf_dl:editionDate'];
-		if (typeof editionDate !== 'string') continue;
-
-		// <link rel="alternate" type="application/atom+xml" href="…"/> is the detail feed URL.
-		const links: unknown[] = [entry.link ?? []].flat();
-		let detailUrl: string | undefined;
-		for (const l of links) {
-			const link = l as { '@_href'?: string; '@_type'?: string; '@_rel'?: string };
-			if (link['@_type'] === 'application/atom+xml' && link['@_rel'] === 'alternate') {
-				detailUrl = link['@_href'];
-				break;
-			}
-		}
-		if (!detailUrl) continue;
-
-		out.push({ title, zone, version, bands, resolution, editionDate, detailUrl });
-	}
-	return out;
-}
-
-/**
- * Picks the best available entry per zone.
- * Order: newer version (2-0 > 1-0), then highest resolution (0M15 > 0M20 > 0M50), then latest editionDate.
- */
-export function pickBestPerZone(entries: IndexEntry[]): Map<string, IndexEntry> {
-	const best = new Map<string, IndexEntry>();
-	const versionRank = (v: string): number => (v === '2-0' ? 2 : 1);
-	const resolutionRank = (r: string): number => (r === '0M15' ? 3 : r === '0M20' ? 2 : 1);
-
-	const score = (e: IndexEntry): [number, number, string] => [
-		versionRank(e.version),
-		resolutionRank(e.resolution),
-		e.editionDate,
-	];
-	const better = (a: IndexEntry, b: IndexEntry): boolean => {
-		const [av, ar, ad] = score(a);
-		const [bv, br, bd] = score(b);
-		if (av !== bv) return av > bv;
-		if (ar !== br) return ar > br;
-		return ad > bd;
-	};
-
-	for (const e of entries) {
-		const current = best.get(e.zone);
-		if (!current || better(e, current)) best.set(e.zone, e);
-	}
-	return best;
-}
-
-/**
- * Returns the year range spanned by a list of YYYY-MM-DD edition dates,
- * formatted as `'YYYY'` (single year) or `'YYYY-YYYY'` (min-max).
- */
-export function computeDateRange(editionDates: string[]): string {
-	if (editionDates.length === 0) throw new Error('computeDateRange: no edition dates');
-	const years = editionDates.map((d) => d.slice(0, 4));
-	const min = years.reduce((a, b) => (a < b ? a : b));
-	const max = years.reduce((a, b) => (a > b ? a : b));
-	return min === max ? min : `${min}-${max}`;
-}
+// ---------------------------------------------------------------------------
+// Per-item phase (used by `download` / `convert`)
+// ---------------------------------------------------------------------------
 
 /**
  * Removes this item's transient scratch files from `tempDir`: the detail-feed
@@ -249,43 +156,6 @@ function cleanItemArtifacts(tempDir: string, item: { id: string; title: string }
 	}
 }
 
-/**
- * Extracts 7z download URLs from a per-resource detail ATOM feed.
- *
- * The detail endpoint paginates with a default page size of 10, so a region
- * with many `.7z.NNN` parts (e.g. fr/guyane: 22 parts) will silently return a
- * truncated list unless the caller fetches it with `?limit=N` set high enough.
- * As a safety net, when the response advertises `gpf_dl:totalentries`, we
- * compare against the parsed entry count and throw if anything is missing.
- */
-export function parseDetailFeed(xml: string): string[] {
-	const parsed = xmlParser.parse(xml) as Record<string, unknown>;
-	const feed = parsed.feed as Record<string, unknown> | undefined;
-	const rawEntries: unknown[] = [feed?.entry ?? []].flat();
-
-	const totalRaw = feed?.['@_gpf_dl:totalentries'];
-	const total = typeof totalRaw === 'string' || typeof totalRaw === 'number' ? Number(totalRaw) : NaN;
-	if (Number.isFinite(total) && rawEntries.length < total) {
-		throw new Error(
-			`parseDetailFeed: paginated response — got ${rawEntries.length} of ${total} entries. ` +
-				`Refetch the detail URL with a higher ?limit=.`,
-		);
-	}
-
-	const urls: string[] = [];
-	for (const raw of rawEntries) {
-		const entry = raw as Record<string, unknown>;
-		const links: unknown[] = [entry.link ?? []].flat();
-		for (const l of links) {
-			const link = l as { '@_href'?: string };
-			const href = link['@_href'];
-			if (!href) continue;
-			if (href.endsWith('.7z') || /\.7z\.\d+$/.test(href)) urls.push(href);
-		}
-	}
-	return urls.sort();
-}
-
 /** Returns the detail-feed URL with a generous `?limit=` so all parts come back in one page. */
 function detailUrlWithLimit(detailUrl: string): string {
 	const u = new URL(detailUrl);
@@ -293,12 +163,16 @@ function detailUrlWithLimit(detailUrl: string): string {
 	return u.toString();
 }
 
+// ---------------------------------------------------------------------------
+// Region factory
+// ---------------------------------------------------------------------------
+
 /**
  * Defines a French sub-région pipeline. Each sub-région passes its list of
  * IGN département zone codes; shared logic handles the ATOM-feed scraping,
  * 7z download + extraction, and JP2 → .versatiles conversion + assembly.
  */
-function defineFrSubRegion(opts: FrSubRegionOptions): RegionPipeline {
+export function defineFrSubRegion(opts: FrSubRegionOptions): RegionPipeline {
 	return defineTileRegion<BdorthoItem, { extractDir: string }>({
 		name: opts.name,
 		meta: buildMeta(),
@@ -319,7 +193,7 @@ function defineFrSubRegion(opts: FrSubRegionOptions): RegionPipeline {
 			if (observedRange !== FR_DATE_RANGE) {
 				throw new Error(
 					`BD ORTHO feed now covers ${observedRange}, but FR_DATE_RANGE is set to '${FR_DATE_RANGE}'. ` +
-						`Please update FR_DATE_RANGE in src/regions/fr.ts.`,
+						`Please update FR_DATE_RANGE in src/regions/fr/scraper.ts.`,
 				);
 			}
 
@@ -444,107 +318,10 @@ function defineFrSubRegion(opts: FrSubRegionOptions): RegionPipeline {
 				// Always drop the per-run tilesDir (partial .versatiles are never reused).
 				safeRm(tilesDir);
 			}
+			// Outside the finally on purpose: keep the extracted JP2 directory if convert
+			// failed, so the next run skips the expensive 7z re-extraction.
 			safeRm(extractDir);
 		},
 		minFiles: opts.departmentCodes.length,
 	});
 }
-
-// ---------------------------------------------------------------------------
-// NUTS-1 région → département mapping
-// ---------------------------------------------------------------------------
-
-export default [
-	{
-		name: 'fr/auvergne_rhone_alpes',
-		// Ain, Allier, Ardèche, Cantal, Drôme, Isère, Loire, Haute-Loire,
-		// Puy-de-Dôme, Rhône, Savoie, Haute-Savoie
-		departmentCodes: ['D001', 'D003', 'D007', 'D015', 'D026', 'D038', 'D042', 'D043', 'D063', 'D069', 'D073', 'D074'],
-	},
-	{
-		name: 'fr/bourgogne_franche_comte',
-		// Côte-d'Or, Doubs, Jura, Nièvre, Haute-Saône, Saône-et-Loire, Yonne,
-		// Territoire de Belfort
-		departmentCodes: ['D021', 'D025', 'D039', 'D058', 'D070', 'D071', 'D089', 'D090'],
-	},
-	{
-		name: 'fr/bretagne',
-		// Côtes-d'Armor, Finistère, Ille-et-Vilaine, Morbihan
-		departmentCodes: ['D022', 'D029', 'D035', 'D056'],
-	},
-	{
-		name: 'fr/centre_val_de_loire',
-		// Cher, Eure-et-Loir, Indre, Indre-et-Loire, Loir-et-Cher, Loiret
-		departmentCodes: ['D018', 'D028', 'D036', 'D037', 'D041', 'D045'],
-	},
-	{
-		name: 'fr/corse',
-		// Corse-du-Sud, Haute-Corse
-		departmentCodes: ['D02A', 'D02B'],
-	},
-	{
-		name: 'fr/grand_est',
-		// Ardennes, Aube, Marne, Haute-Marne, Meurthe-et-Moselle, Meuse, Moselle,
-		// Bas-Rhin, Haut-Rhin, Vosges
-		departmentCodes: ['D008', 'D010', 'D051', 'D052', 'D054', 'D055', 'D057', 'D067', 'D068', 'D088'],
-	},
-	{
-		name: 'fr/hauts_de_france',
-		// Aisne, Nord, Oise, Pas-de-Calais, Somme
-		departmentCodes: ['D002', 'D059', 'D060', 'D062', 'D080'],
-	},
-	{
-		name: 'fr/ile_de_france',
-		// Paris, Seine-et-Marne, Yvelines, Essonne, Hauts-de-Seine,
-		// Seine-Saint-Denis, Val-de-Marne, Val-d'Oise
-		departmentCodes: ['D075', 'D077', 'D078', 'D091', 'D092', 'D093', 'D094', 'D095'],
-	},
-	{
-		name: 'fr/normandie',
-		// Calvados, Eure, Manche, Orne, Seine-Maritime
-		departmentCodes: ['D014', 'D027', 'D050', 'D061', 'D076'],
-	},
-	{
-		name: 'fr/nouvelle_aquitaine',
-		// Charente, Charente-Maritime, Corrèze, Creuse, Dordogne, Gironde, Landes,
-		// Lot-et-Garonne, Pyrénées-Atlantiques, Deux-Sèvres, Vienne, Haute-Vienne
-		departmentCodes: ['D016', 'D017', 'D019', 'D023', 'D024', 'D033', 'D040', 'D047', 'D064', 'D079', 'D086', 'D087'],
-	},
-	{
-		name: 'fr/occitanie',
-		// Ariège, Aude, Aveyron, Gard, Haute-Garonne, Gers, Hérault, Lot, Lozère,
-		// Hautes-Pyrénées, Pyrénées-Orientales, Tarn, Tarn-et-Garonne
-		departmentCodes: [
-			'D009',
-			'D011',
-			'D012',
-			'D030',
-			'D031',
-			'D032',
-			'D034',
-			'D046',
-			'D048',
-			'D065',
-			'D066',
-			'D081',
-			'D082',
-		],
-	},
-	{
-		name: 'fr/pays_de_la_loire',
-		// Loire-Atlantique, Maine-et-Loire, Mayenne, Sarthe, Vendée
-		departmentCodes: ['D044', 'D049', 'D053', 'D072', 'D085'],
-	},
-	{
-		name: 'fr/provence_alpes_cote_d_azur',
-		// Alpes-de-Haute-Provence, Hautes-Alpes, Alpes-Maritimes,
-		// Bouches-du-Rhône, Var, Vaucluse
-		departmentCodes: ['D004', 'D005', 'D006', 'D013', 'D083', 'D084'],
-	},
-	// DROM (overseas NUTS-1 régions)
-	{ name: 'fr/guadeloupe', departmentCodes: ['D971'] },
-	{ name: 'fr/martinique', departmentCodes: ['D972'] },
-	{ name: 'fr/guyane', departmentCodes: ['D973'] },
-	{ name: 'fr/la_reunion', departmentCodes: ['D974'] },
-	{ name: 'fr/mayotte', departmentCodes: ['D976'] },
-].map(defineFrSubRegion);

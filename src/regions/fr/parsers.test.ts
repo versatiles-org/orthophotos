@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { parseDetailFeed, parseIndexPage, pickBestPerZone, type IndexEntry } from './fr.ts';
+import { parseDetailFeed, parseIndexPage, pickBestPerZone, type IndexEntry } from './parsers.ts';
 
 const INDEX_FIXTURE = `<?xml version='1.0' encoding='UTF-8' standalone='yes'?>
 <feed xmlns:georss="http://www.georss.org/georss" xmlns:gpf_dl="https://data.geopf.fr/annexes/ressources/xsd/gpf_dl.xsd" xmlns="http://www.w3.org/2005/Atom" xml:lang="en" gpf_dl:page="1" gpf_dl:pagesize="10" gpf_dl:pagecount="3" gpf_dl:totalentries="6">

@@ -14,7 +14,7 @@ import cz from './cz.ts';
 import de from './de/index.ts';
 import dk from './dk.ts';
 import ee from './ee.ts';
-import fr from './fr.ts';
+import fr from './fr/index.ts';
 import li from './li.ts';
 import lt from './lt.ts';
 import lu from './lu.ts';

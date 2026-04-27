@@ -33,7 +33,7 @@ export default defineTileRegion({
 		releaseDate: '2026-03-23',
 	},
 	init: async () => {
-		const urlsPath = join(dirname(fileURLToPath(import.meta.url)), 'de_sachsen.txt');
+		const urlsPath = join(dirname(fileURLToPath(import.meta.url)), 'sachsen.txt');
 		const content = await readFile(urlsPath, 'utf-8');
 		const urls = content.trim().split('\n').filter(Boolean);
 		return urls.map((url) => ({ id: parseUrlId(url), url })).filter((item) => item.id !== '');

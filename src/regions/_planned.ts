@@ -11,6 +11,10 @@ import type { RegionPipeline } from '../lib/framework.ts';
 
 export default [
 	{
+		id: 'ba',
+		metadata: { status: 'planned', notes: ['Data source not yet investigated.'] },
+	},
+	{
 		id: 'cy',
 		metadata: { status: 'planned', notes: ['Data source not yet investigated.'] },
 	},
@@ -45,6 +49,10 @@ export default [
 		metadata: { status: 'blocked', notes: ['The only available format is the proprietary ECW format.'] },
 	},
 	{
+		id: 'is',
+		metadata: { status: 'planned', notes: ['Data source not yet investigated.'] },
+	},
+	{
 		id: 'it',
 		metadata: {
 			status: 'planned',
@@ -56,8 +64,20 @@ export default [
 		},
 	},
 	{
+		id: 'me',
+		metadata: { status: 'planned', notes: ['Data source not yet investigated.'] },
+	},
+	{
+		id: 'mk',
+		metadata: { status: 'planned', notes: ['Data source not yet investigated.'] },
+	},
+	{
 		id: 'no',
 		metadata: { status: 'blocked', notes: ['Access restricted'] },
+	},
+	{
+		id: 'rs',
+		metadata: { status: 'planned', notes: ['Data source not yet investigated.'] },
 	},
 	{
 		id: 'se',
@@ -65,6 +85,18 @@ export default [
 	},
 	{
 		id: 'si',
+		metadata: { status: 'planned', notes: ['Data source not yet investigated.'] },
+	},
+	{
+		id: 'tr',
+		metadata: { status: 'planned', notes: ['Data source not yet investigated.'] },
+	},
+	{
+		id: 'ua',
+		metadata: { status: 'planned', notes: ['Data source not yet investigated.'] },
+	},
+	{
+		id: 'xk',
 		metadata: { status: 'planned', notes: ['Data source not yet investigated.'] },
 	},
 ] satisfies RegionPipeline[];

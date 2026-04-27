@@ -6,6 +6,7 @@ import {
 	createXmlParser,
 	defineTileRegion,
 	downloadFile,
+	isValidRaster,
 	RemoteZip,
 	runMosaicTile,
 	safeRm,
@@ -37,10 +38,9 @@ interface SkItem {
 	id: string;
 	zipUrl: string;
 	entryFilename: string;
-	[key: string]: unknown;
 }
 
-export default defineTileRegion({
+export default defineTileRegion<SkItem, { tifPath: string }>({
 	name: 'sk',
 	meta: {
 		status: 'released',
@@ -87,10 +87,11 @@ export default defineTileRegion({
 
 		return items;
 	},
-	download: async (item, { tempDir }) => {
-		const { zipUrl, entryFilename } = item as SkItem;
-		const rawPath = join(tempDir, `${item.id}_raw.tif`);
-		const tifPath = join(tempDir, `${item.id}.tif`);
+	download: async (item, ctx) => {
+		const { zipUrl, entryFilename } = item;
+		const rawPath = join(ctx.tempDir, `${item.id}_raw.tif`);
+		const rawTfwPath = rawPath.replace(/\.tif$/, '.tfw');
+		const tifPath = ctx.tempFile(join(ctx.tempDir, `${item.id}.tif`));
 
 		const zip = await RemoteZip.open(zipUrl);
 
@@ -103,26 +104,30 @@ export default defineTileRegion({
 		const tfwFilename = entryFilename.replace(/\.tif$/, '.tfw');
 		const tfwEntry = zip.getEntries().find((e) => e.filename === tfwFilename);
 		if (tfwEntry) {
-			const tfwPath = rawPath.replace(/\.tif$/, '.tfw');
 			const tfwData = await zip.extract(tfwEntry);
 			const { writeFileSync } = await import('node:fs');
-			writeFileSync(tfwPath, tfwData);
+			writeFileSync(rawTfwPath, tfwData);
 		}
 
-		// Convert to tiled GeoTIFF for faster random access
-		await convertToTiledTiff(rawPath, tifPath);
-		safeRm(rawPath);
-		safeRm(rawPath.replace(/\.tif$/, '.tfw'));
+		try {
+			// Convert to tiled GeoTIFF for faster random access
+			await convertToTiledTiff(rawPath, tifPath);
+		} finally {
+			// rawPath is a download-stage scratch file; free space before convert runs.
+			safeRm(rawPath);
+			safeRm(rawTfwPath);
+		}
+
+		if (!(await isValidRaster(tifPath))) {
+			ctx.errors.add(`${item.id}.tif`);
+			return 'invalid';
+		}
 
 		return { tifPath };
 	},
 	convertLimit: { memoryGB: 20 },
 	convert: async ({ tifPath }, { dest }) => {
-		try {
-			await runMosaicTile(tifPath, dest, { crs: '3046', nodata: '0,0,0;255,255,255' });
-		} finally {
-			safeRm(tifPath);
-		}
+		await runMosaicTile(tifPath, dest, { crs: '3046', nodata: '0,0,0;255,255,255' });
 	},
 	minFiles: 40,
 });

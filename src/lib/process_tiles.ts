@@ -22,13 +22,13 @@ import { createInterface } from 'node:readline';
 import { join } from 'node:path';
 import { shuffle } from './array.ts';
 import type { RegionMetadata, RegionPipeline, StepContext } from './framework.ts';
+import { safeRm } from './fs.ts';
 import { type ConcurrencyLimit, pipeline, resolveConcurrency, skip } from './pipeline.ts';
 import { ErrorBucket, expectMinFiles } from './validators.ts';
 
 /** Items must have an `id` property used to derive output and skip-file paths. */
 export interface TileItem {
 	id: string;
-	[key: string]: unknown;
 }
 
 /** Context passed to download/convert callbacks */
@@ -43,6 +43,12 @@ export interface TileContext {
 	tilesDir: string;
 	/** Collector for invalid download errors */
 	errors: ErrorBucket;
+	/**
+	 * Register a path for automatic cleanup after this item finishes
+	 * (success, error, or `'empty'`/`'invalid'` skip). Returns the path
+	 * unchanged so it can be used inline.
+	 */
+	tempFile<P extends string>(path: P): P;
 }
 
 export interface TileRegionOptions<T extends TileItem, D> {
@@ -95,7 +101,11 @@ export function defineTileRegion<T extends TileItem, D>(options: TileRegionOptio
 
 const LABELS = ['converted', 'skipped', 'empty', 'invalid'] as const;
 
-type ConvertEnvelope<D> = { data: Exclude<D, 'empty' | 'invalid' | void>; tileCtx: TileContext };
+type ConvertEnvelope<D> = {
+	data: Exclude<D, 'empty' | 'invalid' | void>;
+	tileCtx: TileContext;
+	runCleanup: () => void;
+};
 
 async function processTiles<T extends TileItem, D>(
 	items: T[],
@@ -108,17 +118,28 @@ async function processTiles<T extends TileItem, D>(
 	const shuffled = shuffle([...items]);
 	const errors = new ErrorBucket();
 
-	const makeTileCtx = (item: T): TileContext => ({
-		dest: join(tilesDir, `${item.id}.versatiles`),
-		skipDest: join(tilesDir, `${item.id}.skip`),
-		tempDir: ctx.tempDir,
-		tilesDir,
-		errors,
-	});
+	const destFor = (item: T): string => join(tilesDir, `${item.id}.versatiles`);
+	const skipDestFor = (item: T): string => join(tilesDir, `${item.id}.skip`);
 
-	const isSkipped = (item: T): boolean => {
-		const tileCtx = makeTileCtx(item);
-		return existsSync(tileCtx.dest) || existsSync(tileCtx.skipDest);
+	const isSkipped = (item: T): boolean => existsSync(destFor(item)) || existsSync(skipDestFor(item));
+
+	const makeCtx = (item: T): { tileCtx: TileContext; runCleanup: () => void } => {
+		const cleanupPaths: string[] = [];
+		const tileCtx: TileContext = {
+			dest: destFor(item),
+			skipDest: skipDestFor(item),
+			tempDir: ctx.tempDir,
+			tilesDir,
+			errors,
+			tempFile<P extends string>(path: P): P {
+				cleanupPaths.push(path);
+				return path;
+			},
+		};
+		const runCleanup = (): void => {
+			while (cleanupPaths.length > 0) safeRm(cleanupPaths.pop()!);
+		};
+		return { tileCtx, runCleanup };
 	};
 
 	const dlConcurrency = resolveConcurrency(options.downloadLimit);
@@ -128,17 +149,35 @@ async function processTiles<T extends TileItem, D>(
 	await pipeline(shuffled, { progress: { labels: [...LABELS], terminalProgress: true, title: options.name } })
 		.map(dlConcurrency, async (item: T) => {
 			if (isSkipped(item)) return skip('skipped');
-			const tileCtx = makeTileCtx(item);
-			const result = await download(item, tileCtx);
-			if (result === 'empty') return skip('empty');
-			if (result === 'invalid') return skip('invalid');
-			if (result == null) return null;
-			return { data: result, tileCtx } as ConvertEnvelope<D>;
+			const { tileCtx, runCleanup } = makeCtx(item);
+			try {
+				const result = await download(item, tileCtx);
+				if (result === 'empty') {
+					runCleanup();
+					return skip('empty');
+				}
+				if (result === 'invalid') {
+					runCleanup();
+					return skip('invalid');
+				}
+				if (result == null) {
+					runCleanup();
+					return null;
+				}
+				return { data: result, tileCtx, runCleanup } as ConvertEnvelope<D>;
+			} catch (err) {
+				runCleanup();
+				throw err;
+			}
 		})
 		.forEach(cvConcurrency, async (envelope) => {
-			const { data, tileCtx } = envelope as ConvertEnvelope<D>;
-			await convert(data, tileCtx);
-			return 'converted';
+			const { data, tileCtx, runCleanup } = envelope as ConvertEnvelope<D>;
+			try {
+				await convert(data, tileCtx);
+				return 'converted';
+			} finally {
+				runCleanup();
+			}
 		});
 
 	errors.throwIfAny();

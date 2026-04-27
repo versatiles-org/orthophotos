@@ -60,7 +60,6 @@ interface BdorthoItem {
 	title: string;
 	detailUrl: string;
 	editionDate: string;
-	[key: string]: unknown;
 }
 
 export interface FrSubRegionOptions {

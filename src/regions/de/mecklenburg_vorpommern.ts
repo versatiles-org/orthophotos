@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { defineTileRegion, downloadFile, isValidRaster, runMosaicTile, safeRm, withRetry } from '../lib.ts';
+import { defineTileRegion, downloadFile, downloadRaster, runMosaicTile, withRetry } from '../lib.ts';
 
 const ATOM_URL = 'https://www.geodaten-mv.de/dienste/dop20_atom?type=dataset&id=f94d17fa-b29b-41f7-a4b8-6e10f1aae38e';
 
@@ -50,19 +50,14 @@ export default defineTileRegion({
 		const xml = await readFile(atomPath, 'utf-8');
 		return parseTileUrls(xml);
 	},
-	download: async ({ url, id }, { tempDir, errors }) => {
-		const tifPath = join(tempDir, `${id}.tif`);
-
-		await withRetry(() => downloadFile(url, tifPath), { maxAttempts: 3 });
-		if (!(await isValidRaster(tifPath))) {
-			errors.add(`${id}.tif (${url})`);
-			return 'invalid';
-		}
+	download: async ({ url, id }, ctx) => {
+		const tifPath = ctx.tempFile(join(ctx.tempDir, `${id}.tif`));
+		const result = await downloadRaster(url, tifPath, ctx.errors, `${id}.tif`);
+		if (result === 'invalid') return 'invalid';
 		return { tifPath };
 	},
 	convert: async ({ tifPath }, { dest }) => {
 		await runMosaicTile(tifPath, dest);
-		safeRm(tifPath);
 	},
 	minFiles: 6600,
 });

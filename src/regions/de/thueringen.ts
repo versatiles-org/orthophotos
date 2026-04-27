@@ -1,15 +1,7 @@
 import { writeFileSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import {
-	defineTileRegion,
-	downloadFile,
-	extractZipFile,
-	runCommand,
-	runMosaicTile,
-	safeRm,
-	withRetry,
-} from '../lib.ts';
+import { defineTileRegion, downloadFile, extractZipFile, runCommand, runMosaicTile, withRetry } from '../lib.ts';
 
 export function generateCoords(): { x: number; y: number; id: string }[] {
 	const coords: { x: number; y: number; id: string }[] = [];
@@ -48,10 +40,10 @@ export default defineTileRegion({
 		releaseDate: '2026-03-23',
 	},
 	init: () => generateCoords(),
-	download: async ({ x, y, id }, { tempDir, skipDest }) => {
-		const jsonPath = join(tempDir, `${id}.json`);
-		const zipPath = join(tempDir, `${id}.zip`);
-		const extractDir = join(tempDir, id);
+	download: async ({ x, y, id }, ctx) => {
+		const jsonPath = ctx.tempFile(join(ctx.tempDir, `${id}.json`));
+		const zipPath = ctx.tempFile(join(ctx.tempDir, `${id}.zip`));
+		const extractDir = ctx.tempFile(join(ctx.tempDir, id));
 
 		const bbox = `${x * 1000}&bbox%5B%5D=${y * 1000}&bbox%5B%5D=${(x + 1) * 1000}&bbox%5B%5D=${(y + 1) * 1000}`;
 		const apiUrl = `https://geoportal.geoportal-th.de/gaialight-th/_apps/dladownload/_ajax/overview.php?crs=EPSG%3A25832&bbox%5B%5D=${bbox}&type%5B%5D=op`;
@@ -64,7 +56,8 @@ export default defineTileRegion({
 		type Feature = { properties: { bildnr: string; bildflugnr: number; gid: number } };
 		const matching = (features as Feature[]).filter((f) => f.properties.bildnr === id);
 		if (matching.length === 0) {
-			writeFileSync(skipDest, '');
+			// Coordinate probing — persist a `.skip` so re-runs don't retry.
+			writeFileSync(ctx.skipDest, '');
 			return 'empty';
 		}
 		const best = matching.reduce((a, b) => (a.properties.bildflugnr > b.properties.bildflugnr ? a : b));
@@ -80,15 +73,14 @@ export default defineTileRegion({
 		const files = await readdir(extractDir, { recursive: true });
 		const tifFile = files.find((f) => typeof f === 'string' && f.endsWith('.tif'));
 		if (!tifFile) {
-			writeFileSync(skipDest, '');
+			writeFileSync(ctx.skipDest, '');
 			return 'empty';
 		}
 
-		return { srcTif: join(extractDir, tifFile), extractDir };
+		return { srcTif: join(extractDir, tifFile) };
 	},
-	convert: async ({ srcTif, extractDir }, { dest }) => {
+	convert: async ({ srcTif }, { dest }) => {
 		await runMosaicTile(srcTif, dest);
-		safeRm(extractDir);
 	},
 	minFiles: 35000,
 });

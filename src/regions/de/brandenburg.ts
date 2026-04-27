@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
-import { defineTileRegion, downloadFile, extractZipFile, runMosaicTile, safeRm, withRetry } from '../lib.ts';
+import { defineTileRegion, downloadFile, extractZipFile, runMosaicTile, withRetry } from '../lib.ts';
 
 const BASE_URL = 'https://data.geobasis-bb.de/geobasis/daten/dop/rgb_jpg/';
 
@@ -51,9 +51,9 @@ export default defineTileRegion({
 		const filenames = parseZipFilenames(html);
 		return filenames.map((f) => ({ id: basename(f, '.zip'), url: `${BASE_URL}${f}` }));
 	},
-	download: async ({ url, id }, { tempDir }) => {
-		const zipPath = join(tempDir, `${id}.zip`);
-		const extractDir = join(tempDir, id);
+	download: async ({ url, id }, ctx) => {
+		const zipPath = ctx.tempFile(join(ctx.tempDir, `${id}.zip`));
+		const extractDir = ctx.tempFile(join(ctx.tempDir, id));
 
 		await withRetry(() => downloadFile(url, zipPath), { maxAttempts: 3 });
 		await extractZipFile(zipPath, extractDir);
@@ -63,11 +63,10 @@ export default defineTileRegion({
 		const jpgFile = files.find((f) => typeof f === 'string' && f.endsWith('.jpg'));
 		if (!jpgFile) return 'empty';
 
-		return { jpgPath: join(extractDir, String(jpgFile)), extractDir };
+		return { jpgPath: join(extractDir, String(jpgFile)) };
 	},
-	convert: async ({ jpgPath, extractDir }, { dest }) => {
+	convert: async ({ jpgPath }, { dest }) => {
 		await runMosaicTile(jpgPath, dest);
-		safeRm(extractDir);
 	},
 	minFiles: 32000,
 });

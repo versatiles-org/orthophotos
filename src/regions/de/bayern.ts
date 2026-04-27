@@ -5,7 +5,7 @@ import {
 	createXmlParser,
 	defineTileRegion,
 	downloadFile,
-	isValidRaster,
+	downloadRaster,
 	pipeline,
 	runMosaicTile,
 	safeRm,
@@ -94,18 +94,14 @@ export default defineTileRegion({
 		const urls: string[] = JSON.parse(await readFile(urlsPath, 'utf-8'));
 		return urls.map((url) => ({ id: basename(url, '.tif'), url }));
 	},
-	download: async ({ url, id }, { tempDir, errors }) => {
-		const tifPath = join(tempDir, `${id}.tif`);
-		await withRetry(() => downloadFile(url, tifPath), { maxAttempts: 3 });
-		if (!(await isValidRaster(tifPath))) {
-			errors.add(`${id}.tif (${url})`);
-			return 'invalid';
-		}
+	download: async ({ url, id }, ctx) => {
+		const tifPath = ctx.tempFile(join(ctx.tempDir, `${id}.tif`));
+		const result = await downloadRaster(url, tifPath, ctx.errors, `${id}.tif`);
+		if (result === 'invalid') return 'invalid';
 		return { tifPath };
 	},
 	convert: async ({ tifPath }, { dest }) => {
 		await runMosaicTile(tifPath, dest);
-		safeRm(tifPath);
 	},
 	minFiles: 2220,
 });

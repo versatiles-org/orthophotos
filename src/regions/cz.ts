@@ -1,15 +1,7 @@
-import { existsSync, rmSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import {
-	createXmlParser,
-	defineTileRegion,
-	downloadFile,
-	extractZipFile,
-	runMosaicTile,
-	safeRm,
-	withRetry,
-} from './lib.ts';
+import { createXmlParser, defineTileRegion, downloadFile, extractZipFile, runMosaicTile, withRetry } from './lib.ts';
 
 const ATOM_URL = 'https://atom.cuzk.gov.cz/OI/OI.xml';
 const ZIP_BASE_URL = 'https://openzu.cuzk.gov.cz/opendata/OI/';
@@ -69,24 +61,22 @@ export default defineTileRegion({
 		const xml = await readFile(atomPath, 'utf-8');
 		return parseTileIds(xml);
 	},
-	download: async ({ url, id }, { tempDir }) => {
-		const zipPath = join(tempDir, `${id}.zip`);
-		const extractDir = join(tempDir, id);
+	download: async ({ url, id }, ctx) => {
+		const zipPath = ctx.tempFile(join(ctx.tempDir, `${id}.zip`));
+		const extractDir = ctx.tempFile(join(ctx.tempDir, id));
 
 		await withRetry(() => downloadFile(url, zipPath), { maxAttempts: 3 });
 		await extractZipFile(zipPath, extractDir);
-		rmSync(zipPath, { force: true });
 
 		const jp2Path = join(extractDir, `${id}.jp2`);
 		if (!existsSync(jp2Path)) return 'empty';
 
-		return { jp2Path, extractDir };
+		return { jp2Path };
 	},
-	convert: async ({ jp2Path, extractDir }, { dest }) => {
+	convert: async ({ jp2Path }, { dest }) => {
 		// JP2 has no embedded CRS; coordinates come from .j2w worldfile in EPSG:3045.
 		// White borders (255,255,255) are treated as transparent via --nodata.
 		await runMosaicTile(jp2Path, dest, { crs: '3045', nodata: '255,255,255' });
-		safeRm(extractDir);
 	},
 	minFiles: 20000,
 });

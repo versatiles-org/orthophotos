@@ -2,10 +2,12 @@
  * Reusable postcondition validators for fetch pipeline steps.
  */
 
+import { rmSync } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { glob } from 'node:fs/promises';
 import { join } from 'node:path';
-import { runCommand } from './command.ts';
+import { downloadFile, type DownloadOptions, runCommand } from './command.ts';
+import { type RetryOptions, withRetry } from './retry.ts';
 
 /**
  * Check that a file is a valid GDAL-readable raster with georeferencing.
@@ -35,6 +37,38 @@ export class ErrorBucket {
 		const list = this.errors.map((msg) => `  ${msg}`).join('\n');
 		throw new Error(`${this.errors.length} error(s) occurred:\n${list}`);
 	}
+}
+
+export interface DownloadRasterOptions {
+	/** Retry settings forwarded to withRetry. Default: `{ maxAttempts: 3 }`. */
+	retry?: RetryOptions;
+	/** Forwarded to downloadFile (headers, minSize, continue). */
+	download?: DownloadOptions;
+}
+
+/**
+ * Download a raster file with retries, then validate it with `isValidRaster`.
+ * On validation failure: deletes the bad file, calls `errors.add(\`${id} (${url})\`)`,
+ * and returns `'invalid'`. On success: returns `{ ok: true, path: dest }`.
+ *
+ * Network failures propagate after retries are exhausted (no `.skip` masking).
+ */
+export async function downloadRaster(
+	url: string,
+	dest: string,
+	errors: ErrorBucket,
+	id: string,
+	options?: DownloadRasterOptions,
+): Promise<{ ok: true; path: string } | 'invalid'> {
+	await withRetry(() => downloadFile(url, dest, options?.download), options?.retry ?? { maxAttempts: 3 });
+	if (!(await isValidRaster(dest))) {
+		try {
+			rmSync(dest, { force: true });
+		} catch {}
+		errors.add(`${id} (${url})`);
+		return 'invalid';
+	}
+	return { ok: true, path: dest };
 }
 
 /**

@@ -5,10 +5,11 @@ import {
 	defineTileRegion,
 	extractWmsBlock,
 	generateWmsXml,
+	isValidRaster,
 	MAX_ZOOM,
 	runMosaicTile,
-	safeRm,
 	type WmsBbox,
+	withRetry,
 } from './lib.ts';
 
 const WMS_URL = 'http://inspire.mzh.government.bg:8080/geoserver/ows';
@@ -66,19 +67,27 @@ export default defineTileRegion({
 		return items.map((item) => ({ ...item, wmsXmlPath, blockPx }));
 	},
 	downloadLimit: 2,
-	download: async (item, { tempDir }) => {
-		const tifPath = join(tempDir, `${item.id}.tif`);
+	download: async (item, ctx) => {
+		const tifPath = ctx.tempFile(join(ctx.tempDir, `${item.id}.tif`));
 
-		await extractWmsBlock(
-			{ wmsXmlPath: item.wmsXmlPath, x0: item.x0, y0: item.y0, x1: item.x1, y1: item.y1, blockPx: item.blockPx },
-			tifPath,
+		await withRetry(
+			() =>
+				extractWmsBlock(
+					{ wmsXmlPath: item.wmsXmlPath, x0: item.x0, y0: item.y0, x1: item.x1, y1: item.y1, blockPx: item.blockPx },
+					tifPath,
+				),
+			{ maxAttempts: 3 },
 		);
+
+		if (!(await isValidRaster(tifPath))) {
+			ctx.errors.add(`${item.id}.tif`);
+			return 'invalid';
+		}
 
 		return { srcPath: tifPath };
 	},
 	convert: async ({ srcPath }, { dest }) => {
 		await runMosaicTile(srcPath, dest, { nodata: '255,255,255' });
-		safeRm(srcPath);
 	},
 	minFiles: 500,
 });

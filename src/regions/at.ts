@@ -1,7 +1,15 @@
 import { existsSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
-import { createXmlParser, defineTileRegion, downloadFile, pipeline, runMosaicTile, safeRm, withRetry } from './lib.ts';
+import {
+	createXmlParser,
+	defineTileRegion,
+	downloadFile,
+	downloadRaster,
+	pipeline,
+	runMosaicTile,
+	withRetry,
+} from './lib.ts';
 
 const ATOM_URL =
 	'https://data.bev.gv.at/geonetwork/srv/atom/describe/service?uuid=7f047345-4ebf-45cd-8900-6edf50a84638';
@@ -92,7 +100,9 @@ export default defineTileRegion({
 				4,
 				async ({ operat, feedUrl }) => {
 					const datasetPath = join(ctx.tempDir, `dataset_${operat}.xml`);
-					await withRetry(() => downloadFile(feedUrl, datasetPath), { maxAttempts: 3 });
+					if (!existsSync(datasetPath)) {
+						await withRetry(() => downloadFile(feedUrl, datasetPath), { maxAttempts: 3 });
+					}
 					const datasetXml = await readFile(datasetPath, 'utf-8');
 					const rgbUrl = parseDatasetFeed(datasetXml);
 					if (rgbUrl) {
@@ -111,16 +121,18 @@ export default defineTileRegion({
 		const urls: string[] = JSON.parse(await readFile(urlsPath, 'utf-8'));
 		return urls.map((url) => ({ id: basename(url, '.tif'), url }));
 	},
+	// Server is rate-limited; one download at a time avoids 429s.
 	downloadLimit: 1,
-	download: async ({ url, id }, { tempDir }) => {
-		const src = join(tempDir, `${id}.tif`);
-		await withRetry(() => downloadFile(url, src), { maxAttempts: 3 });
+	download: async ({ url, id }, ctx) => {
+		const src = ctx.tempFile(join(ctx.tempDir, `${id}.tif`));
+		const result = await downloadRaster(url, src, ctx.errors, `${id}.tif`);
+		if (result === 'invalid') return 'invalid';
 		return { src };
 	},
+	// runMosaicTile builds a large random-access cache; one per ~8 GB of host RAM is safe.
 	convertLimit: { memoryGB: 8 },
-	convert: async ({ src }, { dest, tempDir }) => {
-		await runMosaicTile(src, dest, { cacheDirectory: tempDir });
-		safeRm(src);
+	convert: async ({ src }, ctx) => {
+		await runMosaicTile(src, ctx.dest, { cacheDirectory: ctx.tempDir });
 	},
 	minFiles: 32,
 });

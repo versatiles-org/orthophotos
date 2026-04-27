@@ -1,15 +1,7 @@
 import { existsSync } from 'node:fs';
-import { readFile, readdir } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
-import {
-	defineTileRegion,
-	downloadFile,
-	extractZipFile,
-	runCommand,
-	runMosaicTile,
-	safeRm,
-	withRetry,
-} from '../lib.ts';
+import { defineTileRegion, downloadFile, extractZipAndBuildVrt, runMosaicTile, withRetry } from '../lib.ts';
 
 const CKAN_API_URL =
 	'https://suche.transparenz.hamburg.de/api/3/action/package_show?id=luftbilder-hamburg-dop-zeitreihe-belaubt2';
@@ -65,40 +57,23 @@ export default defineTileRegion({
 		const content = await readFile(apiPath, 'utf-8');
 		return parseResources(JSON.parse(content));
 	},
-	download: async ({ url, id }, { tempDir }) => {
-		const zipPath = join(tempDir, `${id}.zip`);
+	download: async ({ url, id }, ctx) => {
+		const zipPath = ctx.tempFile(join(ctx.tempDir, `${id}.zip`));
 		console.log(`  Downloading ${id}.zip...`);
 		await withRetry(() => downloadFile(url, zipPath), { maxAttempts: 3 });
 		return { zipPath };
 	},
+	// gdal_translate fans out per-tile readers; cap concurrent regions by RAM budget.
 	convertLimit: { memoryGB: 8 },
-	convert: async ({ zipPath }, { dest, tempDir }) => {
-		const extractDir = join(tempDir, basename(zipPath, '.zip'));
-		const vrtPath = `${dest}.vrt`;
+	convert: async ({ zipPath }, ctx) => {
+		const extractDir = ctx.tempFile(join(ctx.tempDir, basename(zipPath, '.zip')));
+		const vrtPath = ctx.tempFile(`${ctx.dest}.vrt`);
 
 		console.log(`  Extracting ${basename(zipPath)}...`);
-		await extractZipFile(zipPath, extractDir);
+		const { fileCount } = await extractZipAndBuildVrt(zipPath, extractDir, vrtPath, { recursive: true });
+		if (fileCount === 0) throw new Error(`No .tif files found in ${extractDir}`);
 
-		// Find all .tif files in the extracted directory
-		const files = await readdir(extractDir, { recursive: true });
-		const tifFiles = files
-			.map((f) => (typeof f === 'string' ? f : String(f)))
-			.filter((f) => f.endsWith('.tif'))
-			.map((f) => join(extractDir, f));
-
-		if (tifFiles.length === 0) {
-			throw new Error(`No .tif files found in ${extractDir}`);
-		}
-
-		// Build VRT from all TIFs
-		await runCommand('gdalbuildvrt', [vrtPath, ...tifFiles]);
-
-		// Convert VRT to versatiles
-		await runMosaicTile(vrtPath, dest);
-
-		safeRm(vrtPath);
-		safeRm(zipPath);
-		safeRm(extractDir);
+		await runMosaicTile(vrtPath, ctx.dest);
 	},
 	minFiles: 7,
 });

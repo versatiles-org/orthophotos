@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { defineTileRegion, downloadFile, runMosaicTile, safeRm, withRetry } from './lib.ts';
+import { defineTileRegion, downloadRaster, runMosaicTile } from './lib.ts';
 
 const DOWNLOAD_URL = 'https://service.geo.llv.li/atom/data/e77da96f-bc1c-4317-8c2f-81310812c798.tif';
 
@@ -22,14 +22,14 @@ export default defineTileRegion({
 		releaseDate: '2026-03-24',
 	},
 	init: () => [{ id: 'image', url: DOWNLOAD_URL }],
-	download: async ({ url }, { tempDir }) => {
-		const src = join(tempDir, 'image.tif');
-		await withRetry(() => downloadFile(url, src), { maxAttempts: 3 });
+	download: async ({ url, id }, ctx) => {
+		const src = ctx.tempFile(join(ctx.tempDir, `${id}.tif`));
+		const result = await downloadRaster(url, src, ctx.errors, `${id}.tif`);
+		if (result === 'invalid') return 'invalid';
 		return { src };
 	},
 	convert: async ({ src }, { dest }) => {
 		await runMosaicTile(src, dest);
-		safeRm(src);
 	},
 	minFiles: 1,
 });

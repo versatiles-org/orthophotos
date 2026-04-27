@@ -1,14 +1,6 @@
-import { chmodSync, existsSync, readdirSync, renameSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, renameSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
-import {
-	defineTileRegion,
-	extractZipFile,
-	isValidRaster,
-	runCommand,
-	runMosaicTile,
-	safeRm,
-	withRetry,
-} from './lib.ts';
+import { defineTileRegion, extractZipAndBuildVrt, isValidRaster, runCommand, runMosaicTile, withRetry } from './lib.ts';
 
 const FTP_HOST = 'ftp.dataforsyningen.dk';
 const FTP_DIR = '/grundlaeggende_landkortdata/ortofoto/12_5CM/';
@@ -56,7 +48,6 @@ async function ftpDownload(netrc: string, remotePath: string, dest: string): Pro
 interface DkItem {
 	id: string;
 	filename: string;
-	[key: string]: unknown;
 }
 
 export default defineTileRegion<DkItem, { zipPath: string }>({
@@ -97,50 +88,38 @@ export default defineTileRegion<DkItem, { zipPath: string }>({
 			filename,
 		}));
 	},
+	// FTPS connections are sequential — the server limits parallel sessions per account.
 	downloadLimit: 1,
-	download: async (item, { tempDir }) => {
-		const netrc = ensureNetrc(tempDir);
-		const zipPath = join(tempDir, `${item.id}.zip`);
-		try {
-			await withRetry(() => ftpDownload(netrc, FTP_DIR + item.filename, zipPath), { maxAttempts: 3 });
-			return { zipPath };
-		} catch (err) {
-			safeRm(zipPath);
-			throw err;
-		}
+	download: async (item, ctx) => {
+		const netrc = ensureNetrc(ctx.tempDir);
+		const zipPath = ctx.tempFile(join(ctx.tempDir, `${item.id}.zip`));
+		await withRetry(() => ftpDownload(netrc, FTP_DIR + item.filename, zipPath), { maxAttempts: 3 });
+		return { zipPath };
 	},
+	// Each VRT fans out to many per-tile GDAL readers; running more than one at a time can swamp the machine.
 	convertLimit: 1,
-	convert: async ({ zipPath }, { dest, tempDir, errors }) => {
+	convert: async ({ zipPath }, ctx) => {
 		const baseId = basename(zipPath, '.zip');
-		const extractDir = join(tempDir, `${baseId}_extract`);
-		try {
-			await extractZipFile(zipPath, extractDir);
-			const tifs = readdirSync(extractDir)
-				.filter((f) => /\.tiff?$/i.test(f))
-				.map((f) => join(extractDir, f));
-			if (tifs.length === 0) {
-				errors.add(`${baseId}.zip (no .tif inside)`);
-				return;
-			}
+		const extractDir = ctx.tempFile(join(ctx.tempDir, `${baseId}_extract`));
+		const vrtPath = join(extractDir, 'mosaic.vrt');
 
-			// Archives hold many TIFFs per 10km cell — always mosaic them through a VRT
-			// so versatiles sees a single continuous raster.
-			const vrtPath = join(extractDir, 'mosaic.vrt');
-			await runCommand('gdalbuildvrt', ['-q', vrtPath, ...tifs], { quiet: true });
-
-			if (!(await isValidRaster(vrtPath))) {
-				errors.add(`${baseId}.zip (invalid raster)`);
-				return;
-			}
-
-			// Danish orthophoto grid is ETRS89 / UTM zone 32N. Cap GDAL concurrency
-			// to 2 — the VRT fans out to many per-tile GDAL readers and can swamp
-			// the machine otherwise.
-			await runMosaicTile(vrtPath, dest, { crs: '25832', gdalConcurrency: 2 });
-		} finally {
-			safeRm(zipPath);
-			safeRm(extractDir);
+		// Archives hold many TIFFs per 10km cell — always mosaic them through a VRT
+		// so versatiles sees a single continuous raster.
+		const { fileCount } = await extractZipAndBuildVrt(zipPath, extractDir, vrtPath);
+		if (fileCount === 0) {
+			ctx.errors.add(`${baseId}.zip (no .tif inside)`);
+			return;
 		}
+
+		if (!(await isValidRaster(vrtPath))) {
+			ctx.errors.add(`${baseId}.zip (invalid raster)`);
+			return;
+		}
+
+		// Danish orthophoto grid is ETRS89 / UTM zone 32N. Cap GDAL concurrency
+		// to 2 — the VRT fans out to many per-tile GDAL readers and can swamp
+		// the machine otherwise.
+		await runMosaicTile(vrtPath, ctx.dest, { crs: '25832', gdalConcurrency: 2 });
 	},
 	// Denmark is ~43k km²; a 10km grid maxes at ~430 tiles but many are water/outside.
 	// Bump this once the first full run gives a concrete count.

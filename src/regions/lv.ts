@@ -1,7 +1,7 @@
 import { existsSync, rmSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
-import { defineTileRegion, downloadFile, runMosaicTile, safeRm, withRetry } from './lib.ts';
+import { defineTileRegion, downloadFile, downloadRaster, runMosaicTile, withRetry } from './lib.ts';
 
 const INDEX_URL =
 	'https://s3.storage.pub.lvdc.gov.lv/lgia-opendata/ortofoto_rgb_v6/LGIA_OpenData_Ortofoto_rgb_v6_saites.txt';
@@ -47,17 +47,16 @@ export default defineTileRegion({
 			tfwUrl: url.replace(/\.tif$/, '.tfw'),
 		}));
 	},
-	download: async ({ url, tfwUrl, id }, { tempDir }) => {
-		const src = join(tempDir, `${id}.tif`);
-		const tfwPath = join(tempDir, `${id}.tfw`);
-		await withRetry(() => downloadFile(url, src), { maxAttempts: 3 });
+	download: async ({ url, tfwUrl, id }, ctx) => {
+		const src = ctx.tempFile(join(ctx.tempDir, `${id}.tif`));
+		const tfwPath = ctx.tempFile(join(ctx.tempDir, `${id}.tfw`));
+		const result = await downloadRaster(url, src, ctx.errors, `${id}.tif`);
+		if (result === 'invalid') return 'invalid';
 		await withRetry(() => downloadFile(tfwUrl, tfwPath), { maxAttempts: 3 });
 		return { src, tfwPath };
 	},
-	convert: async ({ src, tfwPath }, { dest }) => {
+	convert: async ({ src }, { dest }) => {
 		await runMosaicTile(src, dest);
-		safeRm(src);
-		safeRm(tfwPath);
 	},
 	minFiles: 123456,
 });

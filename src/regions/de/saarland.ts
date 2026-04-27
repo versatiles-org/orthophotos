@@ -1,15 +1,7 @@
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import {
-	createXmlParser,
-	defineTileRegion,
-	downloadFile,
-	isValidRaster,
-	runMosaicTile,
-	safeRm,
-	withRetry,
-} from '../lib.ts';
+import { createXmlParser, defineTileRegion, downloadFile, downloadRaster, runMosaicTile, withRetry } from '../lib.ts';
 
 const ATOM_URL =
 	'https://geoportal.saarland.de/mapbender/php/mod_inspireDownloadFeed.php?id=e7995adf-2aeb-4fa4-a536-041e3cc8b24a&type=DATASET&generateFrom=wmslayer&layerid=46747';
@@ -68,19 +60,14 @@ export default defineTileRegion({
 		const xml = await readFile(atomPath, 'utf-8');
 		return parseAtomEntries(xml);
 	},
-	download: async ({ url, id }, { tempDir, errors }) => {
-		const tifPath = join(tempDir, `${id}.tif`);
-
-		await withRetry(() => downloadFile(url, tifPath), { maxAttempts: 3 });
-		if (!(await isValidRaster(tifPath))) {
-			errors.add(`${id}.tif (${url})`);
-			return 'invalid';
-		}
+	download: async ({ url, id }, ctx) => {
+		const tifPath = ctx.tempFile(join(ctx.tempDir, `${id}.tif`));
+		const result = await downloadRaster(url, tifPath, ctx.errors, `${id}.tif`);
+		if (result === 'invalid') return 'invalid';
 		return { tifPath };
 	},
 	convert: async ({ tifPath }, { dest }) => {
 		await runMosaicTile(tifPath, dest);
-		safeRm(tifPath);
 	},
 	minFiles: 19000,
 });

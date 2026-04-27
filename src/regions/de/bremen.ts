@@ -1,15 +1,8 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { readdir } from 'node:fs/promises';
+import { availableParallelism } from 'node:os';
 import { basename, join } from 'node:path';
-import {
-	defineTileRegion,
-	extractZipFile,
-	pipeline,
-	RemoteZip,
-	runMosaicAssemble,
-	runMosaicTile,
-	safeRm,
-} from '../lib.ts';
+import { defineTileRegion, extractZipFile, pipeline, RemoteZip, runMosaicAssemble, runMosaicTile } from '../lib.ts';
 
 const BASE_URL = 'https://gdi2.geo.bremen.de/inspire/download/DOP/data/';
 const IMAGE_EXTS = ['.jpg', '.tif', '.jp2'];
@@ -50,56 +43,54 @@ export default defineTileRegion({
 		}));
 	},
 	downloadLimit: 1,
-	download: async ({ outerZipUrl, id }, { tempDir }) => {
+	download: async ({ outerZipUrl, id }, ctx) => {
 		// Stream the inner ZIP out of the outer ZIP via RemoteZip
 		console.log(`  Reading ${id}...`);
 		const outerZip = await RemoteZip.open(outerZipUrl);
 		const innerEntry = outerZip.getEntries().find((e) => e.filename.endsWith('.zip'));
 		if (!innerEntry) throw new Error(`No inner ZIP found in ${outerZipUrl}`);
 
-		const innerZipPath = join(tempDir, `${id}_inner.zip`);
+		const innerZipPath = ctx.tempFile(join(ctx.tempDir, `${id}_inner.zip`));
 		console.log(`  Downloading inner ZIP (~${(innerEntry.uncompressedSize / 1e9).toFixed(1)} GB)...`);
 		await outerZip.extractToFile(innerEntry, innerZipPath);
 
 		return { innerZipPath };
 	},
 	convertLimit: { concurrency: 1 },
-	convert: async ({ innerZipPath }, { dest, tempDir }) => {
-		const extractDir = join(tempDir, `extract_${Date.now()}`);
-		const tilesDir = join(tempDir, `tiles_${Date.now()}`);
-		try {
-			console.log(`  Extracting ${basename(innerZipPath)}...`);
-			await extractZipFile(innerZipPath, extractDir);
-			safeRm(innerZipPath);
+	convert: async ({ innerZipPath }, ctx) => {
+		const extractDir = ctx.tempFile(join(ctx.tempDir, `extract_${Date.now()}`));
+		const tilesDir = ctx.tempFile(join(ctx.tempDir, `tiles_${Date.now()}`));
+		const filelistPath = ctx.tempFile(join(ctx.tempDir, 'filelist.txt'));
 
-			const files = await readdir(extractDir, { recursive: true });
-			const imageFiles = files
-				.map((f) => (typeof f === 'string' ? f : String(f)))
-				.filter((f) => IMAGE_EXTS.some((ext) => f.endsWith(ext)))
-				.map((f) => join(extractDir, f));
+		console.log(`  Extracting ${basename(innerZipPath)}...`);
+		await extractZipFile(innerZipPath, extractDir);
 
-			if (imageFiles.length === 0) throw new Error(`No image files found in ${extractDir}`);
+		const files = await readdir(extractDir, { recursive: true });
+		const imageFiles = files
+			.map((f) => (typeof f === 'string' ? f : String(f)))
+			.filter((f) => IMAGE_EXTS.some((ext) => f.endsWith(ext)))
+			.map((f) => join(extractDir, f));
 
-			mkdirSync(tilesDir, { recursive: true });
-			console.log(`  Converting ${imageFiles.length} image files...`);
-			const versatilesFiles: string[] = [];
-			await pipeline(imageFiles, { progress: { labels: ['converted'] } }).forEach({ cores: 2 }, async (imgPath) => {
-				const tileName = basename(imgPath).replace(/\.[^.]+$/, '.versatiles');
-				const tilePath = join(tilesDir, tileName);
-				await runMosaicTile(imgPath, tilePath, { crs: '25832', nodata: '0,0,0' });
-				versatilesFiles.push(tilePath);
-				return 'converted';
-			});
+		if (imageFiles.length === 0) throw new Error(`No image files found in ${extractDir}`);
 
-			const filelistPath = join(tempDir, 'filelist.txt');
-			writeFileSync(filelistPath, versatilesFiles.join('\n'));
-			await runMosaicAssemble(filelistPath, dest, { lossless: true });
-			safeRm(filelistPath);
-		} finally {
-			safeRm(innerZipPath);
-			safeRm(extractDir);
-			safeRm(tilesDir);
-		}
+		mkdirSync(tilesDir, { recursive: true });
+		console.log(`  Converting ${imageFiles.length} image files...`);
+		const versatilesFiles: string[] = [];
+		// Each runMosaicTile spawns parallel GDAL readers; cap at half the host cores.
+		const innerConcurrency = Math.max(1, Math.floor(availableParallelism() / 2));
+		await pipeline(imageFiles, { progress: { labels: ['converted'] } }).forEach(innerConcurrency, async (imgPath) => {
+			const tileName = basename(imgPath).replace(/\.[^.]+$/, '.versatiles');
+			const tilePath = join(tilesDir, tileName);
+			await runMosaicTile(imgPath, tilePath, { crs: '25832', nodata: '0,0,0' });
+			versatilesFiles.push(tilePath);
+			return 'converted';
+		});
+
+		writeFileSync(filelistPath, versatilesFiles.join('\n'));
+		// Source archives bundle a whole district's worth of orthophoto tiles into a single
+		// ZIP — splitting one item into many would force gigabytes of network re-fetches per
+		// tile. The plan documents this as an accepted exception to one-item-per-versatiles.
+		await runMosaicAssemble(filelistPath, ctx.dest, { lossless: true });
 	},
 	minFiles: 2,
 });

@@ -1,14 +1,5 @@
-import { rmSync } from 'node:fs';
 import { join } from 'node:path';
-import {
-	convertToTiledTiff,
-	defineTileRegion,
-	downloadFile,
-	isValidRaster,
-	runMosaicTile,
-	safeRm,
-	withRetry,
-} from './lib.ts';
+import { convertToTiledTiff, defineTileRegion, downloadFile, isValidRaster, runMosaicTile, withRetry } from './lib.ts';
 
 const OGC_API_MAP_URL = 'https://ogcapi.dgterritorio.gov.pt/collections/ortos-rgb/map';
 const CRS_3857 = 'http://www.opengis.net/def/crs/EPSG/0/3857';
@@ -28,7 +19,6 @@ interface GridItem {
 	y0: number;
 	x1: number;
 	y1: number;
-	[key: string]: unknown;
 }
 
 function generateGrid(): GridItem[] {
@@ -78,18 +68,18 @@ export default defineTileRegion({
 		return items;
 	},
 	downloadLimit: 2,
-	download: async (item, { tempDir, skipDest, errors }) => {
-		const pngPath = join(tempDir, `${item.id}.png`);
-		const tifPath = join(tempDir, `${item.id}.tif`);
+	download: async (item, ctx) => {
+		const pngPath = ctx.tempFile(join(ctx.tempDir, `${item.id}.png`));
+		const tifPath = ctx.tempFile(join(ctx.tempDir, `${item.id}.tif`));
 		const url = buildTileUrl(item);
 
 		await withRetry(() => downloadFile(url, pngPath, { minSize: 500 }), { maxAttempts: 3 });
 
-		// Empty tiles (outside Portugal) are ~2KB; real imagery is >10KB
+		// Empty tiles (outside Portugal) are ~2KB; real imagery is >10KB.
+		// Persist a `.skip` marker since the grid is fixed — re-running won't fill these.
 		const { statSync, writeFileSync } = await import('node:fs');
 		if (statSync(pngPath).size < 10000) {
-			safeRm(pngPath);
-			writeFileSync(skipDest, '');
+			writeFileSync(ctx.skipDest, '');
 			return 'empty';
 		}
 
@@ -99,10 +89,9 @@ export default defineTileRegion({
 			srs: 'EPSG:3857',
 			ullr: [item.x0, item.y1, item.x1, item.y0],
 		});
-		rmSync(pngPath, { force: true });
 
 		if (!(await isValidRaster(tifPath))) {
-			errors.add(`${item.id}.tif (${url})`);
+			ctx.errors.add(`${item.id}.tif (${url})`);
 			return 'invalid';
 		}
 
@@ -110,7 +99,6 @@ export default defineTileRegion({
 	},
 	convert: async ({ tifPath }, { dest }) => {
 		await runMosaicTile(tifPath, dest);
-		safeRm(tifPath);
 	},
 	minFiles: 500,
 });

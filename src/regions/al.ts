@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
 	computeWmsBlocks,
@@ -6,17 +6,23 @@ import {
 	downloadFile,
 	extractWmsBlock,
 	generateWmsXml,
+	isValidRaster,
 	MAX_ZOOM,
 	parseWmsCapabilities,
 	runMosaicTile,
-	safeRm,
+	type WmsBlockItem,
 	withRetry,
 } from './lib.ts';
 
 const WMS_URL = 'https://geoportal.asig.gov.al/service/orthophoto_2015/wms';
 const LAYER = 'OrthoImagery_20cm';
 
-export default defineTileRegion({
+interface AlItem extends WmsBlockItem {
+	wmsXmlPath: string;
+	blockPx: number;
+}
+
+export default defineTileRegion<AlItem, { srcPath: string }>({
 	name: 'al',
 	meta: {
 		status: 'scraping',
@@ -55,41 +61,35 @@ export default defineTileRegion({
 		return items.map((item) => ({ ...item, wmsXmlPath, blockPx }));
 	},
 	downloadLimit: 1,
-	download: async (item, { tempDir, skipDest }) => {
-		const tifPath = join(tempDir, `${item.id}.tif`);
+	download: async (item, ctx) => {
+		const tifPath = ctx.tempFile(join(ctx.tempDir, `${item.id}.tif`));
+		await withRetry(
+			() =>
+				extractWmsBlock(
+					{
+						wmsXmlPath: item.wmsXmlPath,
+						x0: item.x0,
+						y0: item.y0,
+						x1: item.x1,
+						y1: item.y1,
+						blockPx: item.blockPx,
+					},
+					tifPath,
+				),
+			{ maxAttempts: 3 },
+		);
 
-		try {
-			await withRetry(
-				() =>
-					extractWmsBlock(
-						{
-							wmsXmlPath: item.wmsXmlPath as string,
-							x0: item.x0,
-							y0: item.y0,
-							x1: item.x1,
-							y1: item.y1,
-							blockPx: item.blockPx,
-						},
-						tifPath,
-					),
-				{ maxAttempts: 3 },
-			);
-
-			return { srcPath: tifPath };
-		} catch {
-			// WMS returns errors for blocks outside coverage — mark as empty
-			safeRm(tifPath);
-			const { writeFileSync } = await import('node:fs');
-			writeFileSync(skipDest, '');
+		// WMS returns an XML error blob (not a valid raster) for blocks outside coverage.
+		// Persist a `.skip` marker since coverage is fixed — re-running won't change it.
+		if (!(await isValidRaster(tifPath))) {
+			writeFileSync(ctx.skipDest, '');
 			return 'empty';
 		}
+
+		return { srcPath: tifPath };
 	},
 	convert: async ({ srcPath }, { dest }) => {
-		try {
-			await runMosaicTile(srcPath as string, dest);
-		} finally {
-			safeRm(srcPath as string);
-		}
+		await runMosaicTile(srcPath, dest);
 	},
 	minFiles: 500,
 });

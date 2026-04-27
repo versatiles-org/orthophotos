@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
-import { createXmlParser, defineTileRegion, downloadFile, runMosaicTile, safeRm, withRetry } from '../lib.ts';
+import { createXmlParser, defineTileRegion, downloadFile, downloadRaster, runMosaicTile, withRetry } from '../lib.ts';
 
 const ATOM_URL = 'https://gdi.berlin.de/data/oi_dop2025_sommer/atom/';
 const xmlParser = createXmlParser();
@@ -75,14 +75,14 @@ export default defineTileRegion({
 		const urls = parseTileUrls(feedXml);
 		return urls.map((url) => ({ id: basename(url, '.jp2'), url }));
 	},
-	download: async ({ url, id }, { tempDir }) => {
-		const src = join(tempDir, `${id}.jp2`);
-		await withRetry(() => downloadFile(url, src), { maxAttempts: 3 });
+	download: async ({ url, id }, ctx) => {
+		const src = ctx.tempFile(join(ctx.tempDir, `${id}.jp2`));
+		const result = await downloadRaster(url, src, ctx.errors, `${id}.jp2`);
+		if (result === 'invalid') return 'invalid';
 		return { src };
 	},
 	convert: async ({ src }, { dest }) => {
 		await runMosaicTile(src, dest);
-		safeRm(src);
 	},
 	minFiles: 280,
 });

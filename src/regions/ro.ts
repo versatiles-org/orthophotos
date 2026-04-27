@@ -1,14 +1,12 @@
-import { existsSync, rmSync } from 'node:fs';
-import { readFile, readdir } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import {
 	createXmlParser,
 	defineTileRegion,
 	downloadFile,
-	extractZipFile,
-	runCommand,
+	extractZipAndBuildVrt,
 	runMosaicTile,
-	safeRm,
 	withRetry,
 } from './lib.ts';
 
@@ -62,27 +60,20 @@ export default defineTileRegion({
 		return parseZipUrls(xml);
 	},
 	downloadLimit: 1,
-	download: async ({ url, id }, { tempDir }) => {
-		const zipPath = join(tempDir, `${id}.zip`);
-		const extractDir = join(tempDir, id);
-
+	download: async ({ url, id }, ctx) => {
+		const zipPath = ctx.tempFile(join(ctx.tempDir, `${id}.zip`));
 		await withRetry(() => downloadFile(url, zipPath), { maxAttempts: 3 });
-		await extractZipFile(zipPath, extractDir);
-		rmSync(zipPath, { force: true });
-
-		const files = await readdir(extractDir);
-		const tifFiles = files.filter((f) => f.endsWith('.tif'));
-		if (tifFiles.length === 0) return 'empty';
-
-		const vrtPath = join(tempDir, `${id}.vrt`);
-		await runCommand('gdalbuildvrt', ['-q', vrtPath, ...tifFiles.map((f) => join(extractDir, f))]);
-
-		return { vrtPath, extractDir };
+		return { zipPath, id };
 	},
-	convert: async ({ vrtPath, extractDir }, { dest }) => {
-		await runMosaicTile(vrtPath, dest);
-		safeRm(vrtPath);
-		safeRm(extractDir);
+	convert: async ({ zipPath, id }, ctx) => {
+		const extractDir = ctx.tempFile(join(ctx.tempDir, id));
+		const vrtPath = ctx.tempFile(join(ctx.tempDir, `${id}.vrt`));
+		const { fileCount } = await extractZipAndBuildVrt(zipPath, extractDir, vrtPath);
+		if (fileCount === 0) {
+			ctx.errors.add(`${id}.zip (no .tif inside)`);
+			return;
+		}
+		await runMosaicTile(vrtPath, ctx.dest);
 	},
 	minFiles: 123456,
 });

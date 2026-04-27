@@ -22,12 +22,17 @@ export { createProgress, type Progress, type ProgressOptions } from '../lib/prog
 export { RemoteZip, type ZipEntry } from '../lib/remote-zip.ts';
 export { fetchWithInterval, type FetchWithIntervalOptions } from '../lib/rate-limit.ts';
 export { withRetry, type RetryOptions } from '../lib/retry.ts';
-export { ErrorBucket, isValidRaster } from '../lib/validators.ts';
+export { downloadRaster, ErrorBucket, isValidRaster, type DownloadRasterOptions } from '../lib/validators.ts';
 export { createXmlParser } from '../lib/xml.ts';
-export { computeWmsBlocks, generateWmsXml, parseWmsCapabilities, type WmsBbox } from '../lib/wms.ts';
+export { computeWmsBlocks, generateWmsXml, parseWmsCapabilities, type WmsBbox, type WmsBlockItem } from '../lib/wms.ts';
 
 // External-tool wrappers
-export { convertToTiledTiff, extractWmsBlock } from '../lib/gdal.ts';
+export {
+	convertToTiledTiff,
+	extractWmsBlock,
+	extractZipAndBuildVrt,
+	type ExtractZipBuildVrtOptions,
+} from '../lib/gdal.ts';
 export { runMosaicAssemble, runMosaicTile } from '../lib/versatiles.ts';
 
 // Config

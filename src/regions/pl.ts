@@ -5,10 +5,9 @@ import {
 	createXmlParser,
 	defineTileRegion,
 	downloadFile,
-	isValidRaster,
+	downloadRaster,
 	runCommand,
 	runMosaicTile,
-	safeRm,
 	withRetry,
 } from './lib.ts';
 
@@ -135,19 +134,16 @@ export default defineTileRegion({
 		return [...bestByGrid.values()].map(({ url, gridRef }) => ({ id: gridRef, url }));
 	},
 	downloadLimit: 2,
-	download: async ({ url, id }, { tempDir, errors }) => {
-		const tifPath = join(tempDir, `${id}.tif`);
-
-		await withRetry(() => downloadFile(url, tifPath), { maxAttempts: 5, initialDelayMs: 3000 });
-		if (!(await isValidRaster(tifPath))) {
-			errors.add(`${id}.tif (${url})`);
-			return 'invalid';
-		}
+	download: async ({ url, id }, ctx) => {
+		const tifPath = ctx.tempFile(join(ctx.tempDir, `${id}.tif`));
+		const result = await downloadRaster(url, tifPath, ctx.errors, `${id}.tif`, {
+			retry: { maxAttempts: 5, initialDelayMs: 3000 },
+		});
+		if (result === 'invalid') return 'invalid';
 		return { tifPath };
 	},
 	convert: async ({ tifPath }, { dest }) => {
 		await runMosaicTile(tifPath, dest);
-		safeRm(tifPath);
 	},
 	minFiles: 58000,
 });

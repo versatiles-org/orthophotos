@@ -1,7 +1,7 @@
 import { existsSync, renameSync, statSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { defineTileRegion, isValidRaster, runCommand, runMosaicTile, safeRm, withRetry } from '../lib.ts';
+import { defineTileRegion, isValidRaster, runCommand, runMosaicTile, withRetry } from '../lib.ts';
 
 const GEOJSON_URL =
 	'https://geodaten.schleswig-holstein.de/gaialight-sh/_apps/dladownload/single.php?file=DOP20_SH__Massendownload.geojson&id=4';
@@ -64,22 +64,21 @@ export default defineTileRegion({
 		const content = await readFile(geojsonPath, 'utf-8');
 		return parseGeoJson(JSON.parse(content));
 	},
-	download: async ({ url, id }, { tempDir, errors }) => {
-		const tifPath = join(tempDir, `${id}.tif`);
+	download: async ({ url, id }, ctx) => {
+		const tifPath = ctx.tempFile(join(ctx.tempDir, `${id}.tif`));
 
 		await withRetry(() => downloadInsecure(url, tifPath), { maxAttempts: 3 });
 		if (statSync(tifPath).size === 1) {
 			return 'empty'; // server returns 1-byte files ???
 		}
 		if (!(await isValidRaster(tifPath))) {
-			errors.add(`${id}.tif (${url})`);
+			ctx.errors.add(`${id}.tif (${url})`);
 			return 'invalid';
 		}
 		return { tifPath };
 	},
 	convert: async ({ tifPath }, { dest }) => {
 		await runMosaicTile(tifPath, dest);
-		safeRm(tifPath);
 	},
 	minFiles: 17000,
 });

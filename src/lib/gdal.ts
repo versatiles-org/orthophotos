@@ -2,7 +2,10 @@
  * Wrappers around `gdal_translate` for raster conversion and WMS extraction.
  */
 
+import { readdir } from 'node:fs/promises';
+import { join } from 'node:path';
 import { runCommand } from './command.ts';
+import { extractZipFile } from './fs.ts';
 
 export interface TiledTiffOptions {
 	/** Expand palette to rgb or rgba (e.g., for paletted PNGs) */
@@ -48,6 +51,61 @@ export async function convertToTiledTiff(input: string, output: string, options?
 	if (alpha) args.push('-co', 'ALPHA=YES');
 	args.push(input, output);
 	await runCommand('gdal_translate', args, { quiet: options?.quiet ?? true });
+}
+
+export interface ExtractZipBuildVrtOptions {
+	/** Recurse into subdirectories when finding raster files. Default: false. */
+	recursive?: boolean;
+	/** Regex matched against filenames to identify raster files. Default: `/\.tiff?$/i`. */
+	pattern?: RegExp;
+	/** Subdirectory inside `extractDir` to search. Default: search `extractDir` directly. */
+	subdir?: string;
+	/** Pass `-addalpha` to `gdalbuildvrt`. Default: false. */
+	addAlpha?: boolean;
+	/** Pass `-allow_projection_difference` to `gdalbuildvrt`. Default: false. */
+	allowProjectionDifference?: boolean;
+	/** Assign source SRS via `-a_srs` (e.g. `'EPSG:25832'`). Default: omitted. */
+	srs?: string;
+	/** Suppress stdout/stderr during execution. Default: true. */
+	quiet?: boolean;
+}
+
+/**
+ * Extracts a ZIP archive (atomically via `extractZipFile`) and builds a GDAL VRT
+ * from the raster files inside. Returns the count of matched files so callers
+ * can decide whether to short-circuit (e.g. return `'empty'`).
+ *
+ * Cleanup of `zipPath`, `extractDir`, and `vrtPath` is the caller's responsibility
+ * — typically via `tileCtx.tempFile(...)`.
+ */
+export async function extractZipAndBuildVrt(
+	zipPath: string,
+	extractDir: string,
+	vrtPath: string,
+	options?: ExtractZipBuildVrtOptions,
+): Promise<{ fileCount: number }> {
+	await extractZipFile(zipPath, extractDir);
+
+	const searchDir = options?.subdir ? join(extractDir, options.subdir) : extractDir;
+	const pattern = options?.pattern ?? /\.tiff?$/i;
+	const entries = await readdir(searchDir, { recursive: options?.recursive ?? false });
+	const tifFiles: string[] = [];
+	for (const entry of entries) {
+		const name = typeof entry === 'string' ? entry : String(entry);
+		if (pattern.test(name)) tifFiles.push(join(searchDir, name));
+	}
+
+	if (tifFiles.length === 0) return { fileCount: 0 };
+
+	const args: string[] = [];
+	if (options?.quiet ?? true) args.push('-q');
+	if (options?.addAlpha) args.push('-addalpha');
+	if (options?.allowProjectionDifference) args.push('-allow_projection_difference');
+	if (options?.srs) args.push('-a_srs', options.srs);
+	args.push(vrtPath, ...tifFiles);
+
+	await runCommand('gdalbuildvrt', args, { quiet: options?.quiet ?? true });
+	return { fileCount: tifFiles.length };
 }
 
 export interface WmsBlockExtractOptions {

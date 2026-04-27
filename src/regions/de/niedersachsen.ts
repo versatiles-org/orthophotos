@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
-import { defineTileRegion, downloadFile, runMosaicTile, safeRm, withRetry } from '../lib.ts';
+import { defineTileRegion, downloadFile, downloadRaster, runMosaicTile, withRetry } from '../lib.ts';
 
 const GEOJSON_URL =
 	'https://arcgis-geojson.s3.eu-de.cloud-object-storage.appdomain.cloud/dop20/lgln-opengeodata-dop20.geojson';
@@ -55,14 +55,14 @@ export default defineTileRegion({
 		const urls = parseTileUrls(content);
 		return urls.map((url) => ({ id: basename(url, '.tif'), url }));
 	},
-	download: async ({ url, id }, { tempDir }) => {
-		const src = join(tempDir, `${id}.tif`);
-		await withRetry(() => downloadFile(url, src), { maxAttempts: 3 });
+	download: async ({ url, id }, ctx) => {
+		const src = ctx.tempFile(join(ctx.tempDir, `${id}.tif`));
+		const result = await downloadRaster(url, src, ctx.errors, `${id}.tif`);
+		if (result === 'invalid') return 'invalid';
 		return { src };
 	},
 	convert: async ({ src }, { dest }) => {
 		await runMosaicTile(src, dest);
-		safeRm(src);
 	},
 	minFiles: 14900,
 });

@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, writeFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { defineTileRegion, downloadFile, extractZipFile, runCommand, runMosaicTile, safeRm, withRetry } from './lib.ts';
+import { defineTileRegion, downloadFile, extractZipFile, runCommand, runMosaicTile, withRetry } from './lib.ts';
 
 const INDEX_URL = 'https://geoportaal.maaamet.ee/docs/Avaandmed/epk10_eng.zip';
 const API_URL = 'https://geoportaal.maaamet.ee/index.php?lang_id=2&plugin_act=otsing&page_id=662';
@@ -33,7 +33,6 @@ async function loadSheetNumbers(shpDir: string): Promise<number[]> {
 interface EeItem {
 	id: string;
 	nr: number;
-	[key: string]: unknown;
 }
 
 interface EeDownload {
@@ -77,35 +76,31 @@ export default defineTileRegion<EeItem, EeDownload>({
 		return sheetNumbers.map((nr) => ({ id: String(nr), nr }));
 	},
 	downloadLimit: 2,
-	download: async (item, { tempDir, skipDest }) => {
+	download: async (item, ctx) => {
 		const filename = await getLatestFilename(item.nr);
 		if (!filename) {
-			writeFileSync(skipDest, '');
+			// Persist a `.skip` marker — the API result for this sheet won't change between runs.
+			writeFileSync(ctx.skipDest, '');
 			return 'empty';
 		}
 
-		const zipPath = join(tempDir, `${item.id}.zip`);
+		const zipPath = ctx.tempFile(join(ctx.tempDir, `${item.id}.zip`));
 		const url = `${DL_BASE}&kaardiruut=${item.nr}&andmetyyp=ortofoto_eesti_rgb&f=${filename}`;
 
 		await withRetry(() => downloadFile(url, zipPath), { maxAttempts: 3 });
 
 		return { zipPath, nr: item.nr };
 	},
-	convert: async (data, { dest, tempDir }) => {
-		const extractDir = join(tempDir, `${data.nr}_extract`);
-		try {
-			await extractZipFile(data.zipPath, extractDir);
+	convert: async (data, ctx) => {
+		const extractDir = ctx.tempFile(join(ctx.tempDir, `${data.nr}_extract`));
+		await extractZipFile(data.zipPath, extractDir);
 
-			// Find the .tif file in the extracted directory
-			const tifFile = readdirSync(extractDir).find((f) => f.endsWith('.tif'));
-			if (!tifFile) throw new Error(`No .tif found in ZIP for sheet ${data.nr}`);
-			const tifPath = join(extractDir, tifFile);
+		// Find the .tif file in the extracted directory
+		const tifFile = readdirSync(extractDir).find((f) => f.endsWith('.tif'));
+		if (!tifFile) throw new Error(`No .tif found in ZIP for sheet ${data.nr}`);
+		const tifPath = join(extractDir, tifFile);
 
-			await runMosaicTile(tifPath, dest, { crs: '3301' });
-		} finally {
-			safeRm(data.zipPath);
-			safeRm(extractDir);
-		}
+		await runMosaicTile(tifPath, ctx.dest, { crs: '3301' });
 	},
 	minFiles: 2000,
 });

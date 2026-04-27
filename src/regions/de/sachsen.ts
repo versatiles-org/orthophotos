@@ -1,8 +1,7 @@
-import { rmSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { defineTileRegion, downloadFile, extractZipFile, runMosaicTile, safeRm, withRetry } from '../lib.ts';
+import { defineTileRegion, downloadFile, extractZipFile, runMosaicTile, withRetry } from '../lib.ts';
 
 export function parseUrlId(url: string): string {
 	const match = url.match(/\/(dop20rgb_[^/]+?)_2_sn_tiff\.zip$/);
@@ -39,24 +38,22 @@ export default defineTileRegion({
 		const urls = content.trim().split('\n').filter(Boolean);
 		return urls.map((url) => ({ id: parseUrlId(url), url })).filter((item) => item.id !== '');
 	},
-	download: async ({ url, id }, { tempDir }) => {
-		const zipPath = join(tempDir, `${id}.zip`);
-		const extractDir = join(tempDir, id);
+	download: async ({ url, id }, ctx) => {
+		const zipPath = ctx.tempFile(join(ctx.tempDir, `${id}.zip`));
+		const extractDir = ctx.tempFile(join(ctx.tempDir, id));
 
 		await withRetry(() => downloadFile(url, zipPath), { maxAttempts: 3 });
 		await extractZipFile(zipPath, extractDir);
-		rmSync(zipPath, { force: true });
 
 		// Find the TIF file
 		const files = await readdir(extractDir, { recursive: true });
 		const tifFile = files.find((f) => typeof f === 'string' && f.endsWith('.tif'));
 		if (!tifFile) return 'empty';
 
-		return { tifPath: join(extractDir, String(tifFile)), extractDir };
+		return { tifPath: join(extractDir, String(tifFile)) };
 	},
-	convert: async ({ tifPath, extractDir }, { dest }) => {
+	convert: async ({ tifPath }, { dest }) => {
 		await runMosaicTile(tifPath, dest);
-		safeRm(extractDir);
 	},
 	minFiles: 4900,
 });

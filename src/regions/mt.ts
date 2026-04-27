@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { convertToTiledTiff, defineTileRegion, downloadFile, runMosaicTile, safeRm, withRetry } from './lib.ts';
+import { convertToTiledTiff, defineTileRegion, downloadFile, runMosaicTile, withRetry } from './lib.ts';
 
 /**
  * Malta WMS returns paletted PNG and does not support EPSG:3857.
@@ -20,7 +20,6 @@ interface MtItem {
 	ymin: number;
 	xmax: number;
 	ymax: number;
-	[key: string]: unknown;
 }
 
 interface MtDownload {
@@ -75,8 +74,8 @@ export default defineTileRegion<MtItem, MtDownload>({
 	},
 	init: () => generateGrid(),
 	downloadLimit: 2,
-	download: async (item, { tempDir }) => {
-		const pngPath = join(tempDir, `${item.id}.png`);
+	download: async (item, ctx) => {
+		const pngPath = ctx.tempFile(join(ctx.tempDir, `${item.id}.png`));
 		const url =
 			`${WMS_BASE}?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap` +
 			`&LAYERS=${LAYER}&STYLES=default&SRS=EPSG:4326` +
@@ -87,19 +86,14 @@ export default defineTileRegion<MtItem, MtDownload>({
 
 		return { pngPath, xmin: item.xmin, ymin: item.ymin, xmax: item.xmax, ymax: item.ymax } satisfies MtDownload;
 	},
-	convert: async (data, { dest }) => {
-		const tifPath = data.pngPath.replace(/\.png$/, '.tif');
-		try {
-			await convertToTiledTiff(data.pngPath, tifPath, {
-				expand: 'rgb',
-				srs: 'EPSG:4326',
-				ullr: [data.xmin, data.ymax, data.xmax, data.ymin],
-			});
-			await runMosaicTile(tifPath, dest, { nodata: '0,0,0', crs: '4326' });
-		} finally {
-			safeRm(data.pngPath);
-			safeRm(tifPath);
-		}
+	convert: async (data, ctx) => {
+		const tifPath = ctx.tempFile(data.pngPath.replace(/\.png$/, '.tif'));
+		await convertToTiledTiff(data.pngPath, tifPath, {
+			expand: 'rgb',
+			srs: 'EPSG:4326',
+			ullr: [data.xmin, data.ymax, data.xmax, data.ymin],
+		});
+		await runMosaicTile(tifPath, ctx.dest, { nodata: '0,0,0', crs: '4326' });
 	},
 	minFiles: 70,
 });

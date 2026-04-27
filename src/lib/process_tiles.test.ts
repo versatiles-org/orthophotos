@@ -229,6 +229,121 @@ describe('defineTileRegion', () => {
 		).rejects.toThrow('1 error(s) occurred');
 	});
 
+	describe('tempFile cleanup', () => {
+		it('removes registered files after successful convert', async () => {
+			const aTemp = join(ctx.tempDir, 'a.tmp');
+			const bTemp = join(ctx.tempDir, 'b.tmp');
+
+			await runTileRegion(ctx, {
+				name: 'test/cleanup-success',
+				meta: baseMeta,
+				init: () => [{ id: 'a' }, { id: 'b' }],
+				download: async (item, tileCtx) => {
+					const tmp = tileCtx.tempFile(join(tileCtx.tempDir, `${item.id}.tmp`));
+					writeFileSync(tmp, 'x');
+					return { tmp };
+				},
+				convert: async ({ tmp }, { dest }) => {
+					expect(existsSync(tmp)).toBe(true);
+					writeFileSync(dest, 'ok');
+				},
+				minFiles: 0,
+			});
+
+			expect(existsSync(aTemp)).toBe(false);
+			expect(existsSync(bTemp)).toBe(false);
+		});
+
+		it('removes registered files when download returns empty/invalid', async () => {
+			await runTileRegion(ctx, {
+				name: 'test/cleanup-skip',
+				meta: baseMeta,
+				init: () => [{ id: 'e' }, { id: 'i' }, { id: 'ok' }],
+				download: async (item, tileCtx) => {
+					const tmp = tileCtx.tempFile(join(tileCtx.tempDir, `${item.id}.tmp`));
+					writeFileSync(tmp, 'x');
+					if (item.id === 'e') return 'empty';
+					if (item.id === 'i') return 'invalid';
+					return { tmp };
+				},
+				convert: async ({ tmp }, { dest }) => {
+					writeFileSync(dest, tmp);
+				},
+				minFiles: 0,
+			});
+
+			expect(existsSync(join(ctx.tempDir, 'e.tmp'))).toBe(false);
+			expect(existsSync(join(ctx.tempDir, 'i.tmp'))).toBe(false);
+			expect(existsSync(join(ctx.tempDir, 'ok.tmp'))).toBe(false);
+		});
+
+		it('removes registered files when download throws', async () => {
+			const tmpPath = join(ctx.tempDir, 'fail.tmp');
+
+			await expect(
+				runTileRegion(ctx, {
+					name: 'test/cleanup-download-throw',
+					meta: baseMeta,
+					init: () => [{ id: 'fail' }],
+					download: async (_item, tileCtx) => {
+						const tmp = tileCtx.tempFile(join(tileCtx.tempDir, 'fail.tmp'));
+						writeFileSync(tmp, 'x');
+						throw new Error('boom');
+					},
+					convert: async () => {},
+					minFiles: 0,
+				}),
+			).rejects.toThrow('boom');
+
+			expect(existsSync(tmpPath)).toBe(false);
+		});
+
+		it('removes registered files when convert throws', async () => {
+			const tmpPath = join(ctx.tempDir, 'cv.tmp');
+
+			await expect(
+				runTileRegion(ctx, {
+					name: 'test/cleanup-convert-throw',
+					meta: baseMeta,
+					init: () => [{ id: 'cv' }],
+					download: async (_item, tileCtx) => {
+						const tmp = tileCtx.tempFile(join(tileCtx.tempDir, 'cv.tmp'));
+						writeFileSync(tmp, 'x');
+						return { tmp };
+					},
+					convert: async () => {
+						throw new Error('convert-boom');
+					},
+					minFiles: 0,
+				}),
+			).rejects.toThrow('convert-boom');
+
+			expect(existsSync(tmpPath)).toBe(false);
+		});
+
+		it('tempFile returns the path unchanged', async () => {
+			let observed = '';
+			await runTileRegion(ctx, {
+				name: 'test/cleanup-return',
+				meta: baseMeta,
+				init: () => [{ id: 'r' }],
+				download: async (_item, tileCtx) => {
+					const p = join(tileCtx.tempDir, 'r.tmp');
+					observed = tileCtx.tempFile(p);
+					writeFileSync(observed, 'x');
+					return { p: observed };
+				},
+				convert: async ({ p }, { dest }) => {
+					writeFileSync(dest, p);
+				},
+				minFiles: 0,
+			});
+
+			expect(observed).toBe(join(ctx.tempDir, 'r.tmp'));
+			expect(existsSync(observed)).toBe(false);
+		});
+	});
+
 	it('async init receives StepContext', async () => {
 		writeFileSync(join(ctx.tempDir, 'items.json'), JSON.stringify([{ id: 'p' }, { id: 'q' }]));
 

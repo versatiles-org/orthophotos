@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
-import { defineTileRegion, downloadFile, runMosaicTile, safeRm, withRetry } from '../lib.ts';
+import { defineTileRegion, downloadFile, downloadRaster, runMosaicTile, withRetry } from '../lib.ts';
 
 const INDEX_URL = 'https://www.opengeodata.nrw.de/produkte/geobasis/lusat/akt/dop/dop_jp2_f10/';
 
@@ -46,14 +46,14 @@ export default defineTileRegion({
 		const filenames = parseFilenames(html);
 		return filenames.map((f) => ({ id: basename(f, '.jp2'), url: `${INDEX_URL}${f}` }));
 	},
-	download: async ({ url, id }, { tempDir }) => {
-		const src = join(tempDir, `${id}.jp2`);
-		await withRetry(() => downloadFile(url, src), { maxAttempts: 3 });
+	download: async ({ url, id }, ctx) => {
+		const src = ctx.tempFile(join(ctx.tempDir, `${id}.jp2`));
+		const result = await downloadRaster(url, src, ctx.errors, `${id}.jp2`);
+		if (result === 'invalid') return 'invalid';
 		return { src };
 	},
 	convert: async ({ src }, { dest }) => {
 		await runMosaicTile(src, dest);
-		safeRm(src);
 	},
 	minFiles: 36000,
 });

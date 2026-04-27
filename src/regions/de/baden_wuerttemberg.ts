@@ -1,15 +1,6 @@
 import { statSync, writeFileSync } from 'node:fs';
-import { readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import {
-	defineTileRegion,
-	downloadFile,
-	extractZipFile,
-	runCommand,
-	runMosaicTile,
-	safeRm,
-	withRetry,
-} from '../lib.ts';
+import { defineTileRegion, downloadFile, extractZipAndBuildVrt, runMosaicTile, withRetry } from '../lib.ts';
 
 const BASE_URL = 'https://opengeodata.lgl-bw.de/data/dop20/';
 
@@ -50,50 +41,36 @@ export default defineTileRegion({
 		releaseDate: '2026-03-23',
 	},
 	init: () => generateTileIds().map((id) => ({ id })),
-	download: async ({ id }, { tempDir, skipDest }) => {
-		const zipPath = join(tempDir, `${id}.zip`);
-		const extractDir = join(tempDir, id);
-		const vrtPath = join(tempDir, `${id}.vrt`);
-		const listPath = join(tempDir, `${id}_files.txt`);
-
+	download: async ({ id }, ctx) => {
+		const zipPath = ctx.tempFile(join(ctx.tempDir, `${id}.zip`));
 		await withRetry(() => downloadFile(`${BASE_URL}dop20rgb_32_${id}_2_bw.zip`, zipPath), { maxAttempts: 3 });
 
-		const size = statSync(zipPath).size;
-		if (size < 1000) {
-			writeFileSync(skipDest, '');
+		// Filename probing: many guessed IDs don't correspond to a real archive.
+		// The server returns a tiny error response in those cases — persist a `.skip`
+		// marker so re-runs don't retry these forever.
+		if (statSync(zipPath).size < 1000) {
+			writeFileSync(ctx.skipDest, '');
 			return 'empty';
 		}
 
-		await extractZipFile(zipPath, extractDir);
-
-		const tifDir = join(extractDir, `dop20rgb_32_${id}_2_bw`);
-		const tifFiles = (await readdir(tifDir)).filter((f) => f.endsWith('.tif'));
-		if (tifFiles.length === 0) {
-			writeFileSync(skipDest, '');
-			return 'empty';
-		}
-		await writeFile(listPath, tifFiles.map((f) => join(tifDir, f)).join('\n'));
-		await runCommand(
-			'gdalbuildvrt',
-			[
-				'-q',
-				'-addalpha',
-				'-allow_projection_difference',
-				'-a_srs',
-				'EPSG:25832',
-				vrtPath,
-				'-input_file_list',
-				listPath,
-			],
-			{ cwd: tempDir },
-		);
-
-		return { vrtPath, extractDir };
+		return { zipPath, id };
 	},
-	convert: async ({ vrtPath, extractDir }, { dest }) => {
-		await runMosaicTile(vrtPath, dest);
-		safeRm(vrtPath);
-		safeRm(extractDir);
+	convert: async ({ zipPath, id }, ctx) => {
+		const extractDir = ctx.tempFile(join(ctx.tempDir, id));
+		const vrtPath = ctx.tempFile(join(ctx.tempDir, `${id}.vrt`));
+
+		const { fileCount } = await extractZipAndBuildVrt(zipPath, extractDir, vrtPath, {
+			subdir: `dop20rgb_32_${id}_2_bw`,
+			addAlpha: true,
+			allowProjectionDifference: true,
+			srs: 'EPSG:25832',
+		});
+		if (fileCount === 0) {
+			writeFileSync(ctx.skipDest, '');
+			return;
+		}
+
+		await runMosaicTile(vrtPath, ctx.dest);
 	},
 	minFiles: 14000,
 });

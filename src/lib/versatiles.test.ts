@@ -46,7 +46,8 @@ test('runMosaicTile - calls versatiles with correct args', async () => {
 		quiet: true,
 	});
 	const call = mockRunCommand.mock.calls[0];
-	expect(call[1]).not.toContain('--max-zoom');
+	// `mosaic tile` always caps at MAX_ZOOM so output pyramids stay consistent across regions.
+	expect(call[1]).toContain('--max-zoom');
 	expect(existsSync(output)).toBe(true);
 });
 

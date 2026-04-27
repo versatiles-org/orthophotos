@@ -25,6 +25,7 @@ import {
 	runMosaicAssemble,
 	runMosaicTile,
 	safeRm,
+	sleep,
 	withRetry,
 } from './lib.ts';
 

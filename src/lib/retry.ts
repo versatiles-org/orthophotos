@@ -2,6 +2,8 @@
  * Retry logic wrapper for operations that may fail due to transient issues.
  */
 
+import { sleep } from './delay.ts';
+
 export interface RetryOptions {
 	maxAttempts?: number;
 	initialDelayMs?: number;
@@ -15,10 +17,6 @@ const DEFAULT_OPTIONS: Required<RetryOptions> = {
 	maxDelayMs: 30000,
 	backoffMultiplier: 2,
 };
-
-function sleep(ms: number): Promise<void> {
-	return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 /**
  * Executes an async function with exponential backoff retry logic.

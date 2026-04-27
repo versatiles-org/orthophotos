@@ -13,6 +13,7 @@
 export { shuffle } from '../lib/array.ts';
 export { downloadFile, downloadFiles, runCommand, type DownloadOptions } from '../lib/command.ts';
 export { MAX_ZOOM, QUALITY } from '../lib/constants.ts';
+export { sleep } from '../lib/delay.ts';
 export type { RegionMetadata, RegionPipeline, RegionStatus, StepContext } from '../lib/framework.ts';
 export { extractZipFile, safeRm } from '../lib/fs.ts';
 export { pipeline, skip, type Skip } from '../lib/pipeline.ts';

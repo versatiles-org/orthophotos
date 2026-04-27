@@ -5,11 +5,8 @@
 import { spawn } from 'node:child_process';
 import { type RetryOptions, withRetry } from './retry.ts';
 import { createWriteStream, renameSync, rmSync, statSync } from 'node:fs';
+import { sleep } from './delay.ts';
 import { createProgress } from './progress.ts';
-
-function sleep(ms: number): Promise<void> {
-	return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 interface CommandOutput {
 	success: boolean;

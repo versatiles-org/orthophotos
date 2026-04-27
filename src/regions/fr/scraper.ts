@@ -101,19 +101,27 @@ function buildMeta(): RegionMetadata {
 
 const JSON_HEADERS = { Accept: 'application/json' };
 
+// 50 is the server-enforced maximum: anything higher silently clamps back to 50.
+// At 1 req/s this drops the index walk from ~140 pages to ~30 (~4.7× fewer requests).
+const INDEX_PAGE_SIZE = 50;
+
 /**
  * Fetches every page of the BD ORTHO index, caching each page (as JSON) in `cacheDir`.
  * Returns the list of cached page file paths, in order. Total page count is read from
- * the first page's `pagecount` field.
+ * the first page's `pagecount` field. The page size is encoded in the cache filename
+ * so cached pages from a different size aren't reused.
  */
 export async function fetchIndexPages(cacheDir: string): Promise<string[]> {
 	mkdirSync(cacheDir, { recursive: true });
 
+	const pageUrl = (n: number): string => `${FEED_BASE}?page=${n}&limit=${INDEX_PAGE_SIZE}`;
+	const pagePath = (n: number): string => join(cacheDir, `page-${INDEX_PAGE_SIZE}-${n}.json`);
+
 	// Fetch page 1 up front so we can learn the total page count for the progress bar.
-	const firstPath = join(cacheDir, 'page_1.json');
+	const firstPath = pagePath(1);
 	const firstWasCached = existsSync(firstPath);
 	if (!firstWasCached) {
-		await withRetry(() => downloadFile(`${FEED_BASE}?page=1`, firstPath, { headers: JSON_HEADERS }), {
+		await withRetry(() => downloadFile(pageUrl(1), firstPath, { headers: JSON_HEADERS }), {
 			maxAttempts: 3,
 		});
 	}
@@ -126,7 +134,7 @@ export async function fetchIndexPages(cacheDir: string): Promise<string[]> {
 
 	const items: { path: string; url: string }[] = [];
 	for (let i = 2; i <= pageCount; i++) {
-		items.push({ path: join(cacheDir, `page_${i}.json`), url: `${FEED_BASE}?page=${i}` });
+		items.push({ path: pagePath(i), url: pageUrl(i) });
 	}
 
 	await fetchWithInterval(items, ({ url, path }) => downloadFile(url, path, { headers: JSON_HEADERS }), {
@@ -190,7 +198,7 @@ export function defineFrSubRegion(opts: FrSubRegionOptions): RegionPipeline {
 		meta: buildMeta(),
 		init: async () => {
 			// Cache the index feed once, under the global temp dir, so all fr/* sub-regions
-			// share the same 141 page downloads instead of re-fetching them per region.
+			// share the same page downloads instead of re-fetching them per region.
 			const cacheDir = join(getConfig().dirTemp, 'fr', 'index');
 			console.log('  Fetching BD ORTHO index...');
 			const pagePaths = await fetchIndexPages(cacheDir);

@@ -21,9 +21,8 @@ import { createReadStream, existsSync, mkdirSync, readdirSync, writeFileSync } f
 import { createInterface } from 'node:readline';
 import { join } from 'node:path';
 import { shuffle } from './array.ts';
-import { type ConcurrencyLimit, resolveConcurrency } from './concurrency.ts';
 import type { RegionMetadata, RegionPipeline, StepContext } from './framework.ts';
-import { pipeline, skip } from './pipeline.ts';
+import { type ConcurrencyLimit, pipeline, resolveConcurrency, skip } from './pipeline.ts';
 import { ErrorBucket, expectMinFiles } from './validators.ts';
 
 /** Items must have an `id` property used to derive output and skip-file paths. */

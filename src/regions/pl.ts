@@ -74,7 +74,7 @@ async function extractUrlsFromGmlZip(zipPath: string): Promise<string[]> {
  * URL pattern: .../ortofotomapa/{operatId}/{operatId}_{tileId}_{gridRef}.tif
  * The grid ref (e.g. "N-34-126-C-b-1-3") identifies the location.
  */
-function extractGridRef(url: string): string {
+export function extractGridRef(url: string): string {
 	const filename = url.split('/').pop()?.replace('.tif', '') ?? '';
 	// Remove the first two numeric segments: {operatId}_{tileId}_
 	return filename.replace(/^\d+_\d+_/, '');

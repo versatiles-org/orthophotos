@@ -71,7 +71,15 @@ const style = VersaTilesStyle.colorful({
 	recolor: { saturate: -0.9, invertBrightness: true },
 });
 
-style.layers = style.layers.filter((l) => l.type !== 'line');
+let labelLayers = style.layers
+	.filter((l) => l.type === 'symbol' && l.id.startsWith('label-boundary-country'))
+	.map((l) => {
+		l.paint['text-halo-blur'] = 1;
+		l.paint['text-halo-width'] = 1;
+		l.paint['text-halo-color'] = 'rgba(0,0,0,0.7)';
+		return l;
+	});
+style.layers = style.layers.filter((l) => l.type !== 'line' && l.type !== 'symbol');
 
 maplibregl.setRTLTextPlugin('https://tiles.versatiles.org/assets/lib/mapbox-gl-rtl-text/mapbox-gl-rtl-text.js', true);
 
@@ -115,6 +123,7 @@ map.on('load', () => {
 			'line-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 0.7, 0],
 		},
 	});
+	labelLayers.forEach((l) => map.addLayer(l));
 
 	const popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 12 });
 	let hoveredId = null;

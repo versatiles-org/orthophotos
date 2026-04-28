@@ -68,10 +68,13 @@ export function generateStatusPage(
 <title>VersaTiles Orthophotos - Status</title>
 <link rel="icon" type="image/png" href="https://tiles.versatiles.org/assets/images/versatiles-logo.png">
 <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@33/dist/ag-grid-community.min.js"></script>
+<script src="https://tiles.versatiles.org/assets/lib/versatiles-style/versatiles-style.js"></script>
+<script src="https://tiles.versatiles.org/assets/lib/maplibre-gl/maplibre-gl.js"></script>
+<link href="https://tiles.versatiles.org/assets/lib/maplibre-gl/maplibre-gl.css" rel="stylesheet" />
 <style>
-	body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; margin: 0; padding: 20px; background: #0d1117; color: #e6edf3; }
-	h1 { margin: 0 0 8px; }
-	.summary { margin-bottom: 16px; font-size: 14px; color: #8b949e; }
+	body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; margin: 0; padding: 20px; background: #0d1117; color: #e6edf3; box-sizing: border-box; height: 100vh; display: flex; flex-direction: column; gap: 12px; }
+	h1 { margin: 0; }
+	.summary { margin: 0; font-size: 14px; color: #8b949e; }
 	a { color: #58a6ff; text-decoration: none; }
 	a:hover { text-decoration: underline; }
 	details { line-height: 1.2; }
@@ -79,13 +82,17 @@ export function generateStatusPage(
 	details summary:hover { color: #58a6ff; }
 	details ul { padding-left:18px; font-size: 0.8rem; }
 	details li { margin:4px 0; }
-	#grid { height: calc(100vh - 80px); }
+	#grid, #map { flex: 1 1 0; min-height: 0; }
+	#map { border-radius: 4px; overflow: hidden; }
+	.maplibregl-popup-content { background: #161b22; color: #e6edf3; border: 1px solid #21262d; border-radius: 4px; padding: 8px 10px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 13px; }
+	.maplibregl-popup-tip { display: none; }
 </style>
 </head>
 <body>
 <h1>VersaTiles Orthophotos</h1>
 <p class="summary">${allMetadata.size} regions &middot; ${summary}</p>
 <div id="grid"></div>
+<div id="map"></div>
 <script>
 const rowData = ${JSON.stringify(rows)};
 
@@ -123,6 +130,7 @@ const columnDefs = [
 const gridOptions = {
 	columnDefs,
 	rowData,
+	getRowId: params => params.data.id,
 	theme: agGrid.themeQuartz.withParams({
 		backgroundColor: '#0d1117',
 		foregroundColor: '#e6edf3',
@@ -142,7 +150,123 @@ const gridOptions = {
 };
 
 const gridDiv = document.getElementById('grid');
-agGrid.createGrid(gridDiv, gridOptions);
+const gridApi = agGrid.createGrid(gridDiv, gridOptions);
+
+// --- Map ---
+
+const style = VersaTilesStyle.colorful({
+	baseUrl: 'https://tiles.versatiles.org',
+	recolor: { saturate: -0.8 },
+});
+
+maplibregl.setRTLTextPlugin('https://tiles.versatiles.org/assets/lib/mapbox-gl-rtl-text/mapbox-gl-rtl-text.js', true);
+
+const map = new maplibregl.Map({
+	container: 'map',
+	style,
+	bounds: [-12, 35, 41, 60],
+});
+
+function escapeHtml(s) {
+	return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+}
+
+map.on('load', async () => {
+	let regions;
+	try {
+		regions = await fetch('status.json').then(r => r.json());
+	} catch (err) {
+		console.error('Failed to load status.json for map:', err);
+		return;
+	}
+
+	const byId = new Map(rowData.map(r => [r.id, r]));
+	const features = [];
+	for (const r of regions) {
+		if (!r.region || !r.region.geometry) continue;
+		const meta = byId.get(r.id);
+		if (!meta) continue;
+		features.push({
+			type: 'Feature',
+			id: r.id,
+			properties: {
+				id: meta.id,
+				name: meta.name,
+				status: meta.status,
+				statusColor: meta.statusColor,
+				notesCount: meta.notes ? meta.notes.length : 0,
+			},
+			geometry: r.region.geometry,
+		});
+	}
+
+	map.addSource('regions', { type: 'geojson', data: { type: 'FeatureCollection', features } });
+
+	map.addLayer({
+		id: 'regions-fill',
+		type: 'fill',
+		source: 'regions',
+		paint: { 'fill-color': ['get', 'statusColor'], 'fill-opacity': 0.45 },
+	});
+	map.addLayer({
+		id: 'regions-hover',
+		type: 'fill',
+		source: 'regions',
+		paint: {
+			'fill-color': '#fff',
+			'fill-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 0.25, 0],
+		},
+	});
+	map.addLayer({
+		id: 'regions-line',
+		type: 'line',
+		source: 'regions',
+		paint: { 'line-color': '#0d1117', 'line-width': 0.6 },
+	});
+
+	const popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 12 });
+	let hoveredId = null;
+
+	map.on('mousemove', 'regions-fill', (e) => {
+		if (!e.features.length) return;
+		const f = e.features[0];
+		if (hoveredId !== null && hoveredId !== f.id) {
+			map.setFeatureState({ source: 'regions', id: hoveredId }, { hover: false });
+		}
+		hoveredId = f.id;
+		map.setFeatureState({ source: 'regions', id: hoveredId }, { hover: true });
+		map.getCanvas().style.cursor = 'pointer';
+		const p = f.properties;
+		const noteLine = p.notesCount > 0
+			? '<div style="color:#8b949e;margin-top:2px">' + p.notesCount + ' note' + (p.notesCount === 1 ? '' : 's') + '</div>'
+			: '';
+		popup.setLngLat(e.lngLat).setHTML(
+			'<div style="font-weight:bold">' + escapeHtml(p.name) + ' <span style="color:#6e7681;font-weight:normal">' + escapeHtml(p.id) + '</span></div>'
+			+ '<div style="color:' + p.statusColor + ';font-weight:bold">' + escapeHtml(p.status) + '</div>'
+			+ noteLine
+		).addTo(map);
+	});
+
+	map.on('mouseleave', 'regions-fill', () => {
+		if (hoveredId !== null) {
+			map.setFeatureState({ source: 'regions', id: hoveredId }, { hover: false });
+			hoveredId = null;
+		}
+		map.getCanvas().style.cursor = '';
+		popup.remove();
+	});
+
+	map.on('click', 'regions-fill', (e) => {
+		if (!e.features.length) return;
+		const id = e.features[0].id;
+		const node = gridApi.getRowNode(id);
+		if (!node) return;
+		gridApi.deselectAll();
+		node.setSelected(true);
+		gridApi.ensureNodeVisible(node, 'middle');
+		gridApi.flashCells({ rowNodes: [node] });
+	});
+});
 </script>
 </body>
 </html>

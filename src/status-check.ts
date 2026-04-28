@@ -18,7 +18,7 @@ console.log(`Wrote ${regions.length} regions to web/status.json`);
 const sources = regions.map((region) => ({
 	id: region.id,
 	status: region.status,
-	name: region.region.properties,
+	name: region.region?.properties ?? null,
 }));
 writeFileSync(resolve(__dirname, '../web/sources.json'), JSON.stringify(sources, null, 2));
 

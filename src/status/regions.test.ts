@@ -62,7 +62,7 @@ describe('scanRegions', () => {
 		expect(liRegion).toBeDefined();
 		expect(liRegion!.status.status).toBe('success');
 		expect(liRegion!.status.notes).toEqual(['Good quality']);
-		expect(liRegion!.region.properties.fullname).toBe('Liechtenstein');
+		expect(liRegion!.region!.properties.fullname).toBe('Liechtenstein');
 
 		if (liRegion!.status.status === 'success') {
 			expect(liRegion!.status.entries).toEqual([{ name: 'tiles' }]);
@@ -76,11 +76,13 @@ describe('scanRegions', () => {
 		expect(alRegion!.status.notes).toEqual(['Not yet available']);
 	});
 
-	test('throws on unknown region ID', () => {
+	test('keeps regions without known geometry but sets region to null', () => {
 		// Provide known regions that don't include 'li' or 'al'
 		const knownRegions: KnownRegion[] = [makeKnownRegion('de', 'Germany')];
 
-		expect(() => scanRegions(knownRegions, makeMetadata())).toThrow('Unknown region ID');
+		const result = scanRegions(knownRegions, makeMetadata());
+		expect(result).toHaveLength(2);
+		expect(result.every((r) => r.region === null)).toBe(true);
 	});
 
 	test('uses default entries when not specified in metadata', () => {

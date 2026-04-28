@@ -129,7 +129,7 @@ export function parseArgs(args: string[]): ParsedArgs | null {
 function getCommand(): string {
 	const scriptPath = process.argv[1] ?? '';
 	if (scriptPath.endsWith('run.sh')) return './run.sh';
-	return 'npm run run --';
+	return 'npm run pipeline --';
 }
 
 /**

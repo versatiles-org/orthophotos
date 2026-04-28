@@ -84,7 +84,7 @@ The demo is publicly accessible at [versatiles.org/satellite\_demo/](https://ver
 npm run check          # Lint + format check + typecheck + tests
 npm run lint           # ESLint
 npm run test           # Run tests (vitest)
-npm run coverage       # Run tests with coverage
+npm run test:coverage  # Run tests with coverage
 npm run typecheck      # TypeScript type checking
 npm run format         # Auto-format with Prettier
 ```

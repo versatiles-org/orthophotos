@@ -15,7 +15,7 @@ npm run format             # Auto-format with Prettier
 npm run format:check       # Check formatting without modifying
 
 ./run.sh <region> <tasks>         # Run pipeline tasks for a region
-npm run status-check              # Scan regions, validate status, export JSON
+npm run build:status              # Scan regions, validate status, export JSON
 npm run server                    # Prepare data + start server on port 8080
 ```
 

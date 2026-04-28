@@ -4,12 +4,13 @@
  * Main entry point for the orthophoto processing pipeline.
  *
  * Usage:
- *   npm run run -- <name> <task>
+ *   ./run.sh <name> <task>            (preferred)
+ *   npm run pipeline -- <name> <task>
  *
  * Example:
- *   npm run run -- de/bw 1        # run fetch
- *   npm run run -- de/bw 2        # run merge
- *   npm run run -- de/bw all      # full pipeline (1 2 3)
+ *   ./run.sh de/bw 1        # run fetch
+ *   ./run.sh de/bw 2        # run merge
+ *   ./run.sh de/bw all      # full pipeline (1 2 3)
  */
 
 import { resolve } from 'node:path';

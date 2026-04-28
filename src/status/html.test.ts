@@ -44,7 +44,8 @@ describe('generateStatusPage', () => {
 		expect(html).toContain('<!DOCTYPE html>');
 		expect(html).toContain('<title>VersaTiles Orthophotos - Status</title>');
 		expect(html).toContain('ag-grid-community');
-		expect(html).toContain('agGrid.createGrid');
+		expect(html).toContain('<script src="index.js"></script>');
+		expect(html).toContain('<link rel="stylesheet" href="index.css"');
 		expect(html).toContain('0 regions');
 	});
 

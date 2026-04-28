@@ -34,18 +34,21 @@ export class RemoteZip {
 	 * Requires the server to support `Accept-Ranges: bytes`.
 	 */
 	static async open(url: string): Promise<RemoteZip> {
-		// Step 1: HEAD to get file size
-		const headRes = await fetch(url, { method: 'HEAD' });
-		if (!headRes.ok) throw new Error(`HEAD ${url} failed: ${headRes.status}`);
-		const contentLength = Number(headRes.headers.get('content-length'));
-		if (!contentLength || isNaN(contentLength)) {
-			throw new Error(`Could not determine file size for ${url}`);
+		// Step 1: One suffix-range request — fetches the last 64 KB and returns the
+		// total file size in `Content-Range`, saving the HEAD round-trip.
+		const eocdSearchSize = 65536;
+		const tailRes = await fetch(url, { headers: { Range: `bytes=-${eocdSearchSize}` } });
+		if (!tailRes.ok) throw new Error(`fetch ${url} failed: ${tailRes.status}`);
+		if (tailRes.status !== 206) {
+			throw new Error(
+				`Server ignored Range request for ${url} (status ${tailRes.status}); RemoteZip requires range support`,
+			);
 		}
-
-		// Step 2: Read last 65KB to find EOCD record
-		const eocdSearchSize = Math.min(65536, contentLength);
-		const eocdStart = contentLength - eocdSearchSize;
-		const tailBuf = await fetchRange(url, eocdStart, contentLength - 1);
+		const contentRange = tailRes.headers.get('content-range');
+		if (!contentRange?.match(/^bytes \d+-\d+\/\d+$/)) {
+			throw new Error(`Missing or invalid Content-Range for ${url}: ${contentRange}`);
+		}
+		const tailBuf = Buffer.from(await tailRes.arrayBuffer());
 
 		const eocdOffset = findEOCD(tailBuf);
 		if (eocdOffset === -1) {

@@ -66,9 +66,12 @@ export function generateStatusPage(
 			notes: meta.notes,
 		});
 		if (region?.geometry) {
+			// MapLibre's `feature-state` requires integer feature IDs — non-numeric strings
+			// like "de/bayern" silently no-op. Assign a sequential int here and keep the
+			// real region id inside `properties.id` for downstream grid lookups.
 			features.push({
 				type: 'Feature',
-				id,
+				id: features.length,
 				properties: { id, name, status, statusColor, notesCount: meta.notes.length },
 				geometry: region.geometry,
 			});

@@ -68,7 +68,7 @@ const gridApi = agGrid.createGrid(document.getElementById('grid'), gridOptions);
 
 const style = VersaTilesStyle.colorful({
 	baseUrl: 'https://tiles.versatiles.org',
-	recolor: { saturate: -0.9, invertBrightness: true, gamma: 1.2 },
+	recolor: { saturate: -0.9, invertBrightness: true },
 });
 
 style.layers = style.layers.filter((l) => l.type !== 'line');
@@ -100,19 +100,20 @@ map.on('load', () => {
 		paint: { 'fill-color': ['get', 'statusColor'], 'fill-opacity': 0.7 },
 	});
 	map.addLayer({
-		id: 'regions-hover',
-		type: 'fill',
-		source: 'regions',
-		paint: {
-			'fill-color': '#fff',
-			'fill-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 0.25, 0],
-		},
-	});
-	map.addLayer({
 		id: 'regions-line',
 		type: 'line',
 		source: 'regions',
 		paint: { 'line-color': '#0d1117', 'line-width': 0.5 },
+	});
+	map.addLayer({
+		id: 'regions-hover',
+		type: 'line',
+		source: 'regions',
+		paint: {
+			'line-color': '#fff',
+			'line-width': 2,
+			'line-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 0.7, 0],
+		},
 	});
 
 	const popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 12 });
@@ -165,7 +166,7 @@ map.on('load', () => {
 
 	map.on('click', 'regions-fill', (e) => {
 		if (!e.features.length) return;
-		const id = e.features[0].id;
+		const id = e.features[0].properties.id;
 		const node = gridApi.getRowNode(id);
 		if (!node) return;
 		gridApi.deselectAll();

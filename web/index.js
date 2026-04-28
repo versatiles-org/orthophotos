@@ -79,6 +79,8 @@ const map = new maplibregl.Map({
 	container: 'map',
 	style,
 	bounds: [-12, 35, 41, 60],
+	attributionControl: { compact: true },
+	cooperativeGestures: true,
 });
 
 function escapeHtml(s) {
@@ -95,7 +97,7 @@ map.on('load', () => {
 		id: 'regions-fill',
 		type: 'fill',
 		source: 'regions',
-		paint: { 'fill-color': ['get', 'statusColor'], 'fill-opacity': 0.45 },
+		paint: { 'fill-color': ['get', 'statusColor'], 'fill-opacity': 0.7 },
 	});
 	map.addLayer({
 		id: 'regions-hover',

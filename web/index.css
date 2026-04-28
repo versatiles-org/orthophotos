@@ -68,4 +68,19 @@ a {
 	.maplibregl-popup-tip {
 		display: none;
 	}
+
+	.maplibregl-ctrl-attrib {
+		background: rgba(22, 27, 34, 0.85);
+		color: #e6edf3;
+
+		a {
+			color: #58a6ff;
+		}
+	}
+
+	.maplibregl-ctrl-attrib-button {
+		/* The button's default white background and dark "i" icon both invert,
+		   yielding a dark button with a light icon that matches the page theme. */
+		filter: invert(1);
+	}
 }

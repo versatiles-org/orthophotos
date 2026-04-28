@@ -1,3 +1,4 @@
+import type { Feature, FeatureCollection, MultiPolygon, Polygon } from 'geojson';
 import type { RegionMetadata, RegionStatus } from '../lib/framework.ts';
 import type { KnownRegion } from './geojson.ts';
 
@@ -29,21 +30,33 @@ interface RowData {
 	notes: string[];
 }
 
+interface MapFeatureProperties {
+	id: string;
+	name: string;
+	status: string;
+	statusColor: string;
+	notesCount: number;
+}
+
 export function generateStatusPage(
 	allMetadata: Map<string, RegionMetadata>,
 	knownRegions: Map<string, KnownRegion>,
 ): string {
 	const counts: Record<RegionStatus, number> = { released: 0, scraping: 0, planned: 0, blocked: 0 };
 	const rows: RowData[] = [];
+	const features: Feature<Polygon | MultiPolygon, MapFeatureProperties>[] = [];
 
 	for (const [id, meta] of allMetadata) {
 		counts[meta.status]++;
 		const region = knownRegions.get(id);
+		const name = region?.properties.fullname ?? id;
+		const status = STATUS_LABELS[meta.status];
+		const statusColor = STATUS_COLORS[meta.status];
 		rows.push({
 			id,
-			name: region?.properties.fullname ?? id,
-			status: STATUS_LABELS[meta.status],
-			statusColor: STATUS_COLORS[meta.status],
+			name,
+			status,
+			statusColor,
 			releaseDate: meta.status === 'released' ? meta.releaseDate : '',
 			date: meta.date ?? '',
 			licenseName: meta.license?.name ?? '',
@@ -52,7 +65,20 @@ export function generateStatusPage(
 			creatorUrl: meta.creator?.url ?? '',
 			notes: meta.notes,
 		});
+		if (region?.geometry) {
+			features.push({
+				type: 'Feature',
+				id,
+				properties: { id, name, status, statusColor, notesCount: meta.notes.length },
+				geometry: region.geometry,
+			});
+		}
 	}
+
+	const featureCollection: FeatureCollection<Polygon | MultiPolygon, MapFeatureProperties> = {
+		type: 'FeatureCollection',
+		features,
+	};
 
 	const statuses: RegionStatus[] = ['released', 'scraping', 'planned', 'blocked'];
 	const summary = statuses
@@ -78,7 +104,10 @@ export function generateStatusPage(
 <p class="summary">${allMetadata.size} regions &middot; ${summary}</p>
 <div id="grid"></div>
 <div id="map"></div>
-<script>const rowData = ${JSON.stringify(rows)};</script>
+<script>
+const rowData = ${JSON.stringify(rows)};
+const regionFeatures = ${JSON.stringify(featureCollection)};
+</script>
 <script src="index.js"></script>
 </body>
 </html>

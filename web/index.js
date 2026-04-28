@@ -1,4 +1,4 @@
-/* global agGrid, maplibregl, VersaTilesStyle, rowData */
+/* global agGrid, maplibregl, VersaTilesStyle, rowData, regionFeatures */
 
 function StatusCellRenderer(params) {
 	if (!params.value) return '';
@@ -86,36 +86,8 @@ function escapeHtml(s) {
 	);
 }
 
-map.on('load', async () => {
-	let regions;
-	try {
-		regions = await fetch('status.json').then((r) => r.json());
-	} catch (err) {
-		console.error('Failed to load status.json for map:', err);
-		return;
-	}
-
-	const byId = new Map(rowData.map((r) => [r.id, r]));
-	const features = [];
-	for (const r of regions) {
-		if (!r.region || !r.region.geometry) continue;
-		const meta = byId.get(r.id);
-		if (!meta) continue;
-		features.push({
-			type: 'Feature',
-			id: r.id,
-			properties: {
-				id: meta.id,
-				name: meta.name,
-				status: meta.status,
-				statusColor: meta.statusColor,
-				notesCount: meta.notes ? meta.notes.length : 0,
-			},
-			geometry: r.region.geometry,
-		});
-	}
-
-	map.addSource('regions', { type: 'geojson', data: { type: 'FeatureCollection', features } });
+map.on('load', () => {
+	map.addSource('regions', { type: 'geojson', data: regionFeatures });
 
 	map.addLayer({
 		id: 'regions-fill',

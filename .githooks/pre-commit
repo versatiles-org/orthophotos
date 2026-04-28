@@ -1,10 +1,11 @@
 #!/bin/sh
 
-# Check formatting of staged .ts files
-STAGED=$(git diff --cached --name-only --diff-filter=ACM | grep '\.ts$' || true)
+# Check formatting of staged files. Prettier handles its own file-type detection
+# and respects .prettierignore; --ignore-unknown silently skips other types.
+STAGED=$(git diff --cached --name-only --diff-filter=ACM)
 if [ -n "$STAGED" ]; then
   echo "Checking formatting..."
-  echo "$STAGED" | xargs npx prettier --check 2>&1
+  echo "$STAGED" | xargs npx prettier --check --ignore-unknown 2>&1
   if [ $? -ne 0 ]; then
     echo ""
     echo "Formatting issues found. Run 'npm run format' to fix."

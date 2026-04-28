@@ -96,6 +96,13 @@ export default [
 		metadata: { status: 'planned', notes: ['Data source not yet investigated.'] },
 	},
 	{
+		id: 'uk',
+		metadata: {
+			status: 'planned',
+			notes: ['Data source not yet investigated.'],
+		},
+	},
+	{
 		id: 'xk',
 		metadata: { status: 'planned', notes: ['Data source not yet investigated.'] },
 	},

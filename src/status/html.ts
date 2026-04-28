@@ -72,9 +72,9 @@ export function generateStatusPage(
 <script src="https://tiles.versatiles.org/assets/lib/maplibre-gl/maplibre-gl.js"></script>
 <link href="https://tiles.versatiles.org/assets/lib/maplibre-gl/maplibre-gl.css" rel="stylesheet" />
 <style>
-	body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; margin: 0; padding: 20px; background: #0d1117; color: #e6edf3; box-sizing: border-box; height: 100vh; display: flex; flex-direction: column; gap: 12px; }
-	h1 { margin: 0; }
-	.summary { margin: 0; font-size: 14px; color: #8b949e; }
+	body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; margin: 0; padding: 20px; background: #0d1117; color: #e6edf3; }
+	h1 { margin: 0 0 8px; }
+	.summary { margin: 0 0 16px; font-size: 14px; color: #8b949e; }
 	a { color: #58a6ff; text-decoration: none; }
 	a:hover { text-decoration: underline; }
 	details { line-height: 1.2; }
@@ -82,8 +82,8 @@ export function generateStatusPage(
 	details summary:hover { color: #58a6ff; }
 	details ul { padding-left:18px; font-size: 0.8rem; }
 	details li { margin:4px 0; }
-	#grid, #map { flex: 1 1 0; min-height: 0; }
-	#map { border-radius: 4px; overflow: hidden; }
+	#grid { margin-bottom: 16px; }
+	#map { height: 600px; border-radius: 4px; overflow: hidden; }
 	.maplibregl-popup-content { background: #161b22; color: #e6edf3; border: 1px solid #21262d; border-radius: 4px; padding: 8px 10px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 13px; }
 	.maplibregl-popup-tip { display: none; }
 </style>
@@ -144,7 +144,7 @@ const gridOptions = {
 		sortable: true,
 		resizable: true,
 	},
-	domLayout: 'normal',
+	domLayout: 'autoHeight',
 	animateRows: false,
 	suppressCellFocus: true,
 };

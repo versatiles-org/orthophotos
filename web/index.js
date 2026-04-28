@@ -71,6 +71,8 @@ const style = VersaTilesStyle.colorful({
 	recolor: { saturate: -0.9, invertBrightness: true, gamma: 1.2 },
 });
 
+style.layers = style.layers.filter((l) => l.type !== 'line');
+
 maplibregl.setRTLTextPlugin('https://tiles.versatiles.org/assets/lib/mapbox-gl-rtl-text/mapbox-gl-rtl-text.js', true);
 
 const map = new maplibregl.Map({
@@ -108,7 +110,7 @@ map.on('load', () => {
 		id: 'regions-line',
 		type: 'line',
 		source: 'regions',
-		paint: { 'line-color': '#0d1117', 'line-width': 0.6 },
+		paint: { 'line-color': '#0d1117', 'line-width': 0.5 },
 	});
 
 	const popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 12 });

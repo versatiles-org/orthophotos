@@ -68,7 +68,7 @@ const gridApi = agGrid.createGrid(document.getElementById('grid'), gridOptions);
 
 const style = VersaTilesStyle.colorful({
 	baseUrl: 'https://tiles.versatiles.org',
-	recolor: { saturate: -0.8 },
+	recolor: { saturate: -0.9, invertBrightness: true, gamma: 1.2 },
 });
 
 maplibregl.setRTLTextPlugin('https://tiles.versatiles.org/assets/lib/mapbox-gl-rtl-text/mapbox-gl-rtl-text.js', true);

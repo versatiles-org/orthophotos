@@ -53,7 +53,7 @@ interface DkItem {
 export default defineTileRegion<DkItem, { zipPath: string }>({
 	name: 'dk',
 	meta: {
-		status: 'scraping',
+		status: 'released',
 		notes: [
 			'Forårs ortofoto 2025, 12.5 cm, via FTPS (dataforsyningen.dk/data/981).',
 			'Credentials required — set dk_ftp_user and dk_ftp_pass in config.env.',
@@ -70,6 +70,7 @@ export default defineTileRegion<DkItem, { zipPath: string }>({
 			url: 'https://dataforsyningen.dk/data/981',
 		},
 		date: '2025',
+		releaseDate: '2026-04-27',
 		mask: true,
 	},
 	init: async (ctx) => {

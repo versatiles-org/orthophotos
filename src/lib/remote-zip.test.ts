@@ -1,62 +1,54 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { RemoteZip } from './remote-zip.ts';
 
-// Small CZ orthophoto ZIP (~7.5 MB) with known contents
-const TEST_URL = 'https://openzu.cuzk.gov.cz/opendata/OI/302_5550.zip';
+// OSM water polygons (split, 4326) — large file (~900 MB) but RemoteZip only
+// fetches the tail (central directory) plus a few KB per extracted entry. Hosted
+// on osmdata.openstreetmap.de, which serves real HTTP range requests. The archive
+// is regenerated on a regular cadence, so tests assert structure rather than
+// exact byte content.
+const TEST_URL = 'https://osmdata.openstreetmap.de/download/water-polygons-split-4326.zip';
 
 describe('RemoteZip', () => {
-	it('opens a remote ZIP and lists entries', async () => {
-		const zip = await RemoteZip.open(TEST_URL);
-		const entries = zip.getEntries();
+	let zip: RemoteZip;
 
-		expect(entries.length).toBeGreaterThan(0);
-
-		// CZ orthophoto ZIPs contain a JP2 and a J2W worldfile
-		const jp2 = entries.find((e) => e.filename.endsWith('.jp2'));
-		expect(jp2).toBeDefined();
-		expect(jp2!.uncompressedSize).toBeGreaterThan(0);
-		expect([0, 8]).toContain(jp2!.compressionMethod); // stored or deflated
-
-		const j2w = entries.find((e) => e.filename.endsWith('.j2w'));
-		expect(j2w).toBeDefined();
+	beforeAll(async () => {
+		zip = await RemoteZip.open(TEST_URL);
 	}, 30000);
 
-	it('extracts a small file correctly', async () => {
-		const zip = await RemoteZip.open(TEST_URL);
-		const entries = zip.getEntries();
+	it('lists the expected shapefile entries', () => {
+		const filenames = zip.getEntries().map((e) => e.filename);
+		expect(filenames.some((f) => f.endsWith('.shp'))).toBe(true);
+		expect(filenames.some((f) => f.endsWith('.dbf'))).toBe(true);
+		expect(filenames.some((f) => f.endsWith('.prj'))).toBe(true);
+		expect(filenames.some((f) => f.endsWith('.cpg'))).toBe(true);
+		expect(filenames.some((f) => f.endsWith('.shx'))).toBe(true);
+	});
 
-		// Extract the worldfile (small text file)
-		const j2w = entries.find((e) => e.filename.endsWith('.j2w'));
-		expect(j2w).toBeDefined();
+	it('extracts a stored (uncompressed) entry correctly', async () => {
+		const cpg = zip.getEntries().find((e) => e.filename.endsWith('.cpg'));
+		expect(cpg).toBeDefined();
+		expect(cpg!.compressionMethod).toBe(0);
 
-		const content = await zip.extract(j2w!);
-		expect(content.length).toBe(j2w!.uncompressedSize);
-
-		// J2W is a text file with 6 lines of numbers
-		const text = content.toString('utf-8').trim();
-		const lines = text.split('\n');
-		expect(lines.length).toBe(6);
-		expect(Number(lines[0])).not.toBeNaN();
+		const content = await zip.extract(cpg!);
+		expect(content.length).toBe(cpg!.uncompressedSize);
+		// .cpg names the codepage as a short ASCII string (e.g. "UTF-8").
+		expect(content.toString('utf-8').trim()).toMatch(/^[\w-]+$/);
 	}, 30000);
 
-	it('extracts a large stored file correctly', async () => {
-		const zip = await RemoteZip.open(TEST_URL);
-		const entries = zip.getEntries();
+	it('extracts a deflated entry correctly', async () => {
+		const prj = zip.getEntries().find((e) => e.filename.endsWith('.prj'));
+		expect(prj).toBeDefined();
+		expect(prj!.compressionMethod).toBe(8);
+		// Real compression should reduce a WKT string.
+		expect(prj!.compressedSize).toBeLessThan(prj!.uncompressedSize);
 
-		const jp2 = entries.find((e) => e.filename.endsWith('.jp2'));
-		expect(jp2).toBeDefined();
-
-		const content = await zip.extract(jp2!);
-		expect(content.length).toBe(jp2!.uncompressedSize);
-
-		// JP2 files start with a signature
-		expect(content[0]).toBe(0x00);
-		expect(content[1]).toBe(0x00);
-		expect(content[2]).toBe(0x00);
-		expect(content[3]).toBe(0x0c);
-	}, 60000);
+		const content = await zip.extract(prj!);
+		expect(content.length).toBe(prj!.uncompressedSize);
+		// .prj is a WKT projection definition; starts with GEOGCS or PROJCS.
+		expect(content.toString('utf-8')).toMatch(/^(GEOGCS|PROJCS)/);
+	}, 30000);
 
 	it('throws on invalid URL', async () => {
-		await expect(RemoteZip.open('https://openzu.cuzk.gov.cz/nonexistent.zip')).rejects.toThrow();
+		await expect(RemoteZip.open('https://osmdata.openstreetmap.de/download/nonexistent.zip')).rejects.toThrow();
 	}, 15000);
 });

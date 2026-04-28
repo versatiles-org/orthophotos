@@ -4,7 +4,6 @@ about: Report incorrect or missing map data to help us improve
 title: ''
 labels: ''
 assignees: ''
-
 ---
 
 **What is wrong?**

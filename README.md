@@ -52,11 +52,11 @@ ssh_dir=/path/to/remote/data   # Remote base directory for uploads
 
 ### Tasks
 
-| # | Name   | Description                                            |
-| - | ------ | ------------------------------------------------------ |
-| 1 | fetch  | Download source data + per-file versatiles mosaic tile |
-| 2 | merge  | Merge .versatiles files + upload to remote             |
-| 3 | delete | Remove local data and temp directories                 |
+| #   | Name   | Description                                            |
+| --- | ------ | ------------------------------------------------------ |
+| 1   | fetch  | Download source data + per-file versatiles mosaic tile |
+| 2   | merge  | Merge .versatiles files + upload to remote             |
+| 3   | delete | Remove local data and temp directories                 |
 
 Task spec supports: numbers (`2`), names (`fetch`), ranges (`1-3`), comma lists (`fetch,2-3`), `all` (full pipeline).
 
@@ -76,7 +76,7 @@ The preview server shows all processed orthophoto data using VersaTiles. It gene
 npm run server
 ```
 
-The demo is publicly accessible at [versatiles.org/satellite\_demo/](https://versatiles.org/satellite_demo/).
+The demo is publicly accessible at [versatiles.org/satellite_demo/](https://versatiles.org/satellite_demo/).
 
 ## Development
 
@@ -352,4 +352,4 @@ classDef subgraphs fill-opacity:0.1, fill:#888, color:#888, stroke:#888;
 
 ## Notes
 
-Also check the [EU/EC INSPIRE Geoportal](https://inspire-geoportal.ec.europa.eu/srv/eng/catalog.search#/overview?view=themeOverview\&theme=oi) for more data sources.
+Also check the [EU/EC INSPIRE Geoportal](https://inspire-geoportal.ec.europa.eu/srv/eng/catalog.search#/overview?view=themeOverview&theme=oi) for more data sources.

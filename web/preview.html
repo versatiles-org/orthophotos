@@ -1,131 +1,129 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
+	<head>
+		<meta charset="utf-8" />
+		<title>VersaTiles Satellite Demo</title>
+		<meta name="description" content="Try the beta version of our free satellite map tiles." />
+		<meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
 
-<head>
-	<meta charset="utf-8">
-	<title>VersaTiles Satellite Demo</title>
-	<meta name="description" content="Try the beta version of our free satellite map tiles.">
-	<meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+		<!-- Optional UI color -->
+		<meta name="theme-color" content="#111111" />
 
-	<!-- Optional UI color -->
-	<meta name="theme-color" content="#111111">
+		<link rel="icon" type="image/png" href="https://tiles.versatiles.org/assets/images/versatiles-logo.png" />
 
-	<link rel="icon" type="image/png" href="https://tiles.versatiles.org/assets/images/versatiles-logo.png">
+		<script src="https://tiles.versatiles.org/assets/lib/maplibre-gl/maplibre-gl.js"></script>
+		<link href="https://tiles.versatiles.org/assets/lib/maplibre-gl/maplibre-gl.css" rel="stylesheet" />
 
-	<script src="https://tiles.versatiles.org/assets/lib/maplibre-gl/maplibre-gl.js"></script>
-	<link href="https://tiles.versatiles.org/assets/lib/maplibre-gl/maplibre-gl.css" rel="stylesheet">
+		<script src="https://tiles.versatiles.org/assets/lib/versatiles-style/versatiles-style.js"></script>
 
-	<script src="https://tiles.versatiles.org/assets/lib/versatiles-style/versatiles-style.js"></script>
+		<style>
+			body {
+				margin: 0;
+				padding: 0;
+			}
 
-	<style>
-		body {
-			margin: 0;
-			padding: 0;
-		}
+			#map {
+				position: absolute;
+				top: 0;
+				bottom: 0;
+				width: 100%;
+			}
 
-		#map {
-			position: absolute;
-			top: 0;
-			bottom: 0;
-			width: 100%;
-		}
+			#banner {
+				position: absolute;
+				top: 0;
+				left: 0;
+				right: 0;
+				height: auto;
+				background-color: rgba(255, 255, 255, 0.8);
+				padding: 6px 12px 6px 6px;
+				font-family: sans-serif;
+				font-size: 1rem;
+				display: flex;
+				flex-direction: row;
+				align-items: center;
+				column-gap: 1em;
+				backdrop-filter: blur(4px);
+				z-index: 10000;
+			}
 
-		#banner {
-			position: absolute;
-			top: 0;
-			left: 0;
-			right: 0;
-			height: auto;
-			background-color: rgba(255, 255, 255, 0.8);
-			padding: 6px 12px 6px 6px;
-			font-family: sans-serif;
-			font-size: 1rem;
-			display: flex;
-			flex-direction: row;
-			align-items: center;
-			column-gap: 1em;
-			backdrop-filter: blur(4px);
-			z-index: 10000;
-		}
+			#banner p {
+				margin: 0.3em 0;
+				padding: 0;
+			}
 
-		#banner p {
-			margin: 0.3em 0;
-			padding: 0;
-		}
+			#banner #text {
+				padding-right: 1em;
+			}
 
-		#banner #text {
-			padding-right: 1em;
-		}
+			#banner #btn_close {
+				position: absolute;
+				top: 0.4em;
+				right: 0.4em;
+				font-size: 16px;
+				cursor: pointer;
+			}
 
-		#banner #btn_close {
-			position: absolute;
-			top: 0.4em;
-			right: 0.4em;
-			font-size: 16px;
-			cursor: pointer;
-		}
+			a {
+				color: inherit !important;
+			}
 
-		a {
-			color: inherit !important;
-		}
+			.maplibregl-popup-content {
+				line-height: 1.4em;
+				user-select: none;
+				pointer-events: none;
+			}
 
-		.maplibregl-popup-content {
-			line-height: 1.4em;
-			user-select: none;
-			pointer-events: none;
-		}
+			.maplibregl-popup-content a {
+				outline: none;
+			}
 
-		.maplibregl-popup-content a {
-			outline: none;
-		}
+			.maplibregl-popup-content .stars {
+				color: black;
+			}
 
-		.maplibregl-popup-content .stars {
-			color: black;
-		}
+			.maplibregl-popup-content .stars i {
+				opacity: 0.3;
+				font-style: normal;
+			}
+		</style>
+		<script>
+			function close_banner() {
+				console.log('close');
+				document.getElementById('text').style.display = 'none';
+				document.getElementById('btn_close').style.display = 'none';
+				const banner = document.getElementById('banner');
+				banner.style.backdropFilter = 'none';
+				banner.style.background = 'none';
+			}
+		</script>
+	</head>
 
-		.maplibregl-popup-content .stars i {
-			opacity: 0.3;
-			font-style: normal;
-		}
-	</style>
-	<script>
-		function close_banner() {
-			console.log('close');
-			document.getElementById('text').style.display = 'none';
-			document.getElementById('btn_close').style.display = 'none';
-			const banner = document.getElementById('banner');
-			banner.style.backdropFilter = 'none';
-			banner.style.background = 'none';
-		}
-	</script>
-</head>
+	<body style="margin: 0; height: 100%">
+		<div id="map" class="maplibregl-compact"></div>
+		<script type="module">
+			const style = await VersaTilesStyle.satellite({
+				baseUrl: 'https://tiles.versatiles.org',
+			});
+			style.sources.satellite.tiles = ['http://localhost:8080/tiles/satellite/{z}/{x}/{y}'];
 
-<body style="margin:0;height:100%;">
-	<div id="map" class="maplibregl-compact"></div>
-	<script type="module">
-		const style = await VersaTilesStyle.satellite({
-			baseUrl: 'https://tiles.versatiles.org',
-		});
-		style.sources.satellite.tiles = ['http://localhost:8080/tiles/satellite/{z}/{x}/{y}'];
+			// Remove streets and boundaries — show only raster imagery
+			style.layers = style.layers.filter((l) => l.type === 'raster' || l.type === 'symbol');
 
-		// Remove streets and boundaries — show only raster imagery
-		style.layers = style.layers.filter(l => l.type === 'raster' || l.type === 'symbol');
+			const map = new maplibregl.Map({
+				container: 'map',
+				//bounds: [-23.213, 34.9, 45.112, 62.671],
+				center: [10, 50],
+				zoom: 4,
+				maxZoom: 18,
+				hash: true,
+				maxPitch: 0,
+				style,
+				dragRotate: false,
+				attributionControl: { compact: false },
+			});
 
-		const map = new maplibregl.Map({
-			container: 'map',
-			//bounds: [-23.213, 34.9, 45.112, 62.671],
-			center: [10, 50],
-			zoom: 4,
-			maxZoom: 18,
-			hash: true,
-			maxPitch: 0,
-			style,
-			dragRotate: false,
-			attributionControl: { compact: false },
-		});
-
-		map.addControl(new maplibregl.NavigationControl(), 'top-right');
-	</script>
-</body>
-
+			map.addControl(new maplibregl.NavigationControl(), 'top-right');
+		</script>
+	</body>
 </html>

@@ -35,11 +35,11 @@ npm run server                    # Prepare data + start server on port 8080
 
 Run via `./run.sh <region> <tasks>` (e.g., `./run.sh de/baden_wuerttemberg 1-3`):
 
-| # | Name   | Description                                                         |
-|---|--------|---------------------------------------------------------------------|
-| 1 | fetch  | Download source data + per-file versatiles mosaic tile              |
-| 2 | merge  | Merge .versatiles files locally via versatiles mosaic assemble, then upload to remote via scp |
-| 3 | delete | Remove local data and temp directories                              |
+| #   | Name   | Description                                                                                   |
+| --- | ------ | --------------------------------------------------------------------------------------------- |
+| 1   | fetch  | Download source data + per-file versatiles mosaic tile                                        |
+| 2   | merge  | Merge .versatiles files locally via versatiles mosaic assemble, then upload to remote via scp |
+| 3   | delete | Remove local data and temp directories                                                        |
 
 Task spec supports: numbers (`2`), names (`fetch`), ranges (`1-3`), comma lists (`fetch,2-3`), `all` (full pipeline).
 
@@ -63,6 +63,7 @@ Region IDs follow pattern `<cc>` or `<cc>/<name>` (e.g., `de`, `de/baden_wuertte
 ### Configuration
 
 Environment variables loaded from `config.env`, accessed via `getConfig()` from `src/config.ts`:
+
 - `dir_data` - Directory for large datasets and outputs (required)
 - `dir_temp` - Directory for temporary processing files (required)
 - `ssh_host`, `ssh_port`, `ssh_id`, `ssh_dir` - Remote storage SSH connection and base path (optional, required for merge + server)
@@ -70,6 +71,7 @@ Environment variables loaded from `config.env`, accessed via `getConfig()` from 
 ### Region Statuses
 
 Defined in `src/lib/framework.ts` as `RegionStatus`:
+
 - `'planned'` — data source identified, scraper not yet implemented
 - `'scraping'` — scraper implemented but result not yet released
 - `'released'` — scraper works and result is published on the server
@@ -115,6 +117,7 @@ export default defineTileRegion({
 ```
 
 **Interface:**
+
 - `name` — region ID (e.g. `'de/thueringen'`)
 - `meta` — region metadata (status, notes, license, creator, date)
 - `init(ctx)` — returns `T[]` of items to process. Each item must have an `id: string`. Receives `StepContext` for access to `tempDir`/`dataDir`. Handle all index fetching and caching here.
@@ -125,8 +128,9 @@ export default defineTileRegion({
 - `minFiles` — minimum expected `*.versatiles` output files
 
 **`TileContext`** passed to download/convert callbacks:
+
 - `dest` — output path (`tiles/${id}.versatiles`)
-- `skipDest` — skip marker path (`tiles/${id}.skip`) — write a marker here only for *probing* regions where a tile permanently doesn't exist
+- `skipDest` — skip marker path (`tiles/${id}.skip`) — write a marker here only for _probing_ regions where a tile permanently doesn't exist
 - `tempDir` — temporary directory
 - `tilesDir` — output tiles directory
 - `errors` — `ErrorBucket` for collecting invalid download errors
@@ -160,6 +164,7 @@ Region fetch implementations should follow these patterns consistently:
 **Resumability:** The pipeline automatically skips items with existing `.versatiles` or `.skip` files. Use `shuffle()` to distribute load across servers.
 
 **Transparent borders:** Orthophoto tiles must not have black or white borders around the imagery. Borders cause visible rectangles when tiles are stacked. To ensure clean transparency:
+
 - **Alpha channel:** If the source has an alpha channel (e.g., WMS with `Transparent=TRUE`), use it directly — `versatiles mosaic tile` respects alpha.
 - **Nodata flag:** Use `runMosaicTile(input, output, { nodata: '0,0,0' })` to treat black as transparent, or `{ nodata: '255,255,255' }` for white. Multiple values can be joined with `;` (e.g., `{ nodata: '0,0,0;255,255,255' }`). Note: nodata only works reliably on lossless-compressed source data (e.g., DEFLATE, LZW, uncompressed). JPEG-compressed sources may have intermediate values at edges that don't match the exact nodata value.
 - **GeoJSON masks:** Set `mask: true` (NUTS border) or `mask: 'file.geojson.gz'` in region metadata to apply `raster_mask` clipping at serving time. This is a final safety net but doesn't fix the source tiles.
@@ -179,11 +184,12 @@ convert: async ({ tifPath }, { dest }) => {
 },
 ```
 
-`tempFile()` returns the path unchanged so it can be used inline. Index files cached in `init` (e.g. `feed.xml`, `index.html`) are *not* item-scoped and should be cleaned up via `safeRm` if needed, or left for `task 3 (delete)` to remove.
+`tempFile()` returns the path unchanged so it can be used inline. Index files cached in `init` (e.g. `feed.xml`, `index.html`) are _not_ item-scoped and should be cleaned up via `safeRm` if needed, or left for `task 3 (delete)` to remove.
 
 ### Versatiles CLI
 
 The project uses the `versatiles` CLI tool with the `mosaic` subcommand:
+
 - `versatiles mosaic tile <input> <output>` — tile a single raster into a `.versatiles` container
 - `versatiles mosaic assemble <filelist> <output>` — assemble multiple containers into one
 
@@ -198,6 +204,7 @@ The `versatiles` CLI is developed in the sibling repo `versatiles-rs`. If a regi
 ### VPL Generation and Region Masks
 
 `generateVPL()` in `src/server/vpl.ts` builds a VPL file that stacks orthophoto layers (via SFTP) over satellite imagery. Regions can opt into border clipping via `raster_mask` by setting `mask` in their metadata:
+
 - `mask: true` — uses the region's MultiPolygon from `data/NUTS_RG_03M_2024_4326.topojson.gz`
 - `mask: 'filename.geojson.gz'` — uses a custom GeoJSON file from `data/`
 
@@ -206,6 +213,7 @@ Regions can also set `maskBuffer` to adjust the mask buffer distance in meters (
 ### Command Execution
 
 `runCommand()` in `src/lib/command.ts` supports `quiet` and `quietOnError` options:
+
 - `quiet: true` — suppresses stdout/stderr during execution (still captured for error messages)
 - `quietOnError: true` — also suppresses output in error messages
 

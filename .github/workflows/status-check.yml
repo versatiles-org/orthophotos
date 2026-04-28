@@ -5,7 +5,7 @@ on:
     branches:
       - main
   schedule:
-    - cron: '0 6 * * 4'  # Run weekly on Thursday at 6:00 UTC
+    - cron: '0 6 * * 4' # Run weekly on Thursday at 6:00 UTC
   workflow_dispatch:
 
 permissions:
@@ -14,7 +14,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: "pages"
+  group: 'pages'
   cancel-in-progress: false
 
 jobs:

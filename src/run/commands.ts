@@ -59,14 +59,16 @@ export async function runSshCommand(command: string): Promise<void> {
 
 /**
  * Returns true if a file exists on the remote server, false if it does not.
- * Throws if the SSH connection fails or the remote response is unexpected
- * (so the caller can surface a real connectivity / config issue rather than
- * silently treating it as "file is missing").
  *
  * The remote command always exits 0 on a working connection; the answer is
  * carried in stdout (`yes`/`no`). This is more robust than dispatching on the
  * exit code, where many non-zero values (permission denied, noisy shell init,
  * exotic remote shells) would otherwise be misread as "file does not exist".
+ *
+ * Throws with diagnostics if:
+ *   - the SSH connection itself fails (exit 255)
+ *   - the remote command fails for some other reason (stderr is included)
+ *   - the response is neither `yes` nor `no` (full stdout is included)
  */
 export async function remoteFileExists(remotePath: string): Promise<boolean> {
 	const sshConfig = getConfig().ssh;
@@ -80,27 +82,35 @@ export async function remoteFileExists(remotePath: string): Promise<boolean> {
 	const escaped = remotePath.replace(/'/g, `'\\''`);
 	const remoteCmd = `if [ -f '${escaped}' ]; then echo yes; else echo no; fi`;
 
-	let result;
+	let stdoutText: string;
 	try {
-		result = await runCommand('ssh', [...sshArgs, host, remoteCmd], {
+		const result = await runCommand('ssh', [...sshArgs, host, remoteCmd], {
 			stdout: 'piped',
 			stderr: 'piped',
-			quietOnError: true,
 		});
+		stdoutText = new TextDecoder().decode(result.stdout);
 	} catch (err) {
-		throw new Error(`Cannot reach remote server to check ${remotePath}`, { cause: err });
+		// runCommand throws on any non-zero exit. Distinguish:
+		//   - 255: ssh-side failure (DNS, auth, network, host key)
+		//   - anything else: the remote command itself failed; surface stderr via the cause chain
+		const msg = err instanceof Error ? err.message : String(err);
+		if (msg.includes('Exit code: 255')) {
+			throw new Error(`Cannot reach remote server to check ${remotePath}`, { cause: err });
+		}
+		throw new Error(`Remote existence check failed for ${remotePath}`, { cause: err });
 	}
 
 	// Tolerate banner/motd noise on stdout — only the last non-empty line matters.
-	const lines = new TextDecoder()
-		.decode(result.stdout)
+	const lines = stdoutText
 		.split('\n')
 		.map((s) => s.trim())
 		.filter(Boolean);
 	const verdict = lines[lines.length - 1];
 	if (verdict === 'yes') return true;
 	if (verdict === 'no') return false;
-	throw new Error(`Unexpected response from remote check of ${remotePath}: ${JSON.stringify(verdict ?? '')}`);
+	throw new Error(
+		`Unexpected response from remote existence check of ${remotePath}.\nstdout: ${JSON.stringify(stdoutText)}`,
+	);
 }
 
 export async function runScpUpload(localPath: string, remotePath: string): Promise<void> {

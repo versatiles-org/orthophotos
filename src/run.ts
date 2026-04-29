@@ -86,6 +86,7 @@ async function main(): Promise<void> {
 		const dataDir = resolve(getConfig().dirData, name);
 		const tempDir = resolve(getConfig().dirTemp, name);
 		mkdirSync(dataDir, { recursive: true });
+		mkdirSync(tempDir, { recursive: true });
 
 		const ctx: TaskContext = { name, dataDir, tempDir };
 

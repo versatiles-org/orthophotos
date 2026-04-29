@@ -12,13 +12,32 @@ export interface ParsedArgs {
 
 /**
  * Validates that a region name matches the expected format.
- * Format: "cc" or "cc/ss" where c and s are lowercase letters.
+ * Format: "cc", "cc/ss", or a glob pattern containing `*` (e.g. "fr/*", "de/*").
+ * `*` matches any sequence of characters except `/` (one path segment).
  */
 export function validateRegionName(name: string): void {
-	const pattern = /^[a-z\/_]{2,}$/;
+	const pattern = /^[a-z\/_*]+$/;
 	if (!pattern.test(name)) {
-		throw new Error(`Invalid region name "${name}". Must be "cc" or "cc/ss" (e.g., "de" or "de/berlin")`);
+		throw new Error(
+			`Invalid region name "${name}". Must be "cc", "cc/ss", or a glob like "fr/*" (e.g., "de", "de/berlin", "fr/*")`,
+		);
 	}
+}
+
+/**
+ * Expands a region pattern into the matching registered region IDs.
+ * Returns the input unchanged (single-element array) if it contains no `*`.
+ * `*` matches any sequence of characters except `/`, mirroring shell glob semantics.
+ *
+ * Examples:
+ *   "de"      -> ["de"]
+ *   "fr/*"    -> ["fr/bretagne", "fr/normandie", ...]   (whatever fr/* IDs are registered)
+ *   "de/*"    -> ["de/baden_wuerttemberg", "de/bayern", ..., "de/thueringen"]
+ */
+export function expandRegionPattern(pattern: string, allIds: Iterable<string>): string[] {
+	if (!pattern.includes('*')) return [pattern];
+	const re = new RegExp('^' + pattern.replace(/\*/g, '[^/]*') + '$');
+	return [...allIds].filter((id) => re.test(id)).sort();
 }
 
 /**
@@ -154,5 +173,7 @@ Examples:
   ${cmd} fr 1-2
   ${cmd} de/berlin 1,2
   ${cmd} de/berlin all
+  ${cmd} fr/* 1            # all registered fr/<sub> regions
+  ${cmd} de/* 1-2          # all 16 German Bundesländer
 `;
 }

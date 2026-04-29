@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { expandTasks, getHelpText, parseArgs, validateRegionName } from './args.ts';
+import { expandRegionPattern, expandTasks, getHelpText, parseArgs, validateRegionName } from './args.ts';
 
 // validateRegionName tests
 test('validateRegionName - accepts two-letter country code', () => {
@@ -12,6 +12,40 @@ test('validateRegionName - accepts country/subdivision format', () => {
 	validateRegionName('fr/ne');
 	validateRegionName('de/b');
 	validateRegionName('de/berling');
+});
+
+test('validateRegionName - accepts glob patterns with *', () => {
+	validateRegionName('fr/*');
+	validateRegionName('de/*');
+	validateRegionName('*');
+	validateRegionName('de/b*');
+});
+
+// expandRegionPattern tests
+test('expandRegionPattern - returns single name unchanged for non-glob', () => {
+	expect(expandRegionPattern('de', ['de', 'fr', 'de/bayern'])).toEqual(['de']);
+});
+
+test('expandRegionPattern - expands fr/* to all fr/<sub> ids, sorted', () => {
+	const ids = ['al', 'fr/normandie', 'fr/bretagne', 'fr/idf', 'de/bayern'];
+	expect(expandRegionPattern('fr/*', ids)).toEqual(['fr/bretagne', 'fr/idf', 'fr/normandie']);
+});
+
+test('expandRegionPattern - * does not match across path segments', () => {
+	const ids = ['de/bayern', 'de/baden_wuerttemberg', 'fr', 'fr/idf'];
+	// "de/*" must NOT match "de/foo/bar" if such a thing existed; * is single-segment.
+	expect(expandRegionPattern('de/*', ids)).toEqual(['de/baden_wuerttemberg', 'de/bayern']);
+	// Top-level "*" matches only ids without a slash.
+	expect(expandRegionPattern('*', ids)).toEqual(['fr']);
+});
+
+test('expandRegionPattern - prefix glob like de/b*', () => {
+	const ids = ['de/bayern', 'de/baden_wuerttemberg', 'de/hessen', 'fr/idf'];
+	expect(expandRegionPattern('de/b*', ids)).toEqual(['de/baden_wuerttemberg', 'de/bayern']);
+});
+
+test('expandRegionPattern - returns empty array when nothing matches', () => {
+	expect(expandRegionPattern('xx/*', ['de', 'fr/idf'])).toEqual([]);
 });
 
 // expandTasks tests

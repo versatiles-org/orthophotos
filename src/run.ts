@@ -16,11 +16,11 @@
 import { resolve } from 'node:path';
 import { mkdirSync } from 'node:fs';
 import { getConfig } from './config.ts';
-import { getHelpText, parseArgs } from './run/args.ts';
+import { expandRegionPattern, getHelpText, parseArgs } from './run/args.ts';
 import { formatErrorChain } from './lib/command.ts';
 import { checkRequiredCommands, remoteFileExists, runSshCommand } from './run/commands.ts';
 import { formatUnknownRegionError, runTask, type TaskContext } from './run/tasks.ts';
-import { getRegionPipeline } from './regions/index.ts';
+import { getAllRegionMetadata, getRegionPipeline } from './regions/index.ts';
 
 async function checkRemoteServer(): Promise<void> {
 	console.log('Checking remote server...');
@@ -44,50 +44,55 @@ async function main(): Promise<void> {
 		process.exit(0);
 	}
 
-	// Fail fast (before SSH/command checks) if the region name isn't registered.
-	if (!getRegionPipeline(args.name)) {
+	// Resolve the region pattern against the registry. Single names stay as-is;
+	// glob patterns like "fr/*" expand to every matching registered ID.
+	const allIds = [...getAllRegionMetadata().keys()];
+	const names = expandRegionPattern(args.name, allIds);
+	if (names.length === 0) {
 		throw new Error(formatUnknownRegionError(args.name));
 	}
+	for (const name of names) {
+		if (!getRegionPipeline(name)) throw new Error(formatUnknownRegionError(name));
+	}
 
-	// Check required commands
+	// Check required commands once for the whole batch.
 	console.log('Checking required commands...');
 	await checkRequiredCommands();
 
-	// If fetch or merge is requested and the final file already exists on the
-	// remote, skip those tasks — nothing to scrape or re-upload.
-	const ssh = getConfig().ssh;
-	if (ssh && (args.tasks.includes(1) || args.tasks.includes(2))) {
-		const remotePath = `${ssh.dir}/${args.name}.versatiles`;
-		if (await remoteFileExists(remotePath)) {
-			console.log(`Remote file already exists at ${remotePath} — skipping fetch and merge.`);
-			args.tasks = args.tasks.filter((t) => t !== 1 && t !== 2);
-		}
-	}
-
-	// If merge task is still requested, verify remote is accessible before starting
+	// If merge is requested anywhere, verify the remote up front so we fail fast.
 	if (args.tasks.includes(2)) {
 		await checkRemoteServer();
 	}
 
-	// Build paths
-	const dataDir = resolve(getConfig().dirData, args.name);
-	const tempDir = resolve(getConfig().dirTemp, args.name);
+	const ssh = getConfig().ssh;
 
-	// Ensure data directory exists
-	mkdirSync(dataDir, { recursive: true });
+	for (const name of names) {
+		if (names.length > 1) console.log(`\n=== Region: ${name} ===`);
 
-	// Create task context
-	const ctx: TaskContext = {
-		name: args.name,
-		dataDir,
-		tempDir,
-	};
+		let tasks = [...args.tasks];
 
-	// Run tasks
-	console.log(`Running tasks: ${args.tasks.join(' ')}`);
+		// If fetch or merge is requested and the final file already exists on
+		// the remote, skip those tasks — nothing to scrape or re-upload.
+		if (ssh && (tasks.includes(1) || tasks.includes(2))) {
+			const remotePath = `${ssh.dir}/${name}.versatiles`;
+			if (await remoteFileExists(remotePath)) {
+				console.log(`Remote file already exists at ${remotePath} — skipping fetch and merge.`);
+				tasks = tasks.filter((t) => t !== 1 && t !== 2);
+			}
+		}
 
-	for (const taskNum of args.tasks) {
-		await runTask(taskNum, ctx);
+		if (tasks.length === 0) continue;
+
+		const dataDir = resolve(getConfig().dirData, name);
+		const tempDir = resolve(getConfig().dirTemp, name);
+		mkdirSync(dataDir, { recursive: true });
+
+		const ctx: TaskContext = { name, dataDir, tempDir };
+
+		console.log(`Running tasks: ${tasks.join(' ')}`);
+		for (const taskNum of tasks) {
+			await runTask(taskNum, ctx);
+		}
 	}
 
 	console.log('\nDone.');

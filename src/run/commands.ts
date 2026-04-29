@@ -60,15 +60,20 @@ export async function runSshCommand(command: string): Promise<void> {
 /**
  * Returns true if a file exists on the remote server, false if it does not.
  *
- * The remote command always exits 0 on a working connection; the answer is
- * carried in stdout (`yes`/`no`). This is more robust than dispatching on the
- * exit code, where many non-zero values (permission denied, noisy shell init,
- * exotic remote shells) would otherwise be misread as "file does not exist".
+ * Uses `ls` rather than `test -f` because restricted shells (e.g. Hetzner
+ * Storage Box) don't ship a `test` builtin and reject anything beyond a small
+ * whitelist of file commands. `ls` is supported on both standard POSIX shells
+ * and on those restricted environments.
  *
- * Throws with diagnostics if:
- *   - the SSH connection itself fails (exit 255)
- *   - the remote command fails for some other reason (stderr is included)
- *   - the response is neither `yes` nor `no` (full stdout is included)
+ * Convention:
+ *   - `ls` exits 0  → path is listable → file exists → return true
+ *   - `ls` exits ≠0 → path is not listable → return false
+ *   - ssh exits 255 → connection / auth / DNS failure → throw, with the
+ *     original stderr available via `cause`
+ *
+ * For "permission denied" or other access problems we err on the side of
+ * `false` (re-upload) rather than throwing, since misclassifying as "missing"
+ * just causes a re-merge — much milder than aborting the whole pipeline.
  */
 export async function remoteFileExists(remotePath: string): Promise<boolean> {
 	const sshConfig = getConfig().ssh;
@@ -80,37 +85,21 @@ export async function remoteFileExists(remotePath: string): Promise<boolean> {
 	if (port) sshArgs.push('-p', port);
 	if (keyFile) sshArgs.push('-i', keyFile);
 	const escaped = remotePath.replace(/'/g, `'\\''`);
-	const remoteCmd = `if [ -f '${escaped}' ]; then echo yes; else echo no; fi`;
 
-	let stdoutText: string;
 	try {
-		const result = await runCommand('ssh', [...sshArgs, host, remoteCmd], {
+		await runCommand('ssh', [...sshArgs, host, `ls '${escaped}'`], {
 			stdout: 'piped',
 			stderr: 'piped',
+			quietOnError: true,
 		});
-		stdoutText = new TextDecoder().decode(result.stdout);
+		return true;
 	} catch (err) {
-		// runCommand throws on any non-zero exit. Distinguish:
-		//   - 255: ssh-side failure (DNS, auth, network, host key)
-		//   - anything else: the remote command itself failed; surface stderr via the cause chain
 		const msg = err instanceof Error ? err.message : String(err);
 		if (msg.includes('Exit code: 255')) {
 			throw new Error(`Cannot reach remote server to check ${remotePath}`, { cause: err });
 		}
-		throw new Error(`Remote existence check failed for ${remotePath}`, { cause: err });
+		return false;
 	}
-
-	// Tolerate banner/motd noise on stdout — only the last non-empty line matters.
-	const lines = stdoutText
-		.split('\n')
-		.map((s) => s.trim())
-		.filter(Boolean);
-	const verdict = lines[lines.length - 1];
-	if (verdict === 'yes') return true;
-	if (verdict === 'no') return false;
-	throw new Error(
-		`Unexpected response from remote existence check of ${remotePath}.\nstdout: ${JSON.stringify(stdoutText)}`,
-	);
 }
 
 export async function runScpUpload(localPath: string, remotePath: string): Promise<void> {

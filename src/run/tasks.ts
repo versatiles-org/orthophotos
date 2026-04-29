@@ -136,12 +136,8 @@ async function uploadToRemote(localPath: string, regionName: string): Promise<vo
  * Task 3: Delete local data and temp directories for the region.
  */
 async function taskDelete(ctx: TaskContext): Promise<void> {
-	console.log(`Deleting:`);
-	console.log(`  ${ctx.dataDir}`);
-	console.log(`  ${ctx.tempDir}`);
-
+	console.log(`  Deleting: ${ctx.dataDir}`);
 	safeRm(ctx.dataDir);
+	console.log(`  Deleting: ${ctx.tempDir}`);
 	safeRm(ctx.tempDir);
-
-	console.log('  Local data deleted.');
 }

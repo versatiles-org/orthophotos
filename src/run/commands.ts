@@ -59,8 +59,14 @@ export async function runSshCommand(command: string): Promise<void> {
 
 /**
  * Returns true if a file exists on the remote server, false if it does not.
- * Throws if the SSH connection itself fails (so the caller can surface a real
- * connectivity issue rather than silently treat it as "file is missing").
+ * Throws if the SSH connection fails or the remote response is unexpected
+ * (so the caller can surface a real connectivity / config issue rather than
+ * silently treating it as "file is missing").
+ *
+ * The remote command always exits 0 on a working connection; the answer is
+ * carried in stdout (`yes`/`no`). This is more robust than dispatching on the
+ * exit code, where many non-zero values (permission denied, noisy shell init,
+ * exotic remote shells) would otherwise be misread as "file does not exist".
  */
 export async function remoteFileExists(remotePath: string): Promise<boolean> {
 	const sshConfig = getConfig().ssh;
@@ -72,17 +78,29 @@ export async function remoteFileExists(remotePath: string): Promise<boolean> {
 	if (port) sshArgs.push('-p', port);
 	if (keyFile) sshArgs.push('-i', keyFile);
 	const escaped = remotePath.replace(/'/g, `'\\''`);
+	const remoteCmd = `if [ -f '${escaped}' ]; then echo yes; else echo no; fi`;
+
+	let result;
 	try {
-		await runCommand('ssh', [...sshArgs, host, `test -f '${escaped}'`], { quiet: true, quietOnError: true });
-		return true;
+		result = await runCommand('ssh', [...sshArgs, host, remoteCmd], {
+			stdout: 'piped',
+			stderr: 'piped',
+			quietOnError: true,
+		});
 	} catch (err) {
-		// ssh itself uses exit code 255 for connection/auth failures; other codes come
-		// from the remote command (e.g. `test -f` exits 1 when the file is absent).
-		if (err instanceof Error && err.message.includes('Exit code: 255')) {
-			throw new Error(`Cannot reach remote server to check ${remotePath}`);
-		}
-		return false;
+		throw new Error(`Cannot reach remote server to check ${remotePath}`, { cause: err });
 	}
+
+	// Tolerate banner/motd noise on stdout — only the last non-empty line matters.
+	const lines = new TextDecoder()
+		.decode(result.stdout)
+		.split('\n')
+		.map((s) => s.trim())
+		.filter(Boolean);
+	const verdict = lines[lines.length - 1];
+	if (verdict === 'yes') return true;
+	if (verdict === 'no') return false;
+	throw new Error(`Unexpected response from remote check of ${remotePath}: ${JSON.stringify(verdict ?? '')}`);
 }
 
 export async function runScpUpload(localPath: string, remotePath: string): Promise<void> {

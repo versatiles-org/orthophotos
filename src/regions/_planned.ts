@@ -48,10 +48,6 @@ export default [
 		},
 	},
 	{
-		id: 'is',
-		metadata: { status: 'planned', notes: ['Data source not yet investigated.'] },
-	},
-	{
 		id: 'it',
 		metadata: {
 			status: 'planned',

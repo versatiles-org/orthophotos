@@ -20,6 +20,7 @@ import fi from './fi.ts';
 import fr from './fr/index.ts';
 import hr from './hr.ts';
 import hu from './hu.ts';
+import is from './is.ts';
 import li from './li.ts';
 import lt from './lt.ts';
 import lu from './lu.ts';
@@ -48,6 +49,7 @@ const pipelines: RegionPipeline[] = [
 	...fr,
 	hr,
 	hu,
+	is,
 	li,
 	lt,
 	lu,

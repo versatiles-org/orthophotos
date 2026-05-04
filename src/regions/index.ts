@@ -15,6 +15,7 @@ import cz from './cz.ts';
 import de from './de/index.ts';
 import dk from './dk.ts';
 import ee from './ee.ts';
+import es from './es.ts';
 import fr from './fr/index.ts';
 import li from './li.ts';
 import lt from './lt.ts';
@@ -39,6 +40,7 @@ const pipelines: RegionPipeline[] = [
 	...de,
 	dk,
 	ee,
+	es,
 	...fr,
 	li,
 	lt,

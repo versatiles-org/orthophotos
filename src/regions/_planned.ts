@@ -35,16 +35,6 @@ export default [
 		},
 	},
 	{
-		id: 'es',
-		metadata: {
-			status: 'planned',
-			notes: [
-				'Data source identified but scraper not yet implemented.',
-				'See https://centrodedescargas.cnig.es/CentroDescargas/ortofoto-pnoa-maxima-actualidad',
-			],
-		},
-	},
-	{
 		id: 'fi',
 		metadata: { status: 'blocked', notes: ['Access restricted'] },
 	},

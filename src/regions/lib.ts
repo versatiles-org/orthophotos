@@ -24,13 +24,22 @@ export { fetchWithInterval, type FetchWithIntervalOptions } from '../lib/rate-li
 export { withRetry, type RetryOptions } from '../lib/retry.ts';
 export { downloadRaster, ErrorBucket, isValidRaster, type DownloadRasterOptions } from '../lib/validators.ts';
 export { createXmlParser } from '../lib/xml.ts';
-export { computeWmsBlocks, generateWmsXml, parseWmsCapabilities, type WmsBbox, type WmsBlockItem } from '../lib/wms.ts';
+export {
+	bboxesOverlap,
+	computeWmsBlocks,
+	generateWmsXml,
+	parseWmsCapabilities,
+	type WmsBbox,
+	type WmsBlockItem,
+} from '../lib/wms.ts';
 
 // External-tool wrappers
 export {
+	compositeRastersWithAlpha,
 	convertToTiledTiff,
 	extractWmsBlock,
 	extractZipAndBuildVrt,
+	type CompositeRastersOptions,
 	type ExtractZipBuildVrtOptions,
 } from '../lib/gdal.ts';
 export { runMosaicAssemble, runMosaicTile } from '../lib/versatiles.ts';

@@ -108,6 +108,41 @@ export async function extractZipAndBuildVrt(
 	return { fileCount: tifFiles.length };
 }
 
+export interface CompositeRastersOptions {
+	/** Suppress GDAL output. Default: true. */
+	quiet?: boolean;
+	/** Output format. Default: 'GTiff'. */
+	of?: string;
+	/** Creation options forwarded as `-co k=v`. Default: `['COMPRESS=DEFLATE', 'PREDICTOR=2']`. */
+	creationOptions?: string[];
+}
+
+/**
+ * Composite a stack of RGBA rasters into a single output, oldest first / newest last.
+ *
+ * Uses `gdalwarp -srcalpha -dstalpha`: each source's alpha band is interpreted as
+ * a transparency mask, so a later source only overwrites earlier output where its
+ * alpha > 0. With sources listed oldest → newest, the newest layer wins wherever
+ * it has data and earlier layers fill the gaps.
+ */
+export async function compositeRastersWithAlpha(
+	sources: string[],
+	output: string,
+	options?: CompositeRastersOptions,
+): Promise<void> {
+	if (sources.length === 0) throw new Error('compositeRastersWithAlpha: no sources');
+	const quiet = options?.quiet ?? true;
+	const creationOptions = options?.creationOptions ?? ['COMPRESS=DEFLATE', 'PREDICTOR=2'];
+
+	const args: string[] = [];
+	if (quiet) args.push('-q');
+	args.push('-overwrite', '-srcalpha', '-dstalpha', '-of', options?.of ?? 'GTiff');
+	for (const co of creationOptions) args.push('-co', co);
+	args.push(...sources, output);
+
+	await runCommand('gdalwarp', args, { quiet });
+}
+
 export interface WmsBlockExtractOptions {
 	/** WMS XML config file path */
 	wmsXmlPath: string;

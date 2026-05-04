@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest';
 import { writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { computeWmsBlocks, parseWmsCapabilities } from './wms.ts';
+import { bboxesOverlap, computeWmsBlocks, parseWmsCapabilities } from './wms.ts';
 import type { WmsBbox } from './wms.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -97,6 +97,33 @@ describe('computeWmsBlocks', () => {
 
 		const result = computeWmsBlocks(bbox, 10, 4096, 4096);
 		expect(result.items.length).toBeGreaterThanOrEqual(1);
+	});
+});
+
+describe('bboxesOverlap', () => {
+	test('returns true when bboxes overlap', () => {
+		const a: WmsBbox = { xmin: 0, ymin: 0, xmax: 100, ymax: 100 };
+		const b: WmsBbox = { xmin: 50, ymin: 50, xmax: 150, ymax: 150 };
+		expect(bboxesOverlap(a, b)).toBe(true);
+	});
+
+	test('returns false when one bbox is fully outside the other', () => {
+		const a: WmsBbox = { xmin: 0, ymin: 0, xmax: 100, ymax: 100 };
+		const b: WmsBbox = { xmin: 200, ymin: 0, xmax: 300, ymax: 100 };
+		expect(bboxesOverlap(a, b)).toBe(false);
+	});
+
+	test('returns false when bboxes only touch at an edge', () => {
+		const a: WmsBbox = { xmin: 0, ymin: 0, xmax: 100, ymax: 100 };
+		const b: WmsBbox = { xmin: 100, ymin: 0, xmax: 200, ymax: 100 };
+		expect(bboxesOverlap(a, b)).toBe(false);
+	});
+
+	test('returns true when one bbox is fully inside the other', () => {
+		const outer: WmsBbox = { xmin: 0, ymin: 0, xmax: 100, ymax: 100 };
+		const inner: WmsBbox = { xmin: 25, ymin: 25, xmax: 75, ymax: 75 };
+		expect(bboxesOverlap(outer, inner)).toBe(true);
+		expect(bboxesOverlap(inner, outer)).toBe(true);
 	});
 });
 
@@ -200,6 +227,67 @@ describe('parseWmsCapabilities', () => {
 
 		try {
 			await expect(parseWmsCapabilities(capsPath, 'missing_layer')).rejects.toThrow("Layer 'missing_layer' not found");
+		} finally {
+			rmSync(TEST_DIR, { recursive: true, force: true });
+		}
+	});
+
+	test('parses CRS:84 BoundingBox (lon,lat) from WMS 1.3.0 capabilities', async () => {
+		mkdirSync(TEST_DIR, { recursive: true });
+		const capsPath = resolve(TEST_DIR, 'caps_crs84.xml');
+		writeFileSync(
+			capsPath,
+			`<?xml version="1.0"?>
+<WMS_Capabilities version="1.3.0">
+  <Capability>
+    <Request><GetMap/></Request>
+    <Layer>
+      <Name>geo</Name>
+      <BoundingBox CRS="CRS:84" minx="5" miny="45" maxx="15" maxy="55"/>
+    </Layer>
+  </Capability>
+</WMS_Capabilities>`,
+		);
+
+		try {
+			const result = await parseWmsCapabilities(capsPath, 'geo');
+			expect(result.bbox.xmin).toBeCloseTo(556597.45, 0);
+			expect(result.bbox.xmax).toBeCloseTo(1669792.36, 0);
+			expect(result.bbox.ymin).toBeCloseTo(5621521.49, 0);
+			expect(result.bbox.ymax).toBeCloseTo(7361866.11, 0);
+		} finally {
+			rmSync(TEST_DIR, { recursive: true, force: true });
+		}
+	});
+
+	test('falls back to EX_GeographicBoundingBox in WMS 1.3.0 capabilities', async () => {
+		mkdirSync(TEST_DIR, { recursive: true });
+		const capsPath = resolve(TEST_DIR, 'caps_ex.xml');
+		writeFileSync(
+			capsPath,
+			`<?xml version="1.0"?>
+<WMS_Capabilities version="1.3.0">
+  <Capability>
+    <Request><GetMap/></Request>
+    <Layer>
+      <Name>exgeo</Name>
+      <EX_GeographicBoundingBox>
+        <westBoundLongitude>5</westBoundLongitude>
+        <eastBoundLongitude>15</eastBoundLongitude>
+        <southBoundLatitude>45</southBoundLatitude>
+        <northBoundLatitude>55</northBoundLatitude>
+      </EX_GeographicBoundingBox>
+    </Layer>
+  </Capability>
+</WMS_Capabilities>`,
+		);
+
+		try {
+			const result = await parseWmsCapabilities(capsPath, 'exgeo');
+			expect(result.bbox.xmin).toBeCloseTo(556597.45, 0);
+			expect(result.bbox.xmax).toBeCloseTo(1669792.36, 0);
+			expect(result.bbox.ymin).toBeCloseTo(5621521.49, 0);
+			expect(result.bbox.ymax).toBeCloseTo(7361866.11, 0);
 		} finally {
 			rmSync(TEST_DIR, { recursive: true, force: true });
 		}

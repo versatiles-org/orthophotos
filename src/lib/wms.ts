@@ -87,18 +87,52 @@ export async function parseWmsCapabilities(
 			};
 			break;
 		}
+		if (srs === 'CRS:84') {
+			// CRS:84 is geographic in lon,lat order (unlike WMS 1.3.0's EPSG:4326).
+			bbox = {
+				xmin: lonTo3857(Number(attrs['@_minx'])),
+				ymin: latTo3857(Number(attrs['@_miny'])),
+				xmax: lonTo3857(Number(attrs['@_maxx'])),
+				ymax: latTo3857(Number(attrs['@_maxy'])),
+			};
+			break;
+		}
 	}
 
 	if (!bbox) {
+		// WMS 1.1.1 geographic envelope.
 		const llbb = layerNode.LatLonBoundingBox as Record<string, string> | undefined;
-		if (!llbb) throw new Error(`No bbox found for layer '${layerName}'`);
-		bbox = {
-			xmin: lonTo3857(Number(llbb['@_minx'])),
-			ymin: latTo3857(Number(llbb['@_miny'])),
-			xmax: lonTo3857(Number(llbb['@_maxx'])),
-			ymax: latTo3857(Number(llbb['@_maxy'])),
-		};
+		if (llbb) {
+			bbox = {
+				xmin: lonTo3857(Number(llbb['@_minx'])),
+				ymin: latTo3857(Number(llbb['@_miny'])),
+				xmax: lonTo3857(Number(llbb['@_maxx'])),
+				ymax: latTo3857(Number(llbb['@_maxy'])),
+			};
+		}
 	}
+
+	if (!bbox) {
+		// WMS 1.3.0 geographic envelope.
+		const exbb = layerNode.EX_GeographicBoundingBox as
+			| {
+					westBoundLongitude: number | string;
+					eastBoundLongitude: number | string;
+					southBoundLatitude: number | string;
+					northBoundLatitude: number | string;
+			  }
+			| undefined;
+		if (exbb) {
+			bbox = {
+				xmin: lonTo3857(Number(exbb.westBoundLongitude)),
+				ymin: latTo3857(Number(exbb.southBoundLatitude)),
+				xmax: lonTo3857(Number(exbb.eastBoundLongitude)),
+				ymax: latTo3857(Number(exbb.northBoundLatitude)),
+			};
+		}
+	}
+
+	if (!bbox) throw new Error(`No bbox found for layer '${layerName}'`);
 
 	bbox.xmin = Math.max(bbox.xmin, -WORLD_EXTENT);
 	bbox.ymin = Math.max(bbox.ymin, -WORLD_EXTENT);
@@ -106,6 +140,14 @@ export async function parseWmsCapabilities(
 	bbox.ymax = Math.min(bbox.ymax, WORLD_EXTENT);
 
 	return { bbox, maxWidth, maxHeight };
+}
+
+/**
+ * Returns true if two EPSG:3857 bboxes overlap (share at least one interior point).
+ * Touching edges only do not count as overlap.
+ */
+export function bboxesOverlap(a: WmsBbox, b: WmsBbox): boolean {
+	return a.xmin < b.xmax && a.xmax > b.xmin && a.ymin < b.ymax && a.ymax > b.ymin;
 }
 
 /**

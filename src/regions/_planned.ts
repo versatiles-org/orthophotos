@@ -12,7 +12,15 @@ import type { RegionPipeline } from '../lib/framework.ts';
 export default [
 	{
 		id: 'ba',
-		metadata: { status: 'planned', notes: ['Data source not yet investigated.'] },
+		metadata: {
+			status: 'blocked',
+			notes: [
+				'No open-licensed orthophoto source available — both entities of BiH gate the data behind restrictive terms.',
+				'Federation of BiH (FGU): WMS published at katastar.ba/servisi (Digital orthofoto FBiH 1:5000 / 1:2500). Terms (https://www.katastar.ba/koristenje) require a written request, restrict use to the stated purpose, charge a fee, and assert "all rights reserved". Source: https://www.fgu.com.ba/en/newse-reader/new-digital-orthophoto-of-the-federation-of-bosnia-and-herzegovina-available-on-the-fga-geoportal.html',
+				'Republika Srpska (RGURS): public WMS at https://geoportal.rgurs.org/geoserver/wms exposes ortofoto:Ortofoto2012 (verified — returns real imagery), but the geoportal terms state the data "cannot be used for any personal or business related needs or purposes" and allow "charging of fees for distributed data". The newer ortofoto_2021:orto_2021 layer is listed in GetCapabilities but GetMap returns LayerNotDefined (auth-gated).',
+				'Re-evaluate if either entity adopts an open licence (e.g. CC BY) or if BiH joins INSPIRE with a redistributable orthoimagery service.',
+			],
+		},
 	},
 	{
 		id: 'cy',

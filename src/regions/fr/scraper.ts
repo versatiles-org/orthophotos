@@ -196,6 +196,10 @@ export function defineFrSubRegion(opts: FrSubRegionOptions): RegionPipeline {
 	return defineTileRegion<BdorthoItem, { extractDir: string }>({
 		name: opts.name,
 		meta: buildMeta(),
+		// Géoplateforme rate-limits per-client; processing items in feed order keeps
+		// the per-département request bursts contiguous and avoids interleaving downloads
+		// across départements (which the upstream is happier to serve sequentially).
+		shuffle: false,
 		init: async () => {
 			// Cache the index feed once, under the global temp dir, so all fr/* sub-regions
 			// share the same page downloads instead of re-fetching them per region.

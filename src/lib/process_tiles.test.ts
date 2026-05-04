@@ -369,4 +369,28 @@ describe('defineTileRegion', () => {
 		expect(existsSync(join(tilesDir, 'p.versatiles'))).toBe(true);
 		expect(existsSync(join(tilesDir, 'q.versatiles'))).toBe(true);
 	});
+
+	it('preserves init order when shuffle: false', async () => {
+		// 50 items: probability of seeing the original order under random shuffle
+		// is 1/50! — vanishingly small, so this is a reliable observation.
+		const ids = Array.from({ length: 50 }, (_, i) => `n${String(i).padStart(2, '0')}`);
+		const seen: string[] = [];
+		await runTileRegion(ctx, {
+			name: 'test/no-shuffle',
+			meta: baseMeta,
+			init: () => ids.map((id) => ({ id })),
+			downloadLimit: { concurrency: 1 },
+			download: async (item) => {
+				seen.push(item.id);
+				return { value: item.id };
+			},
+			convertLimit: { concurrency: 1 },
+			convert: async (data, { dest }) => {
+				writeFileSync(dest, data.value);
+			},
+			minFiles: 0,
+			shuffle: false,
+		});
+		expect(seen).toEqual(ids);
+	});
 });

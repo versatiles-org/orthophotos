@@ -69,6 +69,12 @@ export interface TileRegionOptions<T extends TileItem, D> {
 	convert: (data: Exclude<D, 'empty' | 'invalid' | void>, ctx: TileContext) => Promise<void>;
 	/** Minimum number of *.versatiles output files required */
 	minFiles: number;
+	/**
+	 * Shuffle items before processing. Default: `true`. Set `false` when item
+	 * ordering matters (e.g. rate-limited servers that prefer in-order requests,
+	 * or when init's order already encodes a useful priority).
+	 */
+	shuffle?: boolean;
 }
 
 /**
@@ -115,7 +121,7 @@ async function processTiles<T extends TileItem, D>(
 	const tilesDir = join(ctx.dataDir, 'tiles');
 	mkdirSync(tilesDir, { recursive: true });
 
-	const shuffled = shuffle([...items]);
+	const ordered = (options.shuffle ?? true) ? shuffle([...items]) : [...items];
 	const errors = new ErrorBucket();
 
 	const destFor = (item: T): string => join(tilesDir, `${item.id}.versatiles`);
@@ -146,7 +152,7 @@ async function processTiles<T extends TileItem, D>(
 	const cvConcurrency = resolveConcurrency(options.convertLimit);
 
 	const { download, convert } = options;
-	await pipeline(shuffled, { progress: { labels: [...LABELS], terminalProgress: true, title: options.name } })
+	await pipeline(ordered, { progress: { labels: [...LABELS], terminalProgress: true, title: options.name } })
 		.map(dlConcurrency, async (item: T) => {
 			if (isSkipped(item)) return skip('skipped');
 			const { tileCtx, runCleanup } = makeCtx(item);

@@ -25,7 +25,7 @@ interface AlItem extends WmsBlockItem {
 export default defineTileRegion<AlItem, { srcPath: string }>({
 	name: 'al',
 	meta: {
-		status: 'scraping',
+		status: 'released',
 		notes: ['Only WMS found.', 'Server is very slow.', 'Full coverage only for 2015.'],
 		entries: ['result'],
 		license: {
@@ -38,7 +38,7 @@ export default defineTileRegion<AlItem, { srcPath: string }>({
 			url: 'https://geoportal.asig.gov.al/geonetwork/srv/alb/catalog.search#/metadata/b50abc17-b932-4a96-b97a-ae6cba52c2fb',
 		},
 		date: '2015',
-		releaseDate: '2025-10-05',
+		releaseDate: '2026-05-01',
 	},
 	init: async (ctx) => {
 		const capsPath = join(ctx.tempDir, 'caps.xml');

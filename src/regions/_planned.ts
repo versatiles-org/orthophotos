@@ -35,10 +35,6 @@ export default [
 		},
 	},
 	{
-		id: 'fi',
-		metadata: { status: 'blocked', notes: ['Access restricted'] },
-	},
-	{
 		id: 'hr',
 		metadata: { status: 'planned', notes: ['Data source not yet investigated.'] },
 	},

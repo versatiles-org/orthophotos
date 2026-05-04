@@ -93,9 +93,11 @@ test('runTask - task 1 (fetch) throws for unknown region', async () => {
 });
 
 test('runTask - task 1 (fetch) scans for .versatiles files and writes filelist', async () => {
-	// Use a region with status 'blocked' that has no run function — the pipeline.run()
-	// will be caught by the try/catch, then filelist scanning runs afterward
-	const ctx = createTestContext('fi');
+	// Use a region with status 'blocked'/'planned' that has no run function — the
+	// pipeline.run() will be caught by the try/catch, then filelist scanning runs.
+	// `no` (Norway) is currently blocked; if it ever gets a real scraper, swap to
+	// any other id in _planned.ts.
+	const ctx = createTestContext('no');
 
 	try {
 		mkdirSync(ctx.dataDir, { recursive: true });
@@ -104,7 +106,7 @@ test('runTask - task 1 (fetch) scans for .versatiles files and writes filelist',
 		writeFileSync(join(ctx.dataDir, 'tiles', 'b.versatiles'), '');
 		writeFileSync(join(ctx.dataDir, 'tiles', 'c.txt'), '');
 
-		// fi has no run function, so pipeline fails silently, but filelist is still written
+		// `no` has no run function, so pipeline fails, but filelist is still written
 		await expect(runTask(1, ctx)).rejects.toThrow('No pipeline defined');
 	} finally {
 		await cleanupTestTemp();

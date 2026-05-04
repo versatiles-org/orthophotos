@@ -14,14 +14,18 @@ import {
 
 const WMS_URL = 'http://inspire.mzh.government.bg:8080/geoserver/ows';
 
-// Stack all years newest-first — GeoServer composites layers in order (first on top)
+// Stack all years newest-first — GeoServer composites layers in order (first on top).
+// Each year only covers part of the country (north OR south); the stack provides
+// full coverage. `Orthoimagery_2025_TB` is a small SE strip (~lat 41.7–42.1) that
+// the regular `Orthoimagery_2025` (north only) doesn't reach.
 const LAYERS = [
-	'RasterDataSet:Orthoimagery_2025',
-	'RasterDataSet:Orthoimagery_2024',
-	'RasterDataSet:Orthoimagery_2023',
-	'RasterDataSet:Orthoimagery_2022',
-	'RasterDataSet:Orthoimagery_2021',
-	'RasterDataSet:Orthoimagery_2020',
+	'RasterData:Orthoimagery_2025_TB',
+	'RasterData:Orthoimagery_2025',
+	'RasterData:Orthoimagery_2024',
+	'RasterData:Orthoimagery_2023',
+	'RasterData:Orthoimagery_2022',
+	'RasterData:Orthoimagery_2021',
+	'RasterData:Orthoimagery_2020',
 ].join(',');
 
 // Union bounding box covering all years (EPSG:3857), derived from LatLonBoundingBox of all layers

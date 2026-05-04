@@ -5,6 +5,7 @@
 	"scripts": {
 		"build:status": "node --env-file=config.env --import tsx/esm src/status-check.ts",
 		"check": "npm run format:check && npm run lint && npm run typecheck && npm run test",
+		"check:remote": "node --env-file=config.env --import tsx/esm src/check-remote.ts",
 		"deps:upgrade": "vrt deps-upgrade",
 		"docs:graph": "vrt deps-graph | vrt doc-insert README.md '### Dependency Graph'",
 		"format": "prettier --log-level warn --write .",

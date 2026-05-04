@@ -24,7 +24,15 @@ export default [
 	},
 	{
 		id: 'el',
-		metadata: { status: 'blocked', notes: ['No data found.'] },
+		metadata: {
+			status: 'blocked',
+			notes: [
+				'Hellenic Cadastre publishes a national orthophoto WMS at http://gis.ktimanet.gr/wms/wmsopen/wmsserver.aspx (layer "BASEMAP", 20 cm urban / 50 cm rural, 2007–2009 imagery). Verified — returns real GetMap PNGs and is publicly reachable without auth.',
+				'Terms (https://www.ktimanet.gr/CitizenWebApp/Orthophotographs_Page.aspx, in Greek) explicitly prohibit any form of commercial use or exploitation of the service ("απαγορεύεται ρητά οποιασδήποτε μορφής εμπορική χρήση ή εκμετάλλευση"); the full distribution policy is "not yet announced". Re-publishing the rendered tiles on tiles.versatiles.org would violate this.',
+				'Geodata.gov.gr lists an "Orthophotos for the entirety of Greece" dataset, but the entry just points back at the same Cadastre WMS — no separate open download.',
+				'Re-evaluate when the Hellenic Cadastre announces an explicit open-data / re-use policy.',
+			],
+		},
 	},
 	{
 		id: 'es',

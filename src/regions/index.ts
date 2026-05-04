@@ -10,6 +10,7 @@ import at from './at.ts';
 import be from './be.ts';
 import bg from './bg.ts';
 import ch from './ch.ts';
+import cy from './cy.ts';
 import cz from './cz.ts';
 import de from './de/index.ts';
 import dk from './dk.ts';
@@ -33,6 +34,7 @@ const pipelines: RegionPipeline[] = [
 	be,
 	bg,
 	ch,
+	cy,
 	cz,
 	...de,
 	dk,

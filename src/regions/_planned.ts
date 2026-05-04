@@ -23,10 +23,6 @@ export default [
 		},
 	},
 	{
-		id: 'cy',
-		metadata: { status: 'planned', notes: ['Data source not yet investigated.'] },
-	},
-	{
 		id: 'el',
 		metadata: { status: 'blocked', notes: ['No data found.'] },
 	},

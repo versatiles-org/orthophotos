@@ -35,10 +35,6 @@ export default [
 		},
 	},
 	{
-		id: 'hr',
-		metadata: { status: 'planned', notes: ['Data source not yet investigated.'] },
-	},
-	{
 		id: 'hu',
 		metadata: { status: 'planned', notes: ['Data source not yet investigated.'] },
 	},

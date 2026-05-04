@@ -35,10 +35,6 @@ export default [
 		},
 	},
 	{
-		id: 'hu',
-		metadata: { status: 'planned', notes: ['Data source not yet investigated.'] },
-	},
-	{
 		id: 'ie',
 		metadata: {
 			status: 'blocked',

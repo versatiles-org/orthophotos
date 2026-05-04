@@ -50,11 +50,12 @@ export default [
 	{
 		id: 'it',
 		metadata: {
-			status: 'planned',
+			status: 'blocked',
 			notes: [
-				'Data source identified but scraper not yet implemented.',
-				'See http://wms.pcn.minambiente.it/ogc?map=/ms_ogc/WMS_v1.3/raster/ortofoto_colore_12.map',
-				'See https://www.dati.gov.it/node/192?tags=modello-digitale-del-terreno',
+				'No open-licensed national orthophoto source available — AGEA imagery is "all rights reserved" even when published via public WMS.',
+				'Geoportale Nazionale (MASE, formerly minambiente) lists the AGEA 2012 colour ortho at http://wms.pcn.minambiente.it/ogc?map=/ms_ogc/WMS_v1.3/raster/ortofoto_colore_12.map (capabilities advertise no fees / no access constraints), but every GetMap on layers OI.ORTOIMMAGINI.2012{,.32,.33} fails with msShapefileOpen errors against an unreachable internal NAS — the back-end is broken; only the metadata is served. Newer years (18, 22, 23, 24) return 500 from the same MapServer instance.',
+				'Coverage is otherwise fragmented across all 20 regional geoportals (Piemonte, Veneto, Emilia-Romagna, Lombardia, Puglia, …), each republishing AGEA flights via its own GeoServer/MapServer. Verified examples: Piemonte AGEA 2024 RGB at https://opengis.csi.it/mp/regp_agea_2024 (layer regp_agea_2024, 30 cm) and Emilia-Romagna AGEA 2023 RGB at https://servizigis.regione.emilia-romagna.it/wms/agea2023_rgb (20 cm). Both metadata records explicitly state "AGEA(c) tutti i diritti riservati" / "utilizzo ristretto dei dati" — viewing via WMS is permitted, redistribution of rendered tiles is not.',
+				'Re-evaluate if AGEA / MASE adopts a redistributable open licence (CC BY / IODL), or if any region flips its AGEA republication to an open licence at the source.',
 			],
 		},
 	},

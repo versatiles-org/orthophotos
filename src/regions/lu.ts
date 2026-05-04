@@ -33,7 +33,7 @@ export default defineTileRegion({
 			url: 'https://data.public.lu/fr/datasets/orthophoto-officielle-du-grand-duche-de-luxembourg-edition-ete-2025/',
 		},
 		date: '2025',
-		releaseDate: '2026-03-25',
+		releaseDate: '2026-03-28',
 	},
 	init: async (ctx) => {
 		const capsPath = join(ctx.tempDir, 'caps.xml');

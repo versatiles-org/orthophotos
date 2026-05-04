@@ -46,7 +46,16 @@ export default [
 	},
 	{
 		id: 'ie',
-		metadata: { status: 'blocked', notes: ['The only available format is the proprietary ECW format.'] },
+		metadata: {
+			status: 'blocked',
+			notes: [
+				'No open-licensed orthophoto source available — neither download nor WMS.',
+				'Tailte Éireann (formerly OSi) holds the national 25 cm RGBN ortho dataset (2 km × 2 km tiles in ITM, GeoTIFF). It is sold commercially via corporatesales@tailte.ie. Source: https://tailte.ie/map-shop/professional-map-products/aerial-imagery-maps-and-data/',
+				'MapGenie (WMS / WMTS / ArcGIS REST) carries the same imagery but is restricted to public-sector members under the National Mapping Agreement — not redistributable.',
+				'The INSPIRE Geoportal record declares "public access limited" per INSPIRE Article 13(1)(e), and the listed WMTS endpoint (inspireservices.geohive.ie) does not resolve. Source: https://inspire-geoportal.ec.europa.eu/srv/api/records/%7B5F03018E-BCA3-4173-A4F4-DCC784F19DFA%7D',
+				'Re-evaluate if Tailte Éireann publishes orthos under an open licence, or if MapGenie opens beyond public-sector members.',
+			],
+		},
 	},
 	{
 		id: 'is',

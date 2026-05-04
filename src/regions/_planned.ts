@@ -98,8 +98,15 @@ export default [
 	{
 		id: 'uk',
 		metadata: {
-			status: 'planned',
-			notes: ['Data source not yet investigated.'],
+			status: 'blocked',
+			notes: [
+				'No open-licensed orthophoto source available — neither download nor WMS.',
+				'Environment Agency "Vertical Aerial Photography" (OGL v3.0) is the only government-licensed dataset, but only distributed in ECW — unsupported (proprietary GDAL plugin); see "Supported source formats" in CLAUDE.md. Source: https://environment.data.gov.uk/dataset/dae203a8-ba24-4c54-bab0-866b9faadb58',
+				'The EA "Vertical Aerial Photography" WMS (https://environment.data.gov.uk/geoservices/datasets/dae203a8-ba24-4c54-bab0-866b9faadb58/wms) only exposes vector index polygons (every layer name ends in "_Index"); the actual imagery is not available via WMS.',
+				'APGB (Bluesky/Getmapping consortium) provides 12.5/25 cm TIFFs and a national WMS, but the licence restricts use to UK public sector — not redistributable on tiles.versatiles.org.',
+				'All other modern providers (OS MasterMap Imagery, Bluesky direct, Vexcel, Getmapping commercial) are commercial.',
+				'Re-evaluate if the Environment Agency starts publishing GeoTIFFs, or if APGB licensing changes.',
+			],
 		},
 	},
 	{

@@ -221,6 +221,25 @@ Regions can also set `maskBuffer` to adjust the mask buffer distance in meters (
 
 The EU INSPIRE Geoportal orthoimagery theme is the best starting point for finding orthophoto data sources for EU countries: https://inspire-geoportal.ec.europa.eu/srv/eng/catalog.search#/overview?view=themeOverview&theme=oi
 
+**Prefer a download service over WMS when picking a source.** When a national agency offers both an Atom feed / S3 bucket / direct HTTP listing of original tiles (GeoTIFF, JPEG 2000, etc.) AND a WMS endpoint, **always pick the download service.** Reasons, in priority order:
+
+1. **Quality.** Original tiles preserve the source resolution, color depth, and (often) lossless compression. WMS re-renders to PNG/JPEG at our chosen pixel grid — every block is a re-encode loss, and edge alignment introduces visible seams.
+2. **Throughput.** Direct downloads parallelise cleanly (one HTTP request per tile, often via CDNs). WMS endpoints are usually rate-limited per client and slow to render — see `bg`, `lt`, `lu`, `mt` notes for examples of "Server is slow".
+3. **Stability.** A WMS layer rename or version change silently breaks the scraper (see the recent `bg` `RasterDataSet:` → `RasterData:` rename). A download service tends to expose a feed/manifest that's easier to detect breakage on.
+4. **Reproducibility.** Direct tiles have a fixed checksum and are immune to the WMS server tweaking style/compression on us between runs.
+
+Use WMS only when no download service exists, the download service uses a format we can't decode (see "Supported source formats" below), or the download service requires individual login per file. Mark the resulting region with a note in `meta.notes` calling out the WMS fallback so it's visible in the status table.
+
+### Supported source formats
+
+We can ingest anything GDAL can open with the open-source plugins shipped by stock builds (Homebrew on macOS, the `gdal-bin` package on Debian/Ubuntu). In practice that means:
+
+- **Supported:** GeoTIFF, JPEG 2000 (`.jp2`/`.j2k` via OpenJPEG), PNG, JPEG, BMP, plus archive containers like ZIP and 7z that wrap any of the above.
+- **NOT supported: ECW.** GDAL's ECW driver depends on Hexagon's proprietary ERDAS ECW SDK. We don't redistribute the SDK, the install script doesn't pull it.
+- **MrSID** (`.sid`) is in the same boat — also a proprietary plugin, also unsupported.
+
+Before adopting a new source, confirm GDAL can open a sample with a vanilla install: `gdalinfo path/to/sample.tif` (or `.jp2`, etc.). If `gdalinfo` reports "not recognized as being in a supported file format", the region belongs in `'blocked'`, not `'planned'`.
+
 ### External CLI Dependencies
 
 Required tools: `7z`, `curl`, `gdal_translate`, `gdalbuildvrt`, `ssh`, `unzip`, `versatiles`

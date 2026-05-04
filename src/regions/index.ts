@@ -24,6 +24,7 @@ import nl from './nl.ts';
 import pl from './pl.ts';
 import pt from './pt.ts';
 import ro from './ro.ts';
+import se from './se.ts';
 import sk from './sk.ts';
 
 const pipelines: RegionPipeline[] = [
@@ -46,6 +47,7 @@ const pipelines: RegionPipeline[] = [
 	pl,
 	pt,
 	ro,
+	se,
 	sk,
 	..._planned,
 ].sort((a, b) => a.id.localeCompare(b.id));

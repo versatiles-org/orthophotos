@@ -89,10 +89,6 @@ export default [
 		metadata: { status: 'planned', notes: ['Data source not yet investigated.'] },
 	},
 	{
-		id: 'se',
-		metadata: { status: 'blocked', notes: ['Access restricted'] },
-	},
-	{
 		id: 'si',
 		metadata: { status: 'planned', notes: ['Data source not yet investigated.'] },
 	},

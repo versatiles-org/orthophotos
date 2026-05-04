@@ -43,7 +43,7 @@ interface EeDownload {
 export default defineTileRegion<EeItem, EeDownload>({
 	name: 'ee',
 	meta: {
-		status: 'scraping',
+		status: 'released',
 		notes: ['Direct GeoTIFF download per map sheet.', 'License requires attribution.'],
 		entries: ['result'],
 		license: {
@@ -56,6 +56,7 @@ export default defineTileRegion<EeItem, EeDownload>({
 			url: 'https://geoportaal.maaamet.ee/eng/spatial-data/orthophotos-p309.html',
 		},
 		date: '2024',
+		releaseDate: '2026-05-04',
 		mask: true,
 	},
 	init: async (ctx) => {

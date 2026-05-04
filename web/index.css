@@ -28,6 +28,16 @@ a {
 #grid {
 	margin-bottom: 16px;
 
+	/* The Notes cell renderer returns a <details> element, which is block-level
+	   by default and anchors to the top of the auto-height cell. Switching to
+	   inline-block + vertical-align:middle lets the row's line-box centre it,
+	   so the collapsed "<n> notes" summary sits on the same baseline as the
+	   other (non-auto-height) cells. */
+	.ag-cell[col-id='notes'] details {
+		display: inline-block;
+		vertical-align: middle;
+	}
+
 	details {
 		line-height: 1.2;
 

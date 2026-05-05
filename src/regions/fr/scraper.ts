@@ -66,10 +66,16 @@ export interface FrSubRegionOptions {
 	name: string;
 	/** Exact IGN zone codes (e.g. ['D022', 'D029', 'D035', 'D056']). */
 	departmentCodes: string[];
+	/**
+	 * Per-region release date (YYYY-MM-DD), tracked individually because each
+	 * `fr/*` sub-région finishes uploading on its own day. The aggregated `fr`
+	 * entry on the status page takes the latest of these.
+	 */
+	releaseDate: string;
 }
 
 /** Shared metadata for all French sub-régions — license, creator, notes, mask. */
-function buildMeta(): RegionMetadata {
+function buildMeta(opts: FrSubRegionOptions): RegionMetadata {
 	return {
 		status: 'released',
 		notes: [
@@ -89,7 +95,7 @@ function buildMeta(): RegionMetadata {
 			url: 'https://geoservices.ign.fr/documentation/donnees/ortho/bdortho',
 		},
 		date: FR_DATE_RANGE,
-		releaseDate: '2026-04-23',
+		releaseDate: opts.releaseDate,
 		mask: true,
 		aggregateUnder: 'fr',
 	};
@@ -195,7 +201,7 @@ function detailUrlWithLimit(detailUrl: string): string {
 export function defineFrSubRegion(opts: FrSubRegionOptions): RegionPipeline {
 	return defineTileRegion<BdorthoItem, { extractDir: string }>({
 		name: opts.name,
-		meta: buildMeta(),
+		meta: buildMeta(opts),
 		// Géoplateforme rate-limits per-client; processing items in feed order keeps
 		// the per-département request bursts contiguous and avoids interleaving downloads
 		// across départements (which the upstream is happier to serve sequentially).

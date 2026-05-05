@@ -29,7 +29,7 @@ interface CyItem extends WmsBlockItem {
 export default defineTileRegion<CyItem, { srcPath: string }>({
 	name: 'cy',
 	meta: {
-		status: 'scraping',
+		status: 'released',
 		notes: [
 			'INSPIRE View Service for Orthoimagery from the Department of Lands and Surveys.',
 			'Source data: 50 cm aerial photography from 2014.',
@@ -49,6 +49,7 @@ export default defineTileRegion<CyItem, { srcPath: string }>({
 			url: 'https://portal.dls.moi.gov.cy/',
 		},
 		date: '2014',
+		releaseDate: '2026-05-05',
 		mask: true,
 	},
 	init: async (ctx) => {

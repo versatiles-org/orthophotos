@@ -1,13 +1,15 @@
 /**
- * Validates released regions against the remote storage.
+ * Validates region metadata against the remote storage.
  *
- * For every region with `status === 'released'`:
- *   - confirms `<ssh_dir>/<id>.versatiles` exists on the remote
- *   - compares the remote mtime against `releaseDate` in metadata
- *   - sanity-checks size and required metadata fields (license, creator, mask)
+ * Lists every region with `status === 'released'`, `'scraping'`, or `'planned'`:
+ *   - **released**: must have `<ssh_dir>/<id>.versatiles` on the remote; mtime is
+ *     compared against `releaseDate`; license/creator/mask are required.
+ *   - **scraping**: a remote file is allowed (in-progress upload) but not required;
+ *     no `releaseDate` to compare against; metadata fields shown but not enforced.
+ *   - **planned**: a remote file would be unexpected; flag if present.
  *
- * Also reports orphan `.versatiles` files on the remote that do not correspond
- * to any released region, so stale uploads stay visible.
+ * Also reports orphan `.versatiles` files on the remote that don't match any
+ * known region, so stale uploads stay visible.
  */
 
 import { existsSync } from 'node:fs';
@@ -15,7 +17,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { listRemoteVersatilesFiles, type RemoteFile } from './lib/remote-listing.ts';
 import { getAllRegionMetadata } from './regions/index.ts';
-import type { RegionMetadata } from './lib/framework.ts';
+import type { RegionMetadata, RegionStatus } from './lib/framework.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = resolve(__dirname, '../data');
@@ -26,6 +28,8 @@ const DATE_DRIFT_WARN_DAYS = 1;
 const DATE_DRIFT_ERROR_DAYS = 7;
 /** Files smaller than this → warning. Real region tiles are tens of MB upwards. */
 const MIN_REASONABLE_SIZE = 1_000_000;
+
+const TRACKED_STATUSES: ReadonlySet<RegionStatus> = new Set(['released', 'scraping', 'planned']);
 
 const COLORS = {
 	reset: '\x1b[0m',
@@ -42,6 +46,7 @@ type Severity = 'ok' | 'warn' | 'error';
 
 interface Row {
 	id: string;
+	status: string;
 	releaseDate: string;
 	remoteSize: string;
 	remoteDate: string;
@@ -88,47 +93,64 @@ function severityIcon(severity: Severity): string {
 	return colorize('ok', '✓');
 }
 
+function statusLabel(status: RegionStatus): string {
+	switch (status) {
+		case 'released':
+			return colorize('ok', status);
+		case 'scraping':
+			return `${COLORS.cyan}${status}${COLORS.reset}`;
+		case 'planned':
+			return `${COLORS.dim}${status}${COLORS.reset}`;
+		case 'blocked':
+			return `${COLORS.gray}${status}${COLORS.reset}`;
+	}
+}
+
 function buildRow(id: string, meta: RegionMetadata, remote: RemoteFile | undefined): Row {
 	const notes: string[] = [];
 	let severity: Severity = 'ok';
 	const checks: string[] = [];
 
-	if (meta.status !== 'released') {
-		throw new Error(`buildRow called for non-released region '${id}'`);
-	}
+	const releaseDate = meta.releaseDate ?? '';
+	const releaseDateObj = releaseDate ? new Date(`${releaseDate}T00:00:00Z`) : undefined;
+	const releaseDateValid =
+		releaseDate !== '' && /^\d{4}-\d{2}-\d{2}$/.test(releaseDate) && !Number.isNaN(releaseDateObj!.getTime());
 
-	const releaseDate = meta.releaseDate;
-	const releaseDateObj = new Date(`${releaseDate}T00:00:00Z`);
-	const releaseDateValid = !Number.isNaN(releaseDateObj.getTime()) && /^\d{4}-\d{2}-\d{2}$/.test(releaseDate);
-	if (!releaseDateValid) {
+	if (meta.status === 'released' && !releaseDateValid) {
 		notes.push(`releaseDate "${releaseDate}" is not YYYY-MM-DD`);
 		severity = bumpSeverity(severity, 'error');
 	}
 
-	if (!meta.license) {
+	const requireMeta = meta.status === 'released';
+
+	if (meta.license) {
+		checks.push(colorize('ok', 'L'));
+	} else if (requireMeta) {
 		notes.push('license missing');
 		severity = bumpSeverity(severity, 'error');
 		checks.push(colorize('error', 'L'));
 	} else {
-		checks.push(colorize('ok', 'L'));
+		checks.push(`${COLORS.dim}L${COLORS.reset}`);
 	}
 
-	if (!meta.creator) {
+	if (meta.creator) {
+		checks.push(colorize('ok', 'C'));
+	} else if (requireMeta) {
 		notes.push('creator missing');
 		severity = bumpSeverity(severity, 'error');
 		checks.push(colorize('error', 'C'));
 	} else {
-		checks.push(colorize('ok', 'C'));
+		checks.push(`${COLORS.dim}C${COLORS.reset}`);
 	}
 
 	if (typeof meta.mask === 'string') {
 		const maskPath = resolve(DATA_DIR, meta.mask);
-		if (!existsSync(maskPath)) {
-			notes.push(`mask file missing: data/${meta.mask}`);
-			severity = bumpSeverity(severity, 'error');
-			checks.push(colorize('error', 'M'));
-		} else {
+		if (existsSync(maskPath)) {
 			checks.push(colorize('ok', 'M'));
+		} else {
+			notes.push(`mask file missing: data/${meta.mask}`);
+			severity = bumpSeverity(severity, requireMeta ? 'error' : 'warn');
+			checks.push(colorize(requireMeta ? 'error' : 'warn', 'M'));
 		}
 	} else if (meta.mask === true) {
 		checks.push(colorize('ok', 'M'));
@@ -140,36 +162,46 @@ function buildRow(id: string, meta: RegionMetadata, remote: RemoteFile | undefin
 	let remoteDate = '—';
 	let driftStr = '—';
 
-	if (!remote) {
-		notes.push('remote file missing');
-		severity = bumpSeverity(severity, 'error');
-		checks.push(colorize('error', 'R'));
-	} else {
+	if (remote) {
 		checks.push(colorize('ok', 'R'));
 		remoteSize = formatBytes(remote.size);
 		remoteDate = formatDate(remote.mtime);
 
-		if (remote.size < MIN_REASONABLE_SIZE) {
-			notes.push(`remote size ${remoteSize} suspiciously small`);
+		if (meta.status === 'planned') {
+			notes.push('unexpected remote file (status = planned)');
 			severity = bumpSeverity(severity, 'warn');
-		}
-
-		if (releaseDateValid) {
-			const drift = diffDays(remote.mtime, releaseDateObj);
-			driftStr = drift < 1 ? '<1d' : `${Math.round(drift)}d`;
-			if (drift > DATE_DRIFT_ERROR_DAYS) {
-				notes.push(`mtime ${remoteDate} drifts ${Math.round(drift)}d from releaseDate ${releaseDate}`);
-				severity = bumpSeverity(severity, 'error');
-			} else if (drift > DATE_DRIFT_WARN_DAYS) {
-				notes.push(`mtime ${remoteDate} drifts ${Math.round(drift)}d from releaseDate ${releaseDate}`);
+		} else if (meta.status === 'scraping') {
+			notes.push('remote file exists');
+			severity = bumpSeverity(severity, 'warn');
+		} else {
+			if (remote.size < MIN_REASONABLE_SIZE) {
+				notes.push(`remote size ${remoteSize} suspiciously small`);
 				severity = bumpSeverity(severity, 'warn');
 			}
+			if (meta.status === 'released' && releaseDateValid) {
+				const drift = diffDays(remote.mtime, releaseDateObj!);
+				driftStr = drift < 1 ? '<1d' : `${Math.round(drift)}d`;
+				if (drift > DATE_DRIFT_ERROR_DAYS) {
+					notes.push(`mtime drifts ${Math.round(drift)}d from releaseDate`);
+					severity = bumpSeverity(severity, 'error');
+				} else if (drift > DATE_DRIFT_WARN_DAYS) {
+					notes.push(`mtime drifts ${Math.round(drift)}d from releaseDate`);
+					severity = bumpSeverity(severity, 'warn');
+				}
+			}
 		}
+	} else if (meta.status === 'released') {
+		notes.push('remote file missing');
+		severity = bumpSeverity(severity, 'error');
+		checks.push(colorize('error', 'R'));
+	} else {
+		checks.push(`${COLORS.dim}-${COLORS.reset}`);
 	}
 
 	return {
 		id,
-		releaseDate,
+		status: statusLabel(meta.status),
+		releaseDate: releaseDate || '—',
 		remoteSize,
 		remoteDate,
 		driftDays: driftStr,
@@ -189,10 +221,11 @@ function pad(s: string, width: number): string {
 }
 
 function renderTable(rows: Row[]): string {
-	const headers = ['', 'region', 'releaseDate', 'remote mtime', 'drift', 'size', 'L C M R', 'notes'];
+	const headers = ['', 'region', 'status', 'releaseDate', 'remote mtime', 'drift', 'size', 'L C M R', 'notes'];
 	const data = rows.map((r) => [
 		severityIcon(r.severity),
 		r.id,
+		r.status,
 		r.releaseDate,
 		r.remoteDate,
 		r.driftDays,
@@ -214,14 +247,14 @@ function renderTable(rows: Row[]): string {
 
 async function main(): Promise<void> {
 	const allMetadata = getAllRegionMetadata();
-	const released: { id: string; meta: RegionMetadata }[] = [];
+	const tracked: { id: string; meta: RegionMetadata }[] = [];
 	for (const [id, meta] of allMetadata) {
-		if (meta.status === 'released') released.push({ id, meta });
+		if (TRACKED_STATUSES.has(meta.status)) tracked.push({ id, meta });
 	}
-	released.sort((a, b) => a.id.localeCompare(b.id));
+	tracked.sort((a, b) => a.id.localeCompare(b.id));
 
-	if (released.length === 0) {
-		console.log(`${COLORS.dim}No released regions to check.${COLORS.reset}`);
+	if (tracked.length === 0) {
+		console.log(`${COLORS.dim}No released/scraping/planned regions to check.${COLORS.reset}`);
 		return;
 	}
 
@@ -239,17 +272,17 @@ async function main(): Promise<void> {
 
 	const remoteByPath = new Map(remoteFiles.map((f) => [f.path, f]));
 
-	const rows: Row[] = released.map(({ id, meta }) => buildRow(id, meta, remoteByPath.get(`${id}.versatiles`)));
+	const rows: Row[] = tracked.map(({ id, meta }) => buildRow(id, meta, remoteByPath.get(`${id}.versatiles`)));
 
 	console.log(renderTable(rows));
 
-	// Orphans: remote files that don't correspond to any released region
-	const releasedPaths = new Set(released.map(({ id }) => `${id}.versatiles`));
-	const orphans = remoteFiles.filter((f) => !releasedPaths.has(f.path));
+	// Orphans: remote files that don't correspond to any known region (any status)
+	const trackedPaths = new Set(tracked.map(({ id }) => `${id}.versatiles`));
+	const orphans = remoteFiles.filter((f) => !trackedPaths.has(f.path));
 
 	if (orphans.length > 0) {
 		console.log(
-			`\n${COLORS.bold}Orphan files on remote${COLORS.reset} ${COLORS.dim}(not in any released region)${COLORS.reset}:`,
+			`\n${COLORS.bold}Orphan files on remote${COLORS.reset} ${COLORS.dim}(no matching released/scraping/planned region)${COLORS.reset}:`,
 		);
 		for (const f of orphans) {
 			const region = f.path.replace(/\.versatiles$/, '');
@@ -261,9 +294,16 @@ async function main(): Promise<void> {
 		}
 	}
 
-	// Summary
+	// Summary, broken down by status
 	const counts = { ok: 0, warn: 0, error: 0 };
+	const byStatus: Record<string, number> = {};
+	for (const { meta } of tracked) byStatus[meta.status] = (byStatus[meta.status] ?? 0) + 1;
 	for (const r of rows) counts[r.severity]++;
+
+	const statusBreakdown = (['released', 'scraping', 'planned'] as const)
+		.filter((s) => byStatus[s])
+		.map((s) => `${byStatus[s]} ${s}`)
+		.join(', ');
 
 	console.log(
 		`\n${COLORS.bold}Summary:${COLORS.reset} ` +
@@ -271,7 +311,7 @@ async function main(): Promise<void> {
 			`${colorize('warn', `${counts.warn} warn`)}, ` +
 			`${colorize('error', `${counts.error} error`)}` +
 			(orphans.length > 0 ? `, ${colorize('warn', `${orphans.length} orphan`)}` : '') +
-			` (${rows.length} released regions)`,
+			` (${rows.length} regions: ${statusBreakdown})`,
 	);
 
 	if (counts.error > 0) {

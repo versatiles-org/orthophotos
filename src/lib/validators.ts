@@ -22,6 +22,31 @@ export async function isValidRaster(path: string): Promise<boolean> {
 }
 
 /**
+ * Returns true when every band of the raster has a max pixel value of 0 — i.e.
+ * the entire image is black (or empty / fully transparent for an alpha band).
+ *
+ * Uses `gdalinfo -mm` which scans every pixel; for an 8192×8192 deflate-compressed
+ * TIFF this typically takes a few seconds. Useful for skipping legitimately-empty
+ * tiles (out-of-coverage WMS / WMTS responses) before the convert stage.
+ */
+export async function isRasterAllZero(path: string): Promise<boolean> {
+	const result = await runCommand('gdalinfo', ['-mm', path], {
+		stdout: 'piped',
+		stderr: 'piped',
+		quiet: true,
+		quietOnError: true,
+	});
+	const text = Buffer.from(result.stdout).toString('utf-8');
+	const maxes: number[] = [];
+	for (const line of text.split('\n')) {
+		const m = /Computed Min\/Max=([-\d.]+),([-\d.]+)/.exec(line);
+		if (m) maxes.push(Number(m[2]));
+	}
+	if (maxes.length === 0) return false;
+	return maxes.every((max) => max === 0);
+}
+
+/**
  * Collects error messages during a concurrent fetch loop.
  * Call `add()` for each error, then `throwIfAny()` after the loop completes.
  */

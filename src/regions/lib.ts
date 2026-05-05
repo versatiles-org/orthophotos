@@ -22,7 +22,22 @@ export { createProgress, type Progress, type ProgressOptions } from '../lib/prog
 export { RemoteZip, type ZipEntry } from '../lib/remote-zip.ts';
 export { fetchWithInterval, type FetchWithIntervalOptions } from '../lib/rate-limit.ts';
 export { withRetry, type RetryOptions } from '../lib/retry.ts';
-export { downloadRaster, ErrorBucket, isValidRaster, type DownloadRasterOptions } from '../lib/validators.ts';
+export {
+	downloadRaster,
+	ErrorBucket,
+	isRasterAllZero,
+	isValidRaster,
+	type DownloadRasterOptions,
+} from '../lib/validators.ts';
+export {
+	bboxIntersectsPolygon,
+	lonLatTo3857,
+	lonTo3857,
+	latTo3857,
+	pointInPolygon,
+	projectGeometry3857,
+} from '../lib/geometry.ts';
+export { loadKnownRegions, type KnownRegion } from '../status/geojson.ts';
 export { createXmlParser } from '../lib/xml.ts';
 export {
 	bboxesOverlap,

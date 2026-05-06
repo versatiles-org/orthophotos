@@ -8,7 +8,7 @@ import {
 	extractZipFile,
 	runMosaicTile,
 	withRetry,
-} from '../lib/region-api.ts';
+} from '../lib/index.ts';
 
 const ATOM_URL = 'https://atom.cuzk.gov.cz/OI/OI.xml';
 const ZIP_BASE_URL = 'https://openzu.cuzk.gov.cz/opendata/OI/';

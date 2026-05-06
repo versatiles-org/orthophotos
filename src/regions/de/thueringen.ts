@@ -8,7 +8,7 @@ import {
 	runCommand,
 	runMosaicTile,
 	withRetry,
-} from '../../lib/region-api.ts';
+} from '../../lib/index.ts';
 
 export function generateCoords(): { x: number; y: number; id: string }[] {
 	const coords: { x: number; y: number; id: string }[] = [];

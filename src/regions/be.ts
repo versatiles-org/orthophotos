@@ -12,7 +12,7 @@ import {
 	runMosaicTile,
 	type WmsBlockItem,
 	withRetry,
-} from '../lib/region-api.ts';
+} from '../lib/index.ts';
 
 const WMS_URL = 'https://wms.ngi.be/inspire/ortho/service';
 const LAYER = 'orthoimage_coverage';

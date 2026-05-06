@@ -1,18 +1,26 @@
 /**
- * Public surface used by region scrapers.
+ * Public surface for the `lib/` subsystem.
  *
- * Region files should import everything they need from `../lib/region-api.ts`
- * (or `../../lib/region-api.ts` from sub-region directories). This keeps the
- * dependency graph between `regions/` and the rest of the codebase narrow
- * (one edge per region) and gives a single place to discover what's available.
+ * All consumers outside `lib/` (regions/, server/, run/, status/, top-level
+ * scripts) should import from `../lib/index.ts` rather than reaching into
+ * individual files. This keeps the cross-directory dependency graph minimal —
+ * one edge per consumer file — and gives a single place to discover what's
+ * available.
  *
- * If a region needs something that isn't exported here, add the export rather
- * than reaching into `../lib/...` directly.
+ * If something you need isn't exported here, add the export rather than
+ * importing the underlying file directly.
  */
 
 // Internal libs
 export { shuffle } from './array.ts';
-export { downloadFile, downloadFiles, runCommand, type DownloadOptions } from './command.ts';
+export {
+	downloadFile,
+	downloadFiles,
+	formatErrorChain,
+	runCommand,
+	runCommandWithRetry,
+	type DownloadOptions,
+} from './command.ts';
 export { MAX_ZOOM, QUALITY } from './constants.ts';
 export { sleep } from './delay.ts';
 export type { RegionMetadata, RegionPipeline, RegionStatus, StepContext } from './framework.ts';
@@ -20,8 +28,9 @@ export { extractZipFile, safeRm } from './fs.ts';
 export { pipeline, skip, type Skip } from './pipeline.ts';
 export { defineTileRegion, type TileContext, type TileItem } from './process_tiles.ts';
 export { createProgress, type Progress, type ProgressOptions } from './progress.ts';
-export { RemoteZip, type ZipEntry } from './remote-zip.ts';
 export { fetchWithInterval, type FetchWithIntervalOptions } from './rate-limit.ts';
+export { listRemoteVersatilesFiles, type RemoteFile } from './remote-listing.ts';
+export { RemoteZip, type ZipEntry } from './remote-zip.ts';
 export { withRetry, type RetryOptions } from './retry.ts';
 export {
 	downloadRaster,
@@ -38,7 +47,6 @@ export {
 	pointInPolygon,
 	projectGeometry3857,
 } from './geometry.ts';
-export { loadKnownRegions, type KnownRegion } from '../status/geojson.ts';
 export { createXmlParser } from './xml.ts';
 export {
 	bboxesOverlap,
@@ -60,5 +68,8 @@ export {
 } from './gdal.ts';
 export { runMosaicAssemble, runMosaicTile } from './versatiles.ts';
 
-// Config
+// Cross-tree re-exports — pragmatic facade for region scrapers, routed through
+// each subsystem's own index.ts so the directional dependency stays
+// `lib → status` / `lib → config` only at the barrel level.
+export { loadKnownRegions, type KnownRegion } from '../status/index.ts';
 export { getConfig } from '../config.ts';

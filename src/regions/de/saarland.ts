@@ -8,7 +8,7 @@ import {
 	downloadRaster,
 	runMosaicTile,
 	withRetry,
-} from '../../lib/region-api.ts';
+} from '../../lib/index.ts';
 
 const ATOM_URL =
 	'https://geoportal.saarland.de/mapbender/php/mod_inspireDownloadFeed.php?id=e7995adf-2aeb-4fa4-a536-041e3cc8b24a&type=DATASET&generateFrom=wmslayer&layerid=46747';

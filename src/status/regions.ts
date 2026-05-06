@@ -1,6 +1,6 @@
 import type { Status } from './status.ts';
 import { KnownRegion } from './geojson.ts';
-import type { RegionMetadata } from '../lib/framework.ts';
+import type { RegionMetadata } from '../lib/index.ts';
 
 export interface Region {
 	id: string;

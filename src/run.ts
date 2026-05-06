@@ -16,10 +16,10 @@
 import { resolve } from 'node:path';
 import { mkdirSync } from 'node:fs';
 import { getConfig } from './config.ts';
-import { expandRegionPattern, getHelpText, parseArgs } from './run/args.ts';
-import { formatErrorChain } from './lib/command.ts';
-import { checkRequiredCommands, remoteFileExists, runSshCommand } from './run/commands.ts';
-import { formatUnknownRegionError, runTask, type TaskContext } from './run/tasks.ts';
+import { expandRegionPattern, getHelpText, parseArgs } from './run/index.ts';
+import { formatErrorChain } from './lib/index.ts';
+import { checkRequiredCommands, remoteFileExists, runSshCommand } from './run/index.ts';
+import { formatUnknownRegionError, runTask, type TaskContext } from './run/index.ts';
 import { getAllRegionMetadata, getRegionPipeline } from './regions/index.ts';
 
 async function checkRemoteServer(): Promise<void> {

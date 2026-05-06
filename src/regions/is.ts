@@ -12,7 +12,7 @@ import {
 	runMosaicTile,
 	type WmsBlockItem,
 	withRetry,
-} from '../lib/region-api.ts';
+} from '../lib/index.ts';
 
 // Náttúrufræðistofnun (Icelandic Institute of Natural History — formerly Landmælingar
 // Íslands / LMÍ) publishes a public mapcache WMS pre-projected to EPSG:3857. The

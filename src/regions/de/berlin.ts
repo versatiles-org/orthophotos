@@ -8,7 +8,7 @@ import {
 	downloadRaster,
 	runMosaicTile,
 	withRetry,
-} from '../../lib/region-api.ts';
+} from '../../lib/index.ts';
 
 const ATOM_URL = 'https://gdi.berlin.de/data/oi_dop2025_sommer/atom/';
 const xmlParser = createXmlParser();

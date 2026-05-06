@@ -7,7 +7,7 @@
  * Promote an entry out of this file the moment it gets a real scraper.
  */
 
-import type { RegionPipeline } from '../lib/framework.ts';
+import type { RegionPipeline } from '../lib/index.ts';
 
 export default [
 	{

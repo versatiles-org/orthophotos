@@ -15,7 +15,7 @@ import {
 	type WmsBbox,
 	type WmsBlockItem,
 	withRetry,
-} from '../lib/region-api.ts';
+} from '../lib/index.ts';
 
 const WMS_URL = 'http://inspire.mzh.government.bg:8080/geoserver/ows';
 

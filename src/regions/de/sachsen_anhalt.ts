@@ -8,7 +8,7 @@ import {
 	downloadRaster,
 	runMosaicTile,
 	withRetry,
-} from '../../lib/region-api.ts';
+} from '../../lib/index.ts';
 
 const ATOM_URL =
 	'https://geodatenportal.sachsen-anhalt.de/arcgisinspire/rest/directories/web/INSPIRE_ALKIS/ALKIS_OI_DOP20_MapServer/datasetoi.xml';

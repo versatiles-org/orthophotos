@@ -7,7 +7,7 @@ import {
 	runCommand,
 	runMosaicTile,
 	withRetry,
-} from '../lib/region-api.ts';
+} from '../lib/index.ts';
 
 const FTP_HOST = 'ftp.dataforsyningen.dk';
 const FTP_DIR = '/grundlaeggende_landkortdata/ortofoto/12_5CM/';

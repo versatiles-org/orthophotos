@@ -2,7 +2,7 @@
  * Registry mapping region IDs to their pipeline definitions.
  */
 
-import type { RegionMetadata, RegionPipeline, RegionStatus } from '../lib/framework.ts';
+import type { RegionMetadata, RegionPipeline, RegionStatus } from '../lib/index.ts';
 
 import _planned from './_planned.ts';
 import al from './al.ts';

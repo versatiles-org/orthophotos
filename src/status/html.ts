@@ -1,5 +1,5 @@
 import type { Feature, FeatureCollection, MultiPolygon, Polygon } from 'geojson';
-import type { RegionMetadata, RegionStatus } from '../lib/framework.ts';
+import type { RegionMetadata, RegionStatus } from '../lib/index.ts';
 import type { KnownRegion } from './geojson.ts';
 
 const STATUS_LABELS: Record<RegionStatus, string> = {

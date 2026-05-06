@@ -11,7 +11,7 @@ import {
 	parseWmsCapabilities,
 	runMosaicTile,
 	withRetry,
-} from '../lib/region-api.ts';
+} from '../lib/index.ts';
 
 const WMS_URL = 'http://www.geoportal.lt/arcgis/services/NZT/ORT10LT_Web_Mercator_102100/MapServer/WMSServer';
 const LAYER = '0';

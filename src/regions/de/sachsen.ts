@@ -1,7 +1,7 @@
 import { readFile, readdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { defineTileRegion, downloadFile, extractZipFile, runMosaicTile, withRetry } from '../../lib/region-api.ts';
+import { defineTileRegion, downloadFile, extractZipFile, runMosaicTile, withRetry } from '../../lib/index.ts';
 
 export function parseUrlId(url: string): string {
 	const match = url.match(/\/(dop20rgb_[^/]+?)_2_sn_tiff\.zip$/);

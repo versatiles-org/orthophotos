@@ -9,7 +9,7 @@ import {
 	runCommand,
 	runMosaicTile,
 	withRetry,
-} from '../lib/region-api.ts';
+} from '../lib/index.ts';
 
 const DATASET_FEED_URL =
 	'https://mapy.geoportal.gov.pl/wss/service/ATOM/httpauth/atom/OI?spatial_dataset_identifier_code=OI&spatial_dataset_identifier_namespace=PL.PZGiK.203';

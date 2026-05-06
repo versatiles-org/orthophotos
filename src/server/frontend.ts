@@ -1,6 +1,6 @@
 import { resolve } from 'node:path';
 import { existsSync, mkdirSync, renameSync } from 'node:fs';
-import { runCommandWithRetry } from '../lib/command.ts';
+import { runCommandWithRetry } from '../lib/index.ts';
 
 /**
  * Downloads the VersaTiles frontend archive from GitHub releases.

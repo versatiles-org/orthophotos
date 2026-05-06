@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
-import { defineTileRegion, downloadFile, downloadRaster, runMosaicTile, withRetry } from '../lib/region-api.ts';
+import { defineTileRegion, downloadFile, downloadRaster, runMosaicTile, withRetry } from '../lib/index.ts';
 
 const GEOJSON_URL =
 	'https://fsn1.your-objectstorage.com/hwh-portal/20230609_tmp/links/nationaal/Nederland/BM_LRL2025O_RGB.json';

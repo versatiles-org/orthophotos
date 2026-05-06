@@ -9,7 +9,7 @@ import {
 	RemoteZip,
 	runMosaicAssemble,
 	runMosaicTile,
-} from '../../lib/region-api.ts';
+} from '../../lib/index.ts';
 
 const BASE_URL = 'https://gdi2.geo.bremen.de/inspire/download/DOP/data/';
 const IMAGE_EXTS = ['.jpg', '.tif', '.jp2'];

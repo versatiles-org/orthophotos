@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
-import { defineTileRegion, downloadFile, extractZipFile, runMosaicTile, withRetry } from '../../lib/region-api.ts';
+import { defineTileRegion, downloadFile, extractZipFile, runMosaicTile, withRetry } from '../../lib/index.ts';
 
 const BASE_URL = 'https://data.geobasis-bb.de/geobasis/daten/dop/rgb_jpg/';
 

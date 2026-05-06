@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
-import { defineTileRegion, downloadFile, downloadRaster, runMosaicTile, withRetry } from '../../lib/region-api.ts';
+import { defineTileRegion, downloadFile, downloadRaster, runMosaicTile, withRetry } from '../../lib/index.ts';
 
 const GEOJSON_URL =
 	'https://arcgis-geojson.s3.eu-de.cloud-object-storage.appdomain.cloud/dop20/lgln-opengeodata-dop20.geojson';

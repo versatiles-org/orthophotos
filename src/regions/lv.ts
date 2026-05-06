@@ -1,7 +1,7 @@
 import { existsSync, rmSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
-import { defineTileRegion, downloadFile, downloadRaster, runMosaicTile, withRetry } from '../lib/region-api.ts';
+import { defineTileRegion, downloadFile, downloadRaster, runMosaicTile, withRetry } from '../lib/index.ts';
 
 const INDEX_URL =
 	'https://s3.storage.pub.lvdc.gov.lv/lgia-opendata/ortofoto_rgb_v6/LGIA_OpenData_Ortofoto_rgb_v6_saites.txt';

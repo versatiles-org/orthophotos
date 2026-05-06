@@ -11,7 +11,7 @@ import {
 	type WmsBbox,
 	type WmsBlockItem,
 	withRetry,
-} from '../lib/region-api.ts';
+} from '../lib/index.ts';
 
 // PNOA Máxima Actualidad — the always-current orthophoto layer published by IGN
 // as part of the Spanish Sistema Cartográfico Nacional. INSPIRE-compliant WMS

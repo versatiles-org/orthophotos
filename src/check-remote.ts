@@ -15,9 +15,9 @@
 import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { listRemoteVersatilesFiles, type RemoteFile } from './lib/remote-listing.ts';
+import { listRemoteVersatilesFiles, type RemoteFile } from './lib/index.ts';
 import { getAllRegionMetadata } from './regions/index.ts';
-import type { RegionMetadata, RegionStatus } from './lib/framework.ts';
+import type { RegionMetadata, RegionStatus } from './lib/index.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = resolve(__dirname, '../data');

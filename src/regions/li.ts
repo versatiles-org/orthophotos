@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { defineTileRegion, downloadRaster, runMosaicTile } from '../lib/region-api.ts';
+import { defineTileRegion, downloadRaster, runMosaicTile } from '../lib/index.ts';
 
 const DOWNLOAD_URL = 'https://service.geo.llv.li/atom/data/e77da96f-bc1c-4317-8c2f-81310812c798.tif';
 

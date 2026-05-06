@@ -1,7 +1,7 @@
 import { existsSync, renameSync, statSync, writeFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { defineTileRegion, isValidRaster, runCommand, runMosaicTile, withRetry } from '../../lib/region-api.ts';
+import { defineTileRegion, isValidRaster, runCommand, runMosaicTile, withRetry } from '../../lib/index.ts';
 
 const GEOJSON_URL =
 	'https://geodaten.schleswig-holstein.de/gaialight-sh/_apps/dladownload/single.php?file=DOP20_SH__Massendownload.geojson&id=4';

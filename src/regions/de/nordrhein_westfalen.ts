@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
-import { defineTileRegion, downloadFile, downloadRaster, runMosaicTile, withRetry } from '../../lib/region-api.ts';
+import { defineTileRegion, downloadFile, downloadRaster, runMosaicTile, withRetry } from '../../lib/index.ts';
 
 const INDEX_URL = 'https://www.opengeodata.nrw.de/produkte/geobasis/lusat/akt/dop/dop_jp2_f10/';
 

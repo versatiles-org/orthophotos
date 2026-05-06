@@ -12,7 +12,7 @@ import {
 	runMosaicTile,
 	type WmsBlockItem,
 	withRetry,
-} from '../lib/region-api.ts';
+} from '../lib/index.ts';
 
 // Lechner Tudásközpont (formerly FÖMI) INSPIRE View Service for the 2022
 // orthophoto coverage of Hungary. The same INSPIRE record explicitly licenses

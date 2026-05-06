@@ -6,7 +6,7 @@
  * silently dropped from the registry.
  */
 
-import type { RegionPipeline } from '../../lib/framework.ts';
+import type { RegionPipeline } from '../../lib/index.ts';
 import badenWuerttemberg from './baden_wuerttemberg.ts';
 import bayern from './bayern.ts';
 import berlin from './berlin.ts';

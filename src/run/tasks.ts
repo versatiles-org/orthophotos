@@ -6,9 +6,9 @@
 import { existsSync, mkdirSync, renameSync } from 'node:fs';
 import { posix, resolve } from 'node:path';
 import { runScpUpload, runSshCommand } from './commands.ts';
-import { runMosaicAssemble } from '../lib/versatiles.ts';
+import { runMosaicAssemble } from '../lib/index.ts';
 import { TASK_NUMBER_TO_NAME } from './tasks.constants.ts';
-import { safeRm } from '../lib/fs.ts';
+import { safeRm } from '../lib/index.ts';
 import { getRegionPipeline, suggestSimilarRegions } from '../regions/index.ts';
 import { getConfig } from '../config.ts';
 

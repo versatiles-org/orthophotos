@@ -5,7 +5,7 @@
  * — they're consumed by region scrapers via `src/lib/region-api.ts`.
  */
 
-import { runCommand } from '../lib/command.ts';
+import { runCommand } from '../lib/index.ts';
 import { getConfig } from '../config.ts';
 
 /** Required CLI tools */

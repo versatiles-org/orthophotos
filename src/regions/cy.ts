@@ -12,7 +12,7 @@ import {
 	runMosaicTile,
 	type WmsBlockItem,
 	withRetry,
-} from '../lib/region-api.ts';
+} from '../lib/index.ts';
 
 // INSPIRE View Service for Orthoimagery (Annex II) published by the Cyprus
 // Department of Lands and Surveys. The single layer carries the 2014 50 cm

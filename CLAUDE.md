@@ -161,6 +161,21 @@ Region fetch implementations should follow these patterns consistently:
 
 **Skip files (.skip) — only for coordinate probing:** Some regions (e.g. `de/baden_wuerttemberg`, `de/thueringen`, `pt`) probe a grid of coordinates or filenames where many tiles legitimately don't exist; the WMS-coverage regions `al`/`be` do the same when a block falls outside the served area. In those cases, write the marker via `writeFileSync(ctx.skipDest, '')` and return `'empty'` so re-runs skip the lookup. Never use `.skip` for transient download or validation failures — let those propagate via `withRetry` / `errors.add`.
 
+**No silent gaps — every download/convert failure must propagate:** A region's final output must never have holes caused by server errors. Every failure mode has exactly one correct path:
+
+- **Network/server error during download** → throw (e.g. let `withRetry` exhaust, then propagate). The framework aborts the pipeline (`pipeline.ts:235-260`) and the region run fails.
+- **Downloaded file fails validation** (`isValidRaster` returns false, wrong format, etc.) → call `ctx.errors.add(msg)` then `return 'invalid'`. `processTiles` calls `errors.throwIfAny()` at the end (`process_tiles.ts:189`), so the run still fails — but other items get a chance to download first.
+- **Tile legitimately doesn't exist at the source** (out-of-coverage WMS block, source archive doesn't list this id, WMS server returns fully-black raster for outside-country areas) → `writeFileSync(ctx.skipDest, '')` then `return 'empty'`. Re-runs skip the lookup.
+- **`minFiles`** is the third safety net: catastrophic failures where most items return `'empty'` are caught by `expectMinFiles` after the pipeline completes. Set `minFiles` based on the realistic floor of land tiles for the region.
+
+**Anti-patterns to avoid:**
+
+- Returning `'empty'` from a `try { ... } catch { return 'empty' }` block — that masks real failures. Catch only specific, known-safe errors (e.g. `bg.ts` catches just `RasterFormatException`); let everything else propagate.
+- Using `curl` without `--fail` (or `-f`) for downloads. Without `--fail`, curl exits 0 on HTTP 4xx/5xx and writes the error body to disk; that body then flows through validation as if it were real data, and small error responses can be mistaken for legitimate empties. `downloadFile()` always passes `--fail`. For ad-hoc `runCommand('curl', ...)` calls, include `-f` (or `--fail`).
+- Writing `.skip` for "I'm not sure what went wrong" cases. `.skip` is permanent; once written, re-runs won't refetch. Reserve it for things that are fixed by the data source (a tile that doesn't exist isn't going to start existing on the next run).
+
+For "the response decoded fine but contains no actual data" (e.g. an all-black WMTS tile from outside the coverage area), use `isRasterAllZero(path)` from `src/lib/validators.ts` between `isValidRaster` and the convert stage (see `fi.ts` for an example). It's safe to write `.skip` in this case — the source won't suddenly start having data there.
+
 **Resumability:** The pipeline automatically skips items with existing `.versatiles` or `.skip` files. Use `shuffle()` to distribute load across servers.
 
 **Transparent borders:** Orthophoto tiles must not have black or white borders around the imagery. Borders cause visible rectangles when tiles are stacked. To ensure clean transparency:

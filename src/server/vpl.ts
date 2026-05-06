@@ -2,7 +2,7 @@ import { dirname, relative, resolve } from 'node:path';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
-import { getConfig } from '../config.ts';
+import { getConfig } from '../lib/index.ts';
 import { getAllRegionMetadata } from '../regions/index.ts';
 import { loadKnownRegions } from '../status/index.ts';
 

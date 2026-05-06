@@ -6,7 +6,7 @@
  */
 
 import { runCommand } from '../lib/index.ts';
-import { getConfig } from '../config.ts';
+import { getConfig } from '../lib/index.ts';
 
 /** Required CLI tools */
 const REQUIRED_COMMANDS = ['7z', 'curl', 'gdal_translate', 'gdalbuildvrt', 'ssh', 'unzip', 'versatiles'];

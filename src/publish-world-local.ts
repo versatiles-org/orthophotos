@@ -8,9 +8,7 @@
 import { resolve, dirname } from 'node:path';
 import { mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { getConfig } from './config.ts';
-import { runCommand } from './lib/index.ts';
-import { safeRm } from './lib/index.ts';
+import { getConfig, runCommand, safeRm } from './lib/index.ts';
 import { runScpUpload, runSshCommand } from './run/index.ts';
 import { generateVPL } from './server/index.ts';
 

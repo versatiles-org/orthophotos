@@ -10,7 +10,7 @@ import { runMosaicAssemble } from '../lib/index.ts';
 import { TASK_NUMBER_TO_NAME } from './tasks.constants.ts';
 import { safeRm } from '../lib/index.ts';
 import { getRegionPipeline, suggestSimilarRegions } from '../regions/index.ts';
-import { getConfig } from '../config.ts';
+import { getConfig } from '../lib/index.ts';
 
 export interface TaskContext {
 	name: string; // Region identifier (e.g., "de/bw")

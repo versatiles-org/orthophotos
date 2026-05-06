@@ -7,8 +7,7 @@
 
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { getConfig } from './config.ts';
-import { runCommand } from './lib/index.ts';
+import { getConfig, runCommand } from './lib/index.ts';
 import { runSshCommand } from './run/index.ts';
 import { generateVPL } from './server/index.ts';
 

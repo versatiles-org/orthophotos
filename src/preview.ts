@@ -7,10 +7,8 @@
 
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { getConfig } from './config.ts';
-import { runCommand } from './lib/index.ts';
-import { downloadFrontend } from './server/index.ts';
-import { generateVPL } from './server/index.ts';
+import { getConfig, runCommand } from './lib/index.ts';
+import { downloadFrontend, generateVPL } from './server/index.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const previewDir = resolve(__dirname, '../.preview');

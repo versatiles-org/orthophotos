@@ -7,7 +7,7 @@
  */
 
 import { runCommand } from './command.ts';
-import { getConfig } from '../config.ts';
+import { getConfig } from './config.ts';
 
 export interface RemoteFile {
 	/** Path relative to ssh_dir (e.g. "de/bayern.versatiles"). */

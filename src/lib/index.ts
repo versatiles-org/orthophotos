@@ -72,4 +72,4 @@ export { runMosaicAssemble, runMosaicTile } from './versatiles.ts';
 // each subsystem's own index.ts so the directional dependency stays
 // `lib → status` / `lib → config` only at the barrel level.
 export { loadKnownRegions, type KnownRegion } from '../status/index.ts';
-export { getConfig } from '../config.ts';
+export { getConfig } from './config.ts';

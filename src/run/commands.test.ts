@@ -1,6 +1,6 @@
 import { expect, test, vi } from 'vitest';
 import { checkRequiredCommands, runScpUpload, runSshCommand } from './commands.ts';
-import { getConfig } from '../config.ts';
+import { getConfig } from '../lib/index.ts';
 
 // Mock runCommand from lib/command.ts
 vi.mock('../lib/command.ts', async (importOriginal) => {

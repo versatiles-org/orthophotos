@@ -6,7 +6,7 @@
 		"build:status": "node --env-file=config.env --import tsx/esm src/status-check.ts",
 		"check:remote": "node --env-file=config.env --import tsx/esm src/check-remote.ts",
 		"check": "npm run format:check && npm run lint && npm run typecheck && npm run test",
-		"docs:graph": "vrt deps-graph --collapse-dir 'src/regions/*.ts' --collapse-dir 'src/regions/de/*.ts' --collapse-dir 'src/regions/fr/*.ts' | vrt doc-insert README.md '### Dependency Graph'",
+		"docs:graph": "vrt deps-graph --collapse-dir 'src/regions/**/*.ts' | vrt doc-insert README.md '### Dependency Graph'",
 		"format:check": "prettier --check .",
 		"format": "prettier --log-level warn --write .",
 		"lint": "eslint 'src/**/*.ts'",

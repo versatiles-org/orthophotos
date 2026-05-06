@@ -1,7 +1,14 @@
 import { writeFileSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { defineTileRegion, downloadFile, extractZipFile, runCommand, runMosaicTile, withRetry } from '../lib.ts';
+import {
+	defineTileRegion,
+	downloadFile,
+	extractZipFile,
+	runCommand,
+	runMosaicTile,
+	withRetry,
+} from '../../lib/region-api.ts';
 
 export function generateCoords(): { x: number; y: number; id: string }[] {
 	const coords: { x: number; y: number; id: string }[] = [];

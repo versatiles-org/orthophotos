@@ -11,7 +11,7 @@ import {
 	safeRm,
 	shuffle,
 	withRetry,
-} from '../lib.ts';
+} from '../../lib/region-api.ts';
 
 const KML_URL = 'https://geodaten.bayern.de/odd/a/dop20/meta/kml/gemeinde.kml';
 

@@ -8,7 +8,7 @@ import {
 	extractZipAndBuildVrt,
 	runMosaicTile,
 	withRetry,
-} from './lib.ts';
+} from '../lib/region-api.ts';
 
 const ATOM_URL =
 	'https://inspire.geomil.ro/network/rest/directories/arcgisforinspire/INSPIRE/OI_Download_MapServer/OI_Dataset.xml';

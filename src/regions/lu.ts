@@ -11,7 +11,7 @@ import {
 	parseWmsCapabilities,
 	runMosaicTile,
 	withRetry,
-} from './lib.ts';
+} from '../lib/region-api.ts';
 
 // GML source: https://download.data.public.lu/resources/inspire-annex-ii-theme-orthoimagery-orthoimagecoverage-2025-summer/20260324-074957/oi.ortho-rgb-2025-summer.gml
 const WMS_URL = 'https://wms.geoportail.lu/opendata/service';

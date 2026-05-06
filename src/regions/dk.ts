@@ -1,6 +1,13 @@
 import { chmodSync, existsSync, renameSync, writeFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
-import { defineTileRegion, extractZipAndBuildVrt, isValidRaster, runCommand, runMosaicTile, withRetry } from './lib.ts';
+import {
+	defineTileRegion,
+	extractZipAndBuildVrt,
+	isValidRaster,
+	runCommand,
+	runMosaicTile,
+	withRetry,
+} from '../lib/region-api.ts';
 
 const FTP_HOST = 'ftp.dataforsyningen.dk';
 const FTP_DIR = '/grundlaeggende_landkortdata/ortofoto/12_5CM/';

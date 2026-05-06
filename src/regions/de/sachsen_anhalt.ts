@@ -1,7 +1,14 @@
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { createXmlParser, defineTileRegion, downloadFile, downloadRaster, runMosaicTile, withRetry } from '../lib.ts';
+import {
+	createXmlParser,
+	defineTileRegion,
+	downloadFile,
+	downloadRaster,
+	runMosaicTile,
+	withRetry,
+} from '../../lib/region-api.ts';
 
 const ATOM_URL =
 	'https://geodatenportal.sachsen-anhalt.de/arcgisinspire/rest/directories/web/INSPIRE_ALKIS/ALKIS_OI_DOP20_MapServer/datasetoi.xml';

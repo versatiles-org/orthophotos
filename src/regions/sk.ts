@@ -11,7 +11,7 @@ import {
 	runMosaicTile,
 	safeRm,
 	withRetry,
-} from './lib.ts';
+} from '../lib/region-api.ts';
 
 const ATOM_URL = 'https://inspirews.skgeodesy.sk/atom/7efad194-3006-408f-9e6c-c06dc79703bd_dataFeed.atom';
 

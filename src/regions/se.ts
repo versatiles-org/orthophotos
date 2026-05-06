@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { defineTileRegion, downloadRaster, runMosaicTile, withRetry } from './lib.ts';
+import { defineTileRegion, downloadRaster, runMosaicTile, withRetry } from '../lib/region-api.ts';
 
 const STAC_SEARCH = 'https://api.lantmateriet.se/stac-bild/v1/search';
 // Sweden's bbox (slightly padded). STAC search will only return tiles inside coverage.

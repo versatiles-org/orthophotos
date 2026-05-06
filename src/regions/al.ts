@@ -12,7 +12,7 @@ import {
 	runMosaicTile,
 	type WmsBlockItem,
 	withRetry,
-} from './lib.ts';
+} from '../lib/region-api.ts';
 
 const WMS_URL = 'https://geoportal.asig.gov.al/service/orthophoto_2015/wms';
 const LAYER = 'OrthoImagery_20cm';

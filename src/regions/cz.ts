@@ -1,7 +1,14 @@
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { createXmlParser, defineTileRegion, downloadFile, extractZipFile, runMosaicTile, withRetry } from './lib.ts';
+import {
+	createXmlParser,
+	defineTileRegion,
+	downloadFile,
+	extractZipFile,
+	runMosaicTile,
+	withRetry,
+} from '../lib/region-api.ts';
 
 const ATOM_URL = 'https://atom.cuzk.gov.cz/OI/OI.xml';
 const ZIP_BASE_URL = 'https://openzu.cuzk.gov.cz/opendata/OI/';

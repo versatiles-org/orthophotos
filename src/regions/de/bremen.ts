@@ -2,7 +2,14 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { readdir } from 'node:fs/promises';
 import { availableParallelism } from 'node:os';
 import { basename, join } from 'node:path';
-import { defineTileRegion, extractZipFile, pipeline, RemoteZip, runMosaicAssemble, runMosaicTile } from '../lib.ts';
+import {
+	defineTileRegion,
+	extractZipFile,
+	pipeline,
+	RemoteZip,
+	runMosaicAssemble,
+	runMosaicTile,
+} from '../../lib/region-api.ts';
 
 const BASE_URL = 'https://gdi2.geo.bremen.de/inspire/download/DOP/data/';
 const IMAGE_EXTS = ['.jpg', '.tif', '.jp2'];

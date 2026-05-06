@@ -1,7 +1,14 @@
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
-import { createXmlParser, defineTileRegion, downloadFile, downloadRaster, runMosaicTile, withRetry } from '../lib.ts';
+import {
+	createXmlParser,
+	defineTileRegion,
+	downloadFile,
+	downloadRaster,
+	runMosaicTile,
+	withRetry,
+} from '../../lib/region-api.ts';
 
 const ATOM_URL = 'https://gdi.berlin.de/data/oi_dop2025_sommer/atom/';
 const xmlParser = createXmlParser();

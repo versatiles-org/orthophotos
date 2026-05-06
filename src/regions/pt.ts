@@ -1,5 +1,12 @@
 import { join } from 'node:path';
-import { convertToTiledTiff, defineTileRegion, downloadFile, isValidRaster, runMosaicTile, withRetry } from './lib.ts';
+import {
+	convertToTiledTiff,
+	defineTileRegion,
+	downloadFile,
+	isValidRaster,
+	runMosaicTile,
+	withRetry,
+} from '../lib/region-api.ts';
 
 const OGC_API_MAP_URL = 'https://ogcapi.dgterritorio.gov.pt/collections/ortos-rgb/map';
 const CRS_3857 = 'http://www.opengis.net/def/crs/EPSG/0/3857';

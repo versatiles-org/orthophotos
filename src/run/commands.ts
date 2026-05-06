@@ -2,7 +2,7 @@
  * Remote-storage plumbing for the run script: required-CLI check + SSH/SCP wrappers.
  *
  * GDAL and versatiles wrappers live in `src/lib/gdal.ts` and `src/lib/versatiles.ts`
- * — they're consumed by region scrapers via `src/regions/lib.ts`.
+ * — they're consumed by region scrapers via `src/lib/region-api.ts`.
  */
 
 import { runCommand } from '../lib/command.ts';

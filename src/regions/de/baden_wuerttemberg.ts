@@ -1,6 +1,12 @@
 import { statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { defineTileRegion, downloadFile, extractZipAndBuildVrt, runMosaicTile, withRetry } from '../lib.ts';
+import {
+	defineTileRegion,
+	downloadFile,
+	extractZipAndBuildVrt,
+	runMosaicTile,
+	withRetry,
+} from '../../lib/region-api.ts';
 
 const BASE_URL = 'https://opengeodata.lgl-bw.de/data/dop20/';
 

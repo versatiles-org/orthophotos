@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
-import { defineTileRegion, isValidRaster, runCommand, runMosaicTile, withRetry } from '../lib.ts';
+import { defineTileRegion, isValidRaster, runCommand, runMosaicTile, withRetry } from '../../lib/region-api.ts';
 
 const INDEX_URL = 'https://geobasis-rlp.de/data/dop20rgb/current/jp2/';
 

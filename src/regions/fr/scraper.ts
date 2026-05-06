@@ -29,7 +29,7 @@ import {
 	safeRm,
 	sleep,
 	withRetry,
-} from '../lib.ts';
+} from '../../lib/region-api.ts';
 import {
 	type BdorthoDetailPart,
 	computeDateRange,

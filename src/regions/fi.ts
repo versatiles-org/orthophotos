@@ -16,7 +16,7 @@ import {
 	type WmsBbox,
 	type WmsBlockItem,
 	withRetry,
-} from './lib.ts';
+} from '../lib/region-api.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = resolve(__dirname, '../../data');

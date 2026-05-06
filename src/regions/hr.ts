@@ -12,7 +12,7 @@ import {
 	runMosaicTile,
 	type WmsBlockItem,
 	withRetry,
-} from './lib.ts';
+} from '../lib/region-api.ts';
 
 // State Geodetic Administration (Državna geodetska uprava, DGU) of Croatia.
 // INSPIRE View Service for the 2022/23 LiDAR-based digital orthophoto: the

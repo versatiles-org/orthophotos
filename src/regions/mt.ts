@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { convertToTiledTiff, defineTileRegion, downloadFile, runMosaicTile, withRetry } from './lib.ts';
+import { convertToTiledTiff, defineTileRegion, downloadFile, runMosaicTile, withRetry } from '../lib/region-api.ts';
 
 /**
  * Malta WMS returns paletted PNG and does not support EPSG:3857.

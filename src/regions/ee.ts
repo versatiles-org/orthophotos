@@ -7,10 +7,16 @@ const INDEX_URL = 'https://geoportaal.maaamet.ee/docs/Avaandmed/epk10_eng.zip';
 const API_URL = 'https://geoportaal.maaamet.ee/index.php?lang_id=2&plugin_act=otsing&page_id=662';
 const DL_BASE = 'https://geoportaal.maaamet.ee/index.php?lang_id=2&plugin_act=otsing&page_id=662&dl=1';
 
-/** Query the download API for the latest RGB GeoTIFF filename for a sheet. */
+/**
+ * Query the download API for the latest RGB GeoTIFF filename for a sheet.
+ *
+ * `--fail` makes HTTP errors throw instead of silently returning `null` — important
+ * because callers treat `null` as "no data" and persist a `.skip` marker, so a
+ * transient API outage would otherwise permanently mask legitimate sheets.
+ */
 async function getLatestFilename(nr: number): Promise<string | null> {
 	const url = `${API_URL}&kaardiruut=${nr}&andmetyyp=ortofoto_eesti_rgb`;
-	const result = await runCommand('curl', ['-s', '--max-time', '15', url], { quiet: true });
+	const result = await runCommand('curl', ['-sf', '--max-time', '15', url], { quiet: true });
 	const html = new TextDecoder().decode(result.stdout);
 	const match = html.match(/f=(\d+_OF_RGB_GeoTIFF_[^&"]+\.zip)/);
 	return match ? match[1] : null;
@@ -78,7 +84,7 @@ export default defineTileRegion<EeItem, EeDownload>({
 	},
 	downloadLimit: 2,
 	download: async (item, ctx) => {
-		const filename = await getLatestFilename(item.nr);
+		const filename = await withRetry(() => getLatestFilename(item.nr), { maxAttempts: 3 });
 		if (!filename) {
 			// Persist a `.skip` marker — the API result for this sheet won't change between runs.
 			writeFileSync(ctx.skipDest, '');

@@ -50,33 +50,33 @@ export const FR_REGIONS: FrSubRegionOptions[] = [
 		// Ardennes, Aube, Marne, Haute-Marne, Meurthe-et-Moselle, Meuse, Moselle,
 		// Bas-Rhin, Haut-Rhin, Vosges
 		departmentCodes: ['D008', 'D010', 'D051', 'D052', 'D054', 'D055', 'D057', 'D067', 'D068', 'D088'],
-		releaseDate: '2026-04-23',
+		releaseDate: '2026-05-06',
 	},
 	{
 		name: 'fr/hauts_de_france',
 		// Aisne, Nord, Oise, Pas-de-Calais, Somme
 		departmentCodes: ['D002', 'D059', 'D060', 'D062', 'D080'],
-		releaseDate: '2026-04-23',
+		releaseDate: '2026-05-07',
 	},
 	{
 		name: 'fr/ile_de_france',
 		// Paris, Seine-et-Marne, Yvelines, Essonne, Hauts-de-Seine,
 		// Seine-Saint-Denis, Val-de-Marne, Val-d'Oise
 		departmentCodes: ['D075', 'D077', 'D078', 'D091', 'D092', 'D093', 'D094', 'D095'],
-		releaseDate: '2026-04-23',
+		releaseDate: '2026-05-07',
 	},
 	{
 		name: 'fr/normandie',
 		// Calvados, Eure, Manche, Orne, Seine-Maritime
 		departmentCodes: ['D014', 'D027', 'D050', 'D061', 'D076'],
-		releaseDate: '2026-04-23',
+		releaseDate: '2026-05-08',
 	},
 	{
 		name: 'fr/nouvelle_aquitaine',
 		// Charente, Charente-Maritime, Corrèze, Creuse, Dordogne, Gironde, Landes,
 		// Lot-et-Garonne, Pyrénées-Atlantiques, Deux-Sèvres, Vienne, Haute-Vienne
 		departmentCodes: ['D016', 'D017', 'D019', 'D023', 'D024', 'D033', 'D040', 'D047', 'D064', 'D079', 'D086', 'D087'],
-		releaseDate: '2026-04-23',
+		releaseDate: '2026-05-10',
 	},
 	{
 		name: 'fr/occitanie',

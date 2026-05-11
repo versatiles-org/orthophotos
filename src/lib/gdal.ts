@@ -157,29 +157,41 @@ export interface WmsBlockExtractOptions {
 
 /**
  * Extracts a block from a WMS source as a tiled, compressed GeoTIFF with alpha.
+ *
+ * The WMS driver subdivides each `gdal_translate` call into many 1024-px sub-tile
+ * requests, and an 8192-px block means ~64 of them. A single transient failure
+ * (CloudFront 502s on `es`, Apache 503s on `bg`, etc.) without internal retries
+ * would force our outer `withRetry` to redo all ~64 requests — so we ask GDAL to
+ * retry sub-tiles itself first. `GDAL_HTTP_RETRY_CODES` defaults to
+ * "429,500,502,503,504", which covers every transient failure we've seen in the
+ * wild; no need to override it.
  */
 export async function extractWmsBlock(options: WmsBlockExtractOptions, output: string): Promise<void> {
-	await runCommand('gdal_translate', [
-		'-q',
-		options.wmsXmlPath,
-		output,
-		'-projwin',
-		String(options.x0),
-		String(options.y1),
-		String(options.x1),
-		String(options.y0),
-		'-projwin_srs',
-		'EPSG:3857',
-		'-outsize',
-		String(options.blockPx),
-		String(options.blockPx),
-		'-of',
-		'GTiff',
-		'-co',
-		'COMPRESS=DEFLATE',
-		'-co',
-		'PREDICTOR=2',
-		'-co',
-		'ALPHA=YES',
-	]);
+	await runCommand(
+		'gdal_translate',
+		[
+			'-q',
+			options.wmsXmlPath,
+			output,
+			'-projwin',
+			String(options.x0),
+			String(options.y1),
+			String(options.x1),
+			String(options.y0),
+			'-projwin_srs',
+			'EPSG:3857',
+			'-outsize',
+			String(options.blockPx),
+			String(options.blockPx),
+			'-of',
+			'GTiff',
+			'-co',
+			'COMPRESS=DEFLATE',
+			'-co',
+			'PREDICTOR=2',
+			'-co',
+			'ALPHA=YES',
+		],
+		{ env: { GDAL_HTTP_MAX_RETRY: '5', GDAL_HTTP_RETRY_DELAY: '2' } },
+	);
 }

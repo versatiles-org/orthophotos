@@ -153,7 +153,7 @@ Region fetch implementations should follow these patterns consistently:
 - For lists of downloads, pass `retry: { maxAttempts: 3 }` to `downloadFiles({ ... })` rather than wrapping each call.
 - For paginated/rate-limited feeds, use `fetchWithInterval(items, fn, { intervalMs, retry: { maxAttempts: 3 } })` from `src/lib/rate-limit.ts`.
 - Same rule for ad-hoc `fetch()` calls (e.g. HEAD requests for sizing). Wrap them.
-- Exception: `gdal_translate` / `versatiles` invocations are local CPU work — do not retry (a failure is a real error, not transient).
+- Exception: `versatiles` invocations are local CPU work — do not retry (a failure is a real error, not transient). `gdal_translate` is local CPU when fed a local file but does HTTP work when reading from a WMS XML config; `extractWmsBlock()` already sets `GDAL_HTTP_MAX_RETRY=5` so individual sub-tile fetches retry on 429/500/502/503/504 internally, and the per-block call should still be wrapped in our `withRetry` for outages longer than that.
 
 **Download validation:** Every downloaded raster (TIF/JP2/etc.) must be validated. The simplest path is `downloadRaster()`, which validates internally. If you need a custom downloader (e.g. FTPS, insecure curl), call `isValidRaster()` from `src/lib/validators.ts` after the download and return `'invalid'` on failure.
 

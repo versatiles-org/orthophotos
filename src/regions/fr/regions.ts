@@ -97,13 +97,13 @@ export const FR_REGIONS: FrSubRegionOptions[] = [
 			'D081',
 			'D082',
 		],
-		releaseDate: '2026-04-23',
+		releaseDate: '2026-05-12',
 	},
 	{
 		name: 'fr/pays_de_la_loire',
 		// Loire-Atlantique, Maine-et-Loire, Mayenne, Sarthe, Vendée
 		departmentCodes: ['D044', 'D049', 'D053', 'D072', 'D085'],
-		releaseDate: '2026-04-23',
+		releaseDate: '2026-05-13',
 	},
 	{
 		name: 'fr/provence_alpes_cote_d_azur',

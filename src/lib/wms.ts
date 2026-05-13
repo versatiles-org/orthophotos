@@ -194,11 +194,32 @@ export function computeWmsBlocks(
 	return { items, blockPx };
 }
 
+export interface GenerateWmsXmlOptions {
+	/**
+	 * WMS protocol version to embed in the generated GDAL config. Use `'1.3.0'`
+	 * for servers that reject WMS 1.1.1 (GDAL's default) with errors like
+	 * "Missing parameter 'crs'" — e.g. Hungary's Lechner Tudásközpont GeoServer.
+	 * Default: `'1.1.1'` (matches GDAL's historic behaviour and what most servers
+	 * still accept).
+	 */
+	version?: '1.1.1' | '1.3.0';
+}
+
 /**
  * Generate a GDAL WMS XML config file for the given WMS service and layer.
  */
-export async function generateWmsXml(wmsUrl: string, layer: string, outputPath: string): Promise<void> {
+export async function generateWmsXml(
+	wmsUrl: string,
+	layer: string,
+	outputPath: string,
+	options?: GenerateWmsXmlOptions,
+): Promise<void> {
+	const version = options?.version ?? '1.1.1';
+	// WMS 1.1.1 uses `SRS=`, WMS 1.3.0 uses `CRS=`. Passing the wrong key makes
+	// GDAL fall back to EPSG:4326, which we don't want — we drive every block
+	// extraction in EPSG:3857.
+	const srsParam = version === '1.3.0' ? 'CRS' : 'SRS';
 	const sep = wmsUrl.includes('?') ? '&' : '?';
-	const connStr = `WMS:${wmsUrl}${sep}Layers=${layer}&SRS=EPSG:3857&ImageFormat=image/png&Transparent=TRUE&BandsCount=4&UserAgent=versatiles/orthophotos`;
+	const connStr = `WMS:${wmsUrl}${sep}Version=${version}&Layers=${layer}&${srsParam}=EPSG:3857&ImageFormat=image/png&Transparent=TRUE&BandsCount=4&UserAgent=versatiles/orthophotos`;
 	await runCommand('gdal_translate', [connStr, '-of', 'wms', outputPath]);
 }

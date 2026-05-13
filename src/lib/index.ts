@@ -53,6 +53,7 @@ export {
 	computeWmsBlocks,
 	generateWmsXml,
 	parseWmsCapabilities,
+	type GenerateWmsXmlOptions,
 	type WmsBbox,
 	type WmsBlockItem,
 } from './wms.ts';

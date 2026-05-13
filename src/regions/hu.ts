@@ -58,9 +58,12 @@ export default defineTileRegion<HuItem, { srcPath: string }>({
 			});
 		}
 
-		const wmsXmlPath = join(ctx.tempDir, 'wms.xml');
+		// Versioned filename: the server is WMS 1.3.0-only and rejects 1.1.1 (`Missing
+		// parameter "crs"`). Tagging the cache forces regeneration if anyone ever had
+		// a stale 1.1.1 XML in tempDir.
+		const wmsXmlPath = join(ctx.tempDir, 'wms-1.3.0.xml');
 		if (!existsSync(wmsXmlPath)) {
-			await generateWmsXml(WMS_URL, LAYER, wmsXmlPath);
+			await generateWmsXml(WMS_URL, LAYER, wmsXmlPath, { version: '1.3.0' });
 		}
 
 		const { bbox, maxWidth, maxHeight } = await parseWmsCapabilities(capsPath, LAYER);

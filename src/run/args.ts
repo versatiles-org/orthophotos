@@ -36,7 +36,11 @@ export function validateRegionName(name: string): void {
  */
 export function expandRegionPattern(pattern: string, allIds: Iterable<string>): string[] {
 	if (!pattern.includes('*')) return [pattern];
-	const re = new RegExp('^' + pattern.replace(/\*/g, '[^/]*') + '$');
+	// Escape regex metacharacters except `*` so users can't inject arbitrary
+	// regex via the CLI (e.g. `--region '.*'` matching every id, or
+	// `--region '(de|fr)/.+'` slipping past the glob → regex shim).
+	const escaped = pattern.replace(/[\\^$.+?()[\]{}|]/g, '\\$&');
+	const re = new RegExp('^' + escaped.replace(/\*/g, '[^/]*') + '$');
 	return [...allIds].filter((id) => re.test(id)).sort();
 }
 

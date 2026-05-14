@@ -28,7 +28,8 @@ interface HrItem extends WmsBlockItem {
 export default defineTileRegion<HrItem, { srcPath: string }>({
 	name: 'hr',
 	meta: {
-		status: 'scraping',
+		status: 'released',
+		releaseDate: '2026-05-13',
 		notes: [
 			'INSPIRE View Service for Orthoimagery from the State Geodetic Administration (DGU).',
 			'Source data: 25 cm RGB orthophoto from 2022–2023 multisensor aerial campaign.',

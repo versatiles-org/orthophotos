@@ -132,13 +132,18 @@ export default defineTileRegion<BgItem, { id: string; tifPaths: string[] }>({
 							},
 							tifPath,
 						),
-					{ maxAttempts: 3 },
+					{
+						maxAttempts: 3,
+						// GeoServer throws `java.awt.image.RasterFormatException: x lies
+						// outside the raster` for blocks just outside an internal source
+						// raster's actual data extent. Deterministic — skip the retry.
+						shouldRetry: (err) => !err.message.includes('RasterFormatException'),
+					},
 				);
 			} catch (err) {
-				// GeoServer throws `java.awt.image.RasterFormatException: x lies outside the raster`
-				// for blocks that fall just outside an internal source raster's actual data extent
-				// (the layer-level EX_GeographicBoundingBox is a loose envelope, not a true mask).
-				// Treat as "no data for this year here" and let the other overlapping years cover it.
+				// Either the deterministic `RasterFormatException` (no retry attempted)
+				// or a different error after retries exhausted. Only the former means
+				// "no data for this year here" — fall through to the next overlapping year.
 				const msg = err instanceof Error ? err.message : String(err);
 				if (msg.includes('RasterFormatException')) continue;
 				throw err;

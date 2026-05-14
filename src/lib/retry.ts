@@ -9,9 +9,16 @@ export interface RetryOptions {
 	initialDelayMs?: number;
 	maxDelayMs?: number;
 	backoffMultiplier?: number;
+	/**
+	 * Predicate: returns true when `err` is worth retrying, false to abort
+	 * immediately and re-throw. Use this for deterministic server responses
+	 * (e.g. ERDAS APOLLO `LayerNotDefined`, GeoServer `RasterFormatException`)
+	 * where retries waste time and amplify log noise. Default: always retry.
+	 */
+	shouldRetry?: (err: Error) => boolean;
 }
 
-const DEFAULT_OPTIONS: Required<RetryOptions> = {
+const DEFAULT_OPTIONS: Required<Omit<RetryOptions, 'shouldRetry'>> = {
 	maxAttempts: 3,
 	initialDelayMs: 1000,
 	maxDelayMs: 30000,
@@ -27,6 +34,7 @@ const DEFAULT_OPTIONS: Required<RetryOptions> = {
  */
 export async function withRetry<T>(fn: () => Promise<T>, options: RetryOptions = {}): Promise<T> {
 	const opts = { ...DEFAULT_OPTIONS, ...options };
+	const shouldRetry = options.shouldRetry;
 	let lastError: Error | undefined;
 	let delay = opts.initialDelayMs;
 
@@ -37,6 +45,10 @@ export async function withRetry<T>(fn: () => Promise<T>, options: RetryOptions =
 			lastError = error instanceof Error ? error : new Error(String(error));
 
 			if (attempt === opts.maxAttempts) {
+				break;
+			}
+
+			if (shouldRetry && !shouldRetry(lastError)) {
 				break;
 			}
 

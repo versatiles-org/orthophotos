@@ -65,3 +65,39 @@ test('withRetry - converts non-Error throws to Error', async () => {
 		),
 	).rejects.toThrow('string error');
 });
+
+test('withRetry - shouldRetry: false aborts immediately, no further attempts', async () => {
+	let attempts = 0;
+	await expect(
+		withRetry(
+			() => {
+				attempts++;
+				return Promise.reject(new Error('LayerNotDefined'));
+			},
+			{
+				initialDelayMs: 5,
+				maxAttempts: 3,
+				shouldRetry: (err) => !err.message.includes('LayerNotDefined'),
+			},
+		),
+	).rejects.toThrow('LayerNotDefined');
+	expect(attempts).toBe(1);
+});
+
+test('withRetry - shouldRetry: true keeps retrying as normal', async () => {
+	let attempts = 0;
+	const result = await withRetry(
+		() => {
+			attempts++;
+			if (attempts < 3) return Promise.reject(new Error('Transient'));
+			return Promise.resolve('ok');
+		},
+		{
+			initialDelayMs: 5,
+			maxAttempts: 3,
+			shouldRetry: () => true,
+		},
+	);
+	expect(result).toBe('ok');
+	expect(attempts).toBe(3);
+});

@@ -83,14 +83,20 @@ export default defineTileRegion<MeItem, { srcPath: string }>({
 						{ wmsXmlPath: item.wmsXmlPath, x0: item.x0, y0: item.y0, x1: item.x1, y1: item.y1, blockPx: item.blockPx },
 						tifPath,
 					),
-				{ maxAttempts: 3 },
+				{
+					maxAttempts: 3,
+					// ERDAS APOLLO returns `LayerNotDefined: Dataset Ortofoto_DOF2018
+					// not found in the datastore` for blocks that fall outside the
+					// actual data extent (the layer-level EX_GeographicBoundingBox is
+					// a loose envelope, not a true coverage mask). It's deterministic
+					// — retrying just wastes time and amplifies log noise.
+					shouldRetry: (err) => !err.message.includes('LayerNotDefined'),
+				},
 			);
 		} catch (err) {
-			// ERDAS APOLLO returns `LayerNotDefined: Dataset Ortofoto_DOF2018 not found
-			// in the datastore` for blocks that fall outside the actual data extent
-			// (the layer-level EX_GeographicBoundingBox is a loose envelope, not a
-			// true coverage mask). Treat as "no data here" and write a `.skip` marker
-			// so re-runs don't re-issue the same failing request.
+			// Either `LayerNotDefined` (skipped the retry above) or the retried call
+			// exhausted attempts on a different error. Only the former is a legitimate
+			// "no data here" — anything else propagates.
 			const msg = err instanceof Error ? err.message : String(err);
 			if (msg.includes('LayerNotDefined')) {
 				writeFileSync(ctx.skipDest, '');

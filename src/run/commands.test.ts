@@ -16,15 +16,64 @@ vi.mock('../lib/command.ts', async (importOriginal) => {
 import { runCommand } from '../lib/command.ts';
 const mockRunCommand = vi.mocked(runCommand);
 
-test('checkRequiredCommands - succeeds when all commands exist', async () => {
-	mockRunCommand.mockResolvedValue({ success: true, code: 0, stdout: new Uint8Array(), stderr: new Uint8Array() });
+/**
+ * Builds a mock `runCommand` driver for tests of `checkRequiredCommands`. Every
+ * `which` invocation succeeds; every `versatiles mosaic --help` invocation
+ * returns the provided help text on stdout.
+ */
+function mockMosaicHelp(helpText: string): void {
+	mockRunCommand.mockImplementation(async (cmd: string, args: string[]) => {
+		if (cmd === 'versatiles' && args[0] === 'mosaic' && args[1] === '--help') {
+			return { success: true, code: 0, stdout: new TextEncoder().encode(helpText), stderr: new Uint8Array() };
+		}
+		return { success: true, code: 0, stdout: new Uint8Array(), stderr: new Uint8Array() };
+	});
+}
+
+const MOSAIC_HELP_OK = `Tile and assemble image mosaics.
+
+Usage: versatiles mosaic [OPTIONS] <COMMAND>
+
+Commands:
+  tile      Tile a georeferenced raster into a .versatiles container
+  assemble  Combine many tile containers into a single mosaic
+
+Options:
+  -h, --help  Print help
+`;
+
+test('checkRequiredCommands - succeeds when all commands and mosaic subcommands exist', async () => {
+	mockMosaicHelp(MOSAIC_HELP_OK);
 	await checkRequiredCommands();
 	expect(mockRunCommand).toHaveBeenCalledWith('which', expect.any(Array), expect.any(Object));
+	expect(mockRunCommand).toHaveBeenCalledWith('versatiles', ['mosaic', '--help'], expect.any(Object));
 });
 
 test('checkRequiredCommands - throws listing missing commands', async () => {
 	mockRunCommand.mockRejectedValue(new Error('not found'));
 	await expect(checkRequiredCommands()).rejects.toThrow('Missing required commands');
+});
+
+test('checkRequiredCommands - throws when `versatiles mosaic tile` is missing', async () => {
+	mockMosaicHelp(`Tile and assemble image mosaics.
+
+Usage: versatiles mosaic [OPTIONS] <COMMAND>
+
+Commands:
+  assemble  Combine many tile containers into a single mosaic
+`);
+	await expect(checkRequiredCommands()).rejects.toThrow(/missing required subcommand.*tile/);
+});
+
+test('checkRequiredCommands - throws when `versatiles mosaic assemble` is missing', async () => {
+	mockMosaicHelp(`Tile and assemble image mosaics.
+
+Usage: versatiles mosaic [OPTIONS] <COMMAND>
+
+Commands:
+  tile  Tile a georeferenced raster into a .versatiles container
+`);
+	await expect(checkRequiredCommands()).rejects.toThrow(/missing required subcommand.*assemble/);
 });
 
 test('runSshCommand - throws when SSH config is missing', async () => {

@@ -11,6 +11,9 @@ import { getConfig } from '../lib/index.ts';
 /** Required CLI tools */
 const REQUIRED_COMMANDS = ['7z', 'curl', 'gdal_translate', 'gdalbuildvrt', 'ssh', 'unzip', 'versatiles'];
 
+/** `versatiles mosaic` subcommands the scrapers depend on. Both must be present. */
+const REQUIRED_VERSATILES_MOSAIC_SUBCOMMANDS = ['tile', 'assemble'];
+
 /**
  * Checks if a command is available in PATH.
  */
@@ -21,6 +24,31 @@ async function commandExists(cmd: string): Promise<boolean> {
 	} catch {
 		return false;
 	}
+}
+
+/**
+ * Returns the list of subcommands `versatiles mosaic --help` advertises, or
+ * throws if the help text can't be parsed. Used to detect installs where the
+ * binary exists but a subcommand was added or removed (e.g. v4.0.0 briefly
+ * shipped without `mosaic tile`).
+ */
+async function listVersatilesMosaicSubcommands(): Promise<string[]> {
+	const result = await runCommand('versatiles', ['mosaic', '--help'], {
+		stdout: 'piped',
+		stderr: 'piped',
+		quietOnError: true,
+	});
+	const text = Buffer.from(result.stdout).toString('utf-8');
+	// Help block we parse:
+	//   Commands:
+	//     tile      Tile a georeferenced raster ...
+	//     assemble  Combine many tile containers ...
+	// The outer regex deliberately omits the `m` flag — with `m`, `$` matches
+	// end-of-line and the lazy capture stops at the first command instead of
+	// running to the blank line / `Options:` section that ends the block.
+	const match = /Commands:\n([\s\S]*?)(?:\n\n|\nOptions:|$)/.exec(text);
+	if (!match) throw new Error(`Could not parse 'versatiles mosaic --help' output:\n${text}`);
+	return [...match[1].matchAll(/^\s{2,}([a-z][a-z0-9_-]*)\b/gm)].map((m) => m[1]);
 }
 
 /**
@@ -39,6 +67,18 @@ export async function checkRequiredCommands(): Promise<void> {
 	if (missing.length > 0) {
 		const list = missing.map((cmd) => `  - ${cmd}`).join('\n');
 		throw new Error(`Missing required commands:\n${list}`);
+	}
+
+	// `versatiles` is on PATH; confirm every `versatiles mosaic` subcommand we
+	// depend on is actually compiled in. The 4.0.0 release line dropped and then
+	// re-added `mosaic tile`, so a binary on PATH is no longer sufficient proof.
+	const subcommands = await listVersatilesMosaicSubcommands();
+	const missingSubs = REQUIRED_VERSATILES_MOSAIC_SUBCOMMANDS.filter((s) => !subcommands.includes(s));
+	if (missingSubs.length > 0) {
+		throw new Error(
+			`'versatiles mosaic' is missing required subcommand${missingSubs.length === 1 ? '' : 's'}: ${missingSubs.join(', ')}. ` +
+				`Installed binary advertises: [${subcommands.join(', ')}]. Upgrade the versatiles CLI.`,
+		);
 	}
 }
 

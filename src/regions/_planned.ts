@@ -60,10 +60,6 @@ export default [
 		},
 	},
 	{
-		id: 'me',
-		metadata: { status: 'planned', notes: ['Data source not yet investigated.'] },
-	},
-	{
 		id: 'mk',
 		metadata: { status: 'planned', notes: ['Data source not yet investigated.'] },
 	},

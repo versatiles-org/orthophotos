@@ -25,6 +25,7 @@ import li from './li.ts';
 import lt from './lt.ts';
 import lu from './lu.ts';
 import lv from './lv.ts';
+import me from './me.ts';
 import mt from './mt.ts';
 import nl from './nl.ts';
 import pl from './pl.ts';
@@ -54,6 +55,7 @@ const pipelines: RegionPipeline[] = [
 	lt,
 	lu,
 	lv,
+	me,
 	mt,
 	nl,
 	pl,

@@ -65,12 +65,21 @@ export async function runMosaicAssemble(
 	output: string,
 	options?: { lossless?: boolean; quiet?: boolean; quietOnError?: boolean },
 ): Promise<void> {
+	// Defence in depth: reject any path containing whitespace, quotes, or shell
+	// metacharacters before concatenating it into the `@<path>` versatiles
+	// file-list argument. `runCommand` uses `spawn` without `shell: true` so this
+	// can't reach a shell anyway, but the validation also silences the
+	// `js/shell-command-constructed-from-input` CodeQL warning and catches
+	// obviously-malformed callers early.
+	if (!/^[\w./\-+]+$/.test(filelistPath)) {
+		throw new Error(`runMosaicAssemble: filelist path contains unsafe characters: ${JSON.stringify(filelistPath)}`);
+	}
 	// No --max-zoom: include every zoom level present in the inputs.
 	const args = ['mosaic', 'assemble', '--max-buffer-size', '50%', '--quality', QUALITY];
 	if (options?.lossless) {
 		args.push('--lossless');
 	}
-	args.push(`@${filelistPath}`, output);
+	args.push('@' + filelistPath, output);
 	const result = await runCommand('versatiles', args, { quiet: options?.quiet, quietOnError: options?.quietOnError });
 	assertOutputContains(result, 'finished mosaic assemble', `runMosaicAssemble for "${filelistPath}"`);
 }

@@ -33,8 +33,6 @@ const DATE_DRIFT_ERROR_DAYS = 7;
 /** Files smaller than this → warning. Real region tiles are tens of MB upwards. */
 const MIN_REASONABLE_SIZE = 1_000_000;
 
-const TRACKED_STATUSES: ReadonlySet<RegionStatus> = new Set(['released', 'scraping', 'planned', 'blocked']);
-
 const COLORS = {
 	reset: '\x1b[0m',
 	bold: '\x1b[1m',
@@ -267,11 +265,9 @@ function renderTable(rows: Row[]): string {
 
 async function main(): Promise<void> {
 	const allMetadata = getAllRegionMetadata();
-	const tracked: { id: string; meta: RegionMetadata }[] = [];
-	for (const [id, meta] of allMetadata) {
-		if (TRACKED_STATUSES.has(meta.status)) tracked.push({ id, meta });
-	}
-	tracked.sort((a, b) => a.id.localeCompare(b.id));
+	const tracked = [...allMetadata.entries()]
+		.map(([id, meta]) => ({ id, meta }))
+		.sort((a, b) => a.id.localeCompare(b.id));
 
 	if (tracked.length === 0) {
 		console.log(`${COLORS.dim}No regions to check.${COLORS.reset}`);

@@ -32,6 +32,22 @@ export interface TiledTiffOptions {
  * Pass `{ compress: 'lzw', predictor: false, alpha: false, bigtiff: 'if_needed' }`
  * for a fast, minimal intermediate (e.g. JP2 → TIFF as a pre-versatiles step).
  */
+// Bounded maps from the enum option keys to the exact `-co KEY=VALUE` strings
+// gdal_translate expects. Using a lookup instead of template-literal interpolation
+// guarantees the option value is one of a closed set of literals — defence in
+// depth that also satisfies the `js/shell-command-constructed-from-input`
+// CodeQL query (even though `runCommand` uses `spawn` without `shell: true`).
+const COMPRESS_CO: Record<NonNullable<TiledTiffOptions['compress']>, string | null> = {
+	deflate: 'COMPRESS=DEFLATE',
+	lzw: 'COMPRESS=LZW',
+	none: null,
+};
+const BIGTIFF_CO: Record<NonNullable<TiledTiffOptions['bigtiff']>, string> = {
+	yes: 'BIGTIFF=YES',
+	no: 'BIGTIFF=NO',
+	if_needed: 'BIGTIFF=IF_NEEDED',
+};
+
 export async function convertToTiledTiff(input: string, output: string, options?: TiledTiffOptions): Promise<void> {
 	const compress = options?.compress ?? 'deflate';
 	const predictor = options?.predictor ?? true;
@@ -43,11 +59,12 @@ export async function convertToTiledTiff(input: string, output: string, options?
 	if (options?.srs) args.push('-a_srs', options.srs);
 	if (options?.ullr) args.push('-a_ullr', ...options.ullr.map(String));
 	args.push('-co', 'TILED=YES');
-	if (compress !== 'none') {
-		args.push('-co', `COMPRESS=${compress.toUpperCase()}`);
+	const compressCo = COMPRESS_CO[compress];
+	if (compressCo !== null) {
+		args.push('-co', compressCo);
 		if (predictor) args.push('-co', 'PREDICTOR=2');
 	}
-	args.push('-co', `BIGTIFF=${bigtiff.toUpperCase()}`);
+	args.push('-co', BIGTIFF_CO[bigtiff]);
 	if (alpha) args.push('-co', 'ALPHA=YES');
 	args.push(input, output);
 	await runCommand('gdal_translate', args, { quiet: options?.quiet ?? true });

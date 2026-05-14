@@ -28,12 +28,13 @@ interface IsItem extends WmsBlockItem {
 export default defineTileRegion<IsItem, { srcPath: string }>({
 	name: 'is',
 	meta: {
-		status: 'scraping',
+		status: 'blocked',
 		notes: [
-			'Mapcache WMS published by Náttúrufræðistofnun (formerly Landmælingar Íslands / LMÍ).',
-			'Layer "grunnkort-loftmynd" is the national colour orthophoto basemap. Capture date is not advertised in the capabilities — treated as a rolling national mosaic.',
-			'Open data licensing per https://www.natt.is/en/resources/open-data: CC BY 4.0 in line with Iceland Act 45/2018 on public-sector information re-use.',
-			'Native delivery is EPSG:3857 (mapcache is pre-tiled to Web Mercator); no on-the-fly reprojection needed.',
+			'Mapcache WMS published by Náttúrufræðistofnun (formerly Landmælingar Íslands / LMÍ) at https://gis.lmi.is/mapcache/web-mercator/wms (CC BY 4.0 per https://www.natt.is/en/resources/open-data and Iceland Act 45/2018) — reachable, returns alpha-correct PNGs.',
+			'Blocked because the layer is not national coverage: a full-extent render of `grunnkort-loftmynd` shows orthophoto only over the NE quarter plus two small patches in the SW (Reykjavík, most of the central highlands, the W and S coasts have no data). The same partial extent is mirrored on the geoserver endpoint `https://gis.lmi.is/geoserver/wms` (layer `loftmyndir:grunnkort_loftmynd_nidurhal`); a national mosaic simply does not exist in either endpoint today.',
+			'The geoserver also advertises wider-sounding layers (`loftmyndir:loftmyndir_natt_stakar_group`, `loftmyndir:loftmyndir_hnitsettar`) but `GetMap` against them returns a Java NullPointerException — the layers are listed but not actually served.',
+			'Re-evaluate when Náttúrufræðistofnun extends `grunnkort-loftmynd` to national coverage, or publishes a separate full-Iceland orthophoto layer. The init/download/convert code below is kept intact so the partial coverage can be exercised again the moment that happens.',
+			'Mapcache server caps GetMap at 4096 px per dimension — if reactivated, init should pass `computeWmsBlocks(bbox, MAX_ZOOM, 4096, 4096)` instead of relying on the (unadvertised) 8192 default.',
 		],
 		entries: ['result'],
 		license: {

@@ -28,7 +28,7 @@ interface HuItem extends WmsBlockItem {
 export default defineTileRegion<HuItem, { srcPath: string }>({
 	name: 'hu',
 	meta: {
-		status: 'scraping',
+		status: 'released',
 		notes: [
 			'INSPIRE View Service for the 2022 national orthophoto, served by Lechner Tudásközpont (formerly FÖMI).',
 			'Source data: 40 cm RGB orthophoto from the 2022 capture.',
@@ -47,6 +47,7 @@ export default defineTileRegion<HuItem, { srcPath: string }>({
 			url: 'https://lechnerkozpont.hu/',
 		},
 		date: '2022',
+		releaseDate: '2026-05-14',
 		mask: true,
 	},
 	init: async (ctx) => {

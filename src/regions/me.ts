@@ -113,8 +113,11 @@ export default defineTileRegion<MeItem, { srcPath: string }>({
 	convert: async ({ srcPath }, { dest }) => {
 		await runMosaicTile(srcPath, dest);
 	},
-	// Montenegro ≈ 13,800 km². At MAX_ZOOM=17 with 2048-px blocks (~2.5 km wide in 3857
-	// units) the union bbox covers ~2200 blocks before polygon-mask trimming. Tighten
-	// this once the first full run gives a concrete count.
-	minFiles: 500,
+	// Montenegro ≈ 13,800 km². Init computes 696 blocks at 8192×8192 px (the
+	// `<MaxWidth>4000</MaxWidth>` advertised in the caps is per-pixel — GDAL's WMS
+	// driver fans each block out to 1024-px sub-tile fetches, well under the cap).
+	// First full run produced 489 `.versatiles` files after ERDAS APOLLO's
+	// `LayerNotDefined` peripheral blocks were skipped; floor below that with
+	// a small slack for future re-runs.
+	minFiles: 450,
 });

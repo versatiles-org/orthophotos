@@ -214,12 +214,33 @@ export async function generateWmsXml(
 	outputPath: string,
 	options?: GenerateWmsXmlOptions,
 ): Promise<void> {
+	// Defence in depth: validate caller-controlled inputs before concatenating
+	// into the GDAL WMS connection string. `runCommand` uses `spawn` without
+	// `shell: true` so there's no shell-injection path, and the WMS driver
+	// requires literal `:` / `/` in `EPSG:3857` / `image/png` (URLSearchParams
+	// would percent-encode those and break the lookup). Whitelisting the safe
+	// characters here also satisfies the `js/shell-command-constructed-from-input`
+	// CodeQL query.
+	if (!/^https?:\/\/[\w./~%\-:?&=]+$/.test(wmsUrl)) {
+		throw new Error(`generateWmsXml: invalid wmsUrl: ${JSON.stringify(wmsUrl)}`);
+	}
+	if (!/^[\w.\-:]+$/.test(layer)) {
+		throw new Error(`generateWmsXml: invalid layer: ${JSON.stringify(layer)}`);
+	}
 	const version = options?.version ?? '1.1.1';
 	// WMS 1.1.1 uses `SRS=`, WMS 1.3.0 uses `CRS=`. Passing the wrong key makes
 	// GDAL fall back to EPSG:4326, which we don't want — we drive every block
 	// extraction in EPSG:3857.
 	const srsParam = version === '1.3.0' ? 'CRS' : 'SRS';
 	const sep = wmsUrl.includes('?') ? '&' : '?';
-	const connStr = `WMS:${wmsUrl}${sep}Version=${version}&Layers=${layer}&${srsParam}=EPSG:3857&ImageFormat=image/png&Transparent=TRUE&BandsCount=4&UserAgent=versatiles/orthophotos`;
+	const query =
+		'Version=' +
+		version +
+		'&Layers=' +
+		layer +
+		'&' +
+		srsParam +
+		'=EPSG:3857&ImageFormat=image/png&Transparent=TRUE&BandsCount=4&UserAgent=versatiles/orthophotos';
+	const connStr = 'WMS:' + wmsUrl + sep + query;
 	await runCommand('gdal_translate', [connStr, '-of', 'wms', outputPath]);
 }

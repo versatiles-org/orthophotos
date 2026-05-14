@@ -81,19 +81,19 @@ async function buildTileIndex(): Promise<SeItem[]> {
 export default defineTileRegion<SeItem, { tifPath: string }>({
 	name: 'se',
 	meta: {
-		status: 'scraping',
+		status: 'blocked',
 		notes: [
-			'Lantmäteriet ortofoto, served via STAC API as Cloud-Optimized GeoTIFFs.',
-			'Open data: CC0 (no rights reserved, no attribution required).',
-			'STAC search is anonymous; downloads require a GeoTorget account — a shared one is hardcoded (see source comments).',
-			'Coverage: 0.16 m for southern Sweden / Norrland coast (every 2 years), 0.25–0.37 m elsewhere (every 4–6 years). EPSG:3006 (SWEREF99 TM).',
-			'Catalog is deduped per grid cell, preferring higher resolution then newer acquisition.',
+			'Lantmäteriet ortofoto, served via STAC API at https://api.lantmateriet.se/stac-bild/v1/ as Cloud-Optimized GeoTIFFs in EPSG:3006 (SWEREF99 TM). Coverage: 0.16 m for southern Sweden / Norrland coast (every 2 years), 0.25–0.37 m elsewhere (every 4–6 years).',
+			'Blocked: the shared `mail@versatiles.org` GeoTorget account no longer downloads — `dl1.lantmateriet.se` returns 403 Forbidden with that Basic-auth header (STAC search still works anonymously). The account appears to have been revoked or quota-exhausted by bulk pulls.',
+			'License also changed: the catalog description now states "tillgängliga för användning under Creative Commons licens CC BY 4.0. Din användning kommer att prövas juridiskt, i enlighet med dataskyddsförordningen (GDPR), och du behöver godkänna särskilda användningsvillkor" — CC BY 4.0 with mandatory GDPR review and acceptance of special terms of use. That is no longer the CC0 we originally encoded, and the "accept special terms" requirement is something a downstream re-publisher cannot satisfy on behalf of viewers.',
+			'The previously published `se.versatiles` (2025-10-06, 24.3 GB on the remote) was produced under the old CC0 understanding; attribution / takedown may need a separate decision.',
+			'Re-evaluate if (a) Lantmäteriet restores or replaces the GeoTorget account model with an open download endpoint, and (b) the terms of use are revisited so plain CC BY 4.0 (attribution only) is sufficient. The init/download/convert code below is kept intact for the moment access is restored.',
 		],
 		entries: ['result'],
 		license: {
-			name: 'CC0',
-			url: 'https://creativecommons.org/publicdomain/zero/1.0/',
-			requiresAttribution: false,
+			name: 'CC BY 4.0',
+			url: 'https://creativecommons.org/licenses/by/4.0/',
+			requiresAttribution: true,
 		},
 		creator: {
 			name: 'Lantmäteriet',

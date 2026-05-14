@@ -1,12 +1,16 @@
 /**
  * Validates region metadata against the remote storage.
  *
- * Lists every region with `status === 'released'`, `'scraping'`, or `'planned'`:
+ * Lists every region with `status` of `released`, `scraping`, `planned`, or
+ * `blocked`:
  *   - **released**: must have `<ssh_dir>/<id>.versatiles` on the remote; mtime is
  *     compared against `releaseDate`; license/creator/mask are required.
  *   - **scraping**: a remote file is allowed (in-progress upload) but not required;
  *     no `releaseDate` to compare against; metadata fields shown but not enforced.
  *   - **planned**: a remote file would be unexpected; flag if present.
+ *   - **blocked**: rendered dim/faint as a low-priority reference row. A remote
+ *     file here is unexpected and flagged (still dim) — typically a stale upload
+ *     from before the region became blocked.
  *
  * Also reports orphan `.versatiles` files on the remote that don't match any
  * known region, so stale uploads stay visible.
@@ -29,7 +33,7 @@ const DATE_DRIFT_ERROR_DAYS = 7;
 /** Files smaller than this → warning. Real region tiles are tens of MB upwards. */
 const MIN_REASONABLE_SIZE = 1_000_000;
 
-const TRACKED_STATUSES: ReadonlySet<RegionStatus> = new Set(['released', 'scraping', 'planned']);
+const TRACKED_STATUSES: ReadonlySet<RegionStatus> = new Set(['released', 'scraping', 'planned', 'blocked']);
 
 const COLORS = {
 	reset: '\x1b[0m',
@@ -54,6 +58,8 @@ interface Row {
 	checks: string;
 	severity: Severity;
 	notes: string[];
+	/** If true, render every cell in this row dim/faint (e.g. blocked regions). */
+	dim?: boolean;
 }
 
 function bumpSeverity(current: Severity, next: Severity): Severity {
@@ -167,8 +173,8 @@ function buildRow(id: string, meta: RegionMetadata, remote: RemoteFile | undefin
 		remoteSize = formatBytes(remote.size);
 		remoteDate = formatDate(remote.mtime);
 
-		if (meta.status === 'planned') {
-			notes.push('unexpected remote file (status = planned)');
+		if (meta.status === 'planned' || meta.status === 'blocked') {
+			notes.push(`unexpected remote file (status = ${meta.status})`);
 			severity = bumpSeverity(severity, 'warn');
 		} else if (meta.status === 'scraping') {
 			notes.push('remote file exists');
@@ -208,7 +214,13 @@ function buildRow(id: string, meta: RegionMetadata, remote: RemoteFile | undefin
 		checks: checks.join(' '),
 		severity,
 		notes,
+		dim: meta.status === 'blocked',
 	};
+}
+
+/** Strip ANSI SGR codes — used when re-coloring a whole row (e.g. dimming blocked rows). */
+function stripAnsi(s: string): string {
+	return s.replace(/\x1b\[[0-9;]*m/g, '');
 }
 
 function visibleLength(s: string): number {
@@ -239,8 +251,16 @@ function renderTable(rows: Row[]): string {
 	const lines: string[] = [];
 	lines.push(headers.map((h, i) => `${COLORS.bold}${pad(h, widths[i])}${COLORS.reset}`).join('  '));
 	lines.push(widths.map((w) => `${COLORS.gray}${'─'.repeat(w)}${COLORS.reset}`).join('  '));
-	for (const row of data) {
-		lines.push(row.map((cell, i) => pad(cell, widths[i])).join('  '));
+	for (let i = 0; i < rows.length; i++) {
+		const row = rows[i];
+		const cells = data[i];
+		if (row.dim) {
+			// Strip embedded colors so the dim styling applies uniformly across the row,
+			// otherwise each cell's internal `\x1b[0m` would clear the dim attribute.
+			lines.push(cells.map((cell, j) => `${COLORS.dim}${pad(stripAnsi(cell), widths[j])}${COLORS.reset}`).join('  '));
+		} else {
+			lines.push(cells.map((cell, j) => pad(cell, widths[j])).join('  '));
+		}
 	}
 	return lines.join('\n');
 }
@@ -254,7 +274,7 @@ async function main(): Promise<void> {
 	tracked.sort((a, b) => a.id.localeCompare(b.id));
 
 	if (tracked.length === 0) {
-		console.log(`${COLORS.dim}No released/scraping/planned regions to check.${COLORS.reset}`);
+		console.log(`${COLORS.dim}No regions to check.${COLORS.reset}`);
 		return;
 	}
 
@@ -282,7 +302,7 @@ async function main(): Promise<void> {
 
 	if (orphans.length > 0) {
 		console.log(
-			`\n${COLORS.bold}Orphan files on remote${COLORS.reset} ${COLORS.dim}(no matching released/scraping/planned region)${COLORS.reset}:`,
+			`\n${COLORS.bold}Orphan files on remote${COLORS.reset} ${COLORS.dim}(no matching region in any status)${COLORS.reset}:`,
 		);
 		for (const f of orphans) {
 			const region = f.path.replace(/\.versatiles$/, '');
@@ -300,7 +320,7 @@ async function main(): Promise<void> {
 	for (const { meta } of tracked) byStatus[meta.status] = (byStatus[meta.status] ?? 0) + 1;
 	for (const r of rows) counts[r.severity]++;
 
-	const statusBreakdown = (['released', 'scraping', 'planned'] as const)
+	const statusBreakdown = (['released', 'scraping', 'planned', 'blocked'] as const)
 		.filter((s) => byStatus[s])
 		.map((s) => `${byStatus[s]} ${s}`)
 		.join(', ');

@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
 	computeWmsBlocks,
@@ -76,14 +76,28 @@ export default defineTileRegion<MeItem, { srcPath: string }>({
 	downloadLimit: 2,
 	download: async (item, ctx) => {
 		const tifPath = ctx.tempFile(join(ctx.tempDir, `${item.id}.tif`));
-		await withRetry(
-			() =>
-				extractWmsBlock(
-					{ wmsXmlPath: item.wmsXmlPath, x0: item.x0, y0: item.y0, x1: item.x1, y1: item.y1, blockPx: item.blockPx },
-					tifPath,
-				),
-			{ maxAttempts: 3 },
-		);
+		try {
+			await withRetry(
+				() =>
+					extractWmsBlock(
+						{ wmsXmlPath: item.wmsXmlPath, x0: item.x0, y0: item.y0, x1: item.x1, y1: item.y1, blockPx: item.blockPx },
+						tifPath,
+					),
+				{ maxAttempts: 3 },
+			);
+		} catch (err) {
+			// ERDAS APOLLO returns `LayerNotDefined: Dataset Ortofoto_DOF2018 not found
+			// in the datastore` for blocks that fall outside the actual data extent
+			// (the layer-level EX_GeographicBoundingBox is a loose envelope, not a
+			// true coverage mask). Treat as "no data here" and write a `.skip` marker
+			// so re-runs don't re-issue the same failing request.
+			const msg = err instanceof Error ? err.message : String(err);
+			if (msg.includes('LayerNotDefined')) {
+				writeFileSync(ctx.skipDest, '');
+				return 'empty';
+			}
+			throw err;
+		}
 		if (!(await isValidRaster(tifPath))) {
 			ctx.errors.add(`${item.id}.tif`);
 			return 'invalid';

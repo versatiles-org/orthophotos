@@ -214,26 +214,41 @@ export async function generateWmsXml(
 	outputPath: string,
 	options?: GenerateWmsXmlOptions,
 ): Promise<void> {
-	// Defence in depth: validate caller-controlled inputs before concatenating
-	// into the GDAL WMS connection string. `runCommand` uses `spawn` without
-	// `shell: true` so there's no shell-injection path, and the WMS driver
-	// requires literal `:` / `/` in `EPSG:3857` / `image/png` (URLSearchParams
-	// would percent-encode those and break the lookup). Whitelisting the safe
-	// characters here also satisfies the `js/shell-command-constructed-from-input`
-	// CodeQL query.
-	if (!/^https?:\/\/[\w./~%\-:?&=]+$/.test(wmsUrl)) {
+	// `runCommand` uses `spawn` without `shell: true`, so the connection string
+	// is delivered to `gdal_translate` as a single argv element and never reaches
+	// a shell. The validation below is defence in depth — it also limits the data
+	// flow CodeQL's `js/shell-command-constructed-from-input` query sees, by
+	// passing every interpolated input through a narrow allow-list regex or the
+	// URL parser:
+	//  - `wmsUrl`: `new URL()` parses + validates, `.toString()` normalises.
+	//  - `layer`:  allow-list `[\w.\-:]` (GDAL/WMS layer names like `RasterData:Orthoimagery_2025`).
+	//  - `version`: allow-list `1\.[13]\.\d` — narrow enough to bound to the two valid WMS versions.
+	let parsedUrl: URL;
+	try {
+		parsedUrl = new URL(wmsUrl);
+	} catch {
 		throw new Error(`generateWmsXml: invalid wmsUrl: ${JSON.stringify(wmsUrl)}`);
+	}
+	if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+		throw new Error(`generateWmsXml: wmsUrl must be http or https: ${JSON.stringify(wmsUrl)}`);
 	}
 	if (!/^[\w.\-:]+$/.test(layer)) {
 		throw new Error(`generateWmsXml: invalid layer: ${JSON.stringify(layer)}`);
 	}
 	const version = options?.version ?? '1.1.1';
+	if (!/^1\.[13]\.\d$/.test(version)) {
+		throw new Error(`generateWmsXml: invalid version: ${JSON.stringify(version)}`);
+	}
 	// WMS 1.1.1 uses `SRS=`, WMS 1.3.0 uses `CRS=`. Passing the wrong key makes
 	// GDAL fall back to EPSG:4326, which we don't want — we drive every block
 	// extraction in EPSG:3857.
 	const srsParam = version === '1.3.0' ? 'CRS' : 'SRS';
-	const sep = wmsUrl.includes('?') ? '&' : '?';
-	const query =
+	const sanitisedUrl = parsedUrl.toString();
+	const sep = parsedUrl.search ? '&' : '?';
+	const connStr =
+		'WMS:' +
+		sanitisedUrl +
+		sep +
 		'Version=' +
 		version +
 		'&Layers=' +
@@ -241,6 +256,5 @@ export async function generateWmsXml(
 		'&' +
 		srsParam +
 		'=EPSG:3857&ImageFormat=image/png&Transparent=TRUE&BandsCount=4&UserAgent=versatiles/orthophotos';
-	const connStr = 'WMS:' + wmsUrl + sep + query;
 	await runCommand('gdal_translate', [connStr, '-of', 'wms', outputPath]);
 }

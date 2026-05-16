@@ -212,3 +212,80 @@ test('downloadFiles - propagates download errors', async () => {
 		rmSync(dir, { recursive: true, force: true });
 	}
 });
+
+test('downloadFiles - size mode: a mid-stream abort rejects instead of crashing', async () => {
+	// Regression test: streamDownload used to leave its WriteStream without an
+	// 'error' listener during streaming, so a connection dropped mid-write
+	// surfaced as an unhandled 'error' (ERR_STREAM_DESTROYED) and killed the
+	// process. The download must instead reject so `retry` can catch it — the
+	// test process surviving to observe the rejection is the proof.
+	const dir = mkdtempSync(join(tmpdir(), 'downloadFiles-'));
+	try {
+		const total = 64 * 1024;
+		const server: Server = createServer((req, res) => {
+			res.setHeader('Content-Length', total);
+			if (req.method === 'HEAD') return res.end();
+			// Send a fraction of the promised body, then hard-kill the socket.
+			res.write(Buffer.alloc(8 * 1024, 0x61));
+			setTimeout(() => res.socket?.destroy(), 10);
+		});
+		await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
+		const port = (server.address() as { port: number }).port;
+		try {
+			await expect(
+				downloadFiles([{ url: `http://127.0.0.1:${port}/x`, dest: join(dir, 'x'), size: total }], {
+					progress: 'size',
+					retry: { maxAttempts: 2, initialDelayMs: 1 },
+				}),
+			).rejects.toThrow();
+		} finally {
+			await new Promise<void>((r) => server.close(() => r()));
+		}
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+});
+
+test('downloadFiles - size mode: resume picks up after a mid-stream abort', async () => {
+	// First request aborts partway; the retry sends `Range:` and the server
+	// completes the file. The assembled file must equal the full payload.
+	const dir = mkdtempSync(join(tmpdir(), 'downloadFiles-'));
+	try {
+		const payload = Buffer.alloc(40 * 1024).map((_, i) => i & 0xff);
+		let attempt = 0;
+		const server: Server = createServer((req, res) => {
+			if (req.method === 'HEAD') {
+				res.setHeader('Content-Length', payload.length);
+				return res.end();
+			}
+			const range = /^bytes=(\d+)-/.exec(req.headers.range ?? '');
+			const from = range ? Number(range[1]) : 0;
+			attempt++;
+			if (attempt === 1) {
+				// First attempt: send a slice, then kill the connection.
+				res.setHeader('Content-Length', payload.length);
+				res.write(payload.subarray(0, 12 * 1024));
+				setTimeout(() => res.socket?.destroy(), 10);
+				return;
+			}
+			// Retry: honour the Range header and serve the rest.
+			res.statusCode = from > 0 ? 206 : 200;
+			res.setHeader('Content-Length', payload.length - from);
+			res.end(payload.subarray(from));
+		});
+		await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
+		const port = (server.address() as { port: number }).port;
+		try {
+			await downloadFiles([{ url: `http://127.0.0.1:${port}/x`, dest: join(dir, 'x'), size: payload.length }], {
+				progress: 'size',
+				download: { continue: true },
+				retry: { maxAttempts: 5, initialDelayMs: 1 },
+			});
+			expect(readFileSync(join(dir, 'x')).equals(payload)).toBe(true);
+		} finally {
+			await new Promise<void>((r) => server.close(() => r()));
+		}
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+});

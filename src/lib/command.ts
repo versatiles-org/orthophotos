@@ -5,6 +5,7 @@
 import { spawn } from 'node:child_process';
 import { type RetryOptions, withRetry } from './retry.ts';
 import { createWriteStream, renameSync, rmSync, statSync } from 'node:fs';
+import { pipeline } from 'node:stream/promises';
 import { sleep } from './delay.ts';
 import { createProgress } from './progress.ts';
 
@@ -202,23 +203,24 @@ async function streamDownload(
 	if (!res.ok) throw new Error(`Download failed: ${url} (${res.status} ${res.statusText})`);
 	if (!res.body) throw new Error(`No response body: ${url}`);
 
+	// If we asked to resume but the server ignored the Range header (200, not 206),
+	// it's sending the whole file again — overwrite from the start.
 	const append = resumeFrom > 0 && res.status === 206;
 	const out = createWriteStream(tmp, { flags: append ? 'a' : 'w' });
-	try {
-		for await (const chunk of res.body) {
-			const buf = chunk as Uint8Array;
-			if (!out.write(buf)) await new Promise<void>((resolve) => out.once('drain', resolve));
-			onBytes(buf.byteLength);
+
+	// `pipeline` attaches error handlers to *every* stream and destroys them all
+	// if any link fails. The hand-rolled write/drain loop this replaces left the
+	// WriteStream with no 'error' listener during streaming, so a mid-stream
+	// connection drop surfaced as an unhandled 'error' event (ERR_STREAM_DESTROYED)
+	// that crashed the process instead of rejecting cleanly into `withRetry`.
+	// On failure the bytes already flushed to `${dest}.tmp` are kept so the next
+	// retry can resume via the Range header above.
+	await pipeline(async function* () {
+		for await (const chunk of res.body as AsyncIterable<Uint8Array>) {
+			onBytes(chunk.byteLength);
+			yield chunk;
 		}
-		await new Promise<void>((resolve, reject) => {
-			out.once('finish', resolve);
-			out.once('error', reject);
-			out.end();
-		});
-	} catch (err) {
-		out.destroy();
-		throw err;
-	}
+	}, out);
 
 	if (options?.minSize) {
 		const size = statSync(tmp).size;

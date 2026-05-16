@@ -281,10 +281,18 @@ export function defineFrSubRegion(opts: FrSubRegionOptions): RegionPipeline {
 				{
 					progress: 'size',
 					title: `Downloading ${item.id} (${parts.length} part${parts.length === 1 ? '' : 's'})`,
+					// BD ORTHO 7z parts are multi-GB and Géoplateforme drops the
+					// connection partway through often enough that retry-from-zero
+					// can't catch up. `continue: true` makes each retry resume from
+					// the `.tmp` partial via a `Range:` request, so attempts chain
+					// forward progress instead of repeatedly restarting at 0%.
+					download: { continue: true },
 					// Géoplateforme rate-limits to ~1 req/s and serves 429s otherwise.
-					// Throttle proactively, and back off generously on 429/5xx.
+					// Throttle proactively, and back off generously on 429/5xx. With
+					// resume enabled we can afford many more attempts because each
+					// one makes forward progress.
 					intervalMs: REQUEST_INTERVAL_MS,
-					retry: { maxAttempts: 5, initialDelayMs: 5000, maxDelayMs: 60000, backoffMultiplier: 2 },
+					retry: { maxAttempts: 50, initialDelayMs: 5000, maxDelayMs: 60000, backoffMultiplier: 2 },
 				},
 			);
 

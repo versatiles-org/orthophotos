@@ -110,7 +110,7 @@ export const FR_REGIONS: FrSubRegionOptions[] = [
 		// Alpes-de-Haute-Provence, Hautes-Alpes, Alpes-Maritimes,
 		// Bouches-du-Rhône, Var, Vaucluse
 		departmentCodes: ['D004', 'D005', 'D006', 'D013', 'D083', 'D084'],
-		releaseDate: '2026-04-23',
+		releaseDate: '2026-05-18',
 	},
 	// DROM (overseas NUTS-1 régions)
 	{ name: 'fr/guadeloupe', departmentCodes: ['D971'], releaseDate: '2026-04-24' },

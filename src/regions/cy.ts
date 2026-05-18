@@ -50,7 +50,6 @@ export default defineTileRegion<CyItem, { srcPath: string }>({
 		},
 		date: '2014',
 		releaseDate: '2026-05-05',
-		mask: true,
 	},
 	init: async (ctx) => {
 		const capsPath = join(ctx.tempDir, 'caps.xml');
@@ -92,7 +91,12 @@ export default defineTileRegion<CyItem, { srcPath: string }>({
 		return { srcPath: tifPath };
 	},
 	convert: async ({ srcPath }, { dest }) => {
-		await runMosaicTile(srcPath, dest);
+		// The ArcGIS WMS fills transparent pixels with pure white (255,255,255) under
+		// alpha=0. The alpha channel keeps them invisible at native zoom, but overview
+		// downsampling averages RGB without alpha weighting, bleeding white into coast
+		// and block edges as thin rectangular halos. Source is lossless PNG, so the
+		// white is exact — flag it as nodata so it is excluded from the downsample.
+		await runMosaicTile(srcPath, dest, { nodata: '255,255,255' });
 	},
 	// Cyprus is small (~9,250 km²); even at MAX_ZOOM=17 with 8192-px blocks we expect
 	// only a few dozen blocks. Tighten this once the first run gives a real count.

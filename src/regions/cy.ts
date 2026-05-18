@@ -49,7 +49,7 @@ export default defineTileRegion<CyItem, { srcPath: string }>({
 			url: 'https://portal.dls.moi.gov.cy/',
 		},
 		date: '2014',
-		releaseDate: '2026-05-05',
+		releaseDate: '2026-05-18',
 	},
 	init: async (ctx) => {
 		const capsPath = join(ctx.tempDir, 'caps.xml');

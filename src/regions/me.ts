@@ -31,7 +31,7 @@ interface MeItem extends WmsBlockItem {
 export default defineTileRegion<MeItem, { srcPath: string }>({
 	name: 'me',
 	meta: {
-		status: 'scraping',
+		status: 'released',
 		notes: [
 			'WMS published by Uprava za nekretnine (Real Estate Administration of Montenegro) via the ERDAS APOLLO server at https://geoportalcg.me/erdas-iws/ogc/wms/Ortofoto. The public viewer at https://geoportal.co.me/ embeds this endpoint.',
 			'Source data: 20 cm RGB orthophoto from the DOF 2018 campaign — verified to cover all of Montenegro by a full-country render.',
@@ -50,6 +50,7 @@ export default defineTileRegion<MeItem, { srcPath: string }>({
 			url: 'https://www.gov.me/en/uzn',
 		},
 		date: '2018',
+		releaseDate: '2026-05-14',
 		mask: true,
 	},
 	init: async (ctx) => {

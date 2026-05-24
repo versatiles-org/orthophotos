@@ -7,7 +7,7 @@
 
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { getConfig, runCommand } from './lib/index.ts';
+import { ensureRemoteHashes, getConfig, runCommand } from './lib/index.ts';
 import { runSshCommand } from './run/index.ts';
 import { generateVPL } from './server/index.ts';
 
@@ -38,6 +38,8 @@ console.log(`Publishing to ${remotePath}...`);
 try {
 	await runCommand('versatiles', args);
 	await runSshCommand(`mv '${tmpRemotePath}' '${remotePath}'`);
+	console.log(`Computing remote hashes for ${remotePath}...`);
+	await ensureRemoteHashes([remotePath], { force: true });
 	console.log('Done.');
 } catch (err) {
 	try {

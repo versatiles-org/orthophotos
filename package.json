@@ -13,6 +13,7 @@
 		"pipeline": "node --env-file=config.env --import tsx/esm src/run.ts",
 		"prepare": "git config core.hooksPath .githooks",
 		"preview": "node --env-file=config.env --import tsx/esm src/preview.ts",
+		"publish:hashes": "node --env-file=config.env --import tsx/esm src/publish-hashes.ts",
 		"publish:world:local": "node --env-file=config.env --import tsx/esm src/publish-world-local.ts",
 		"publish:world": "node --env-file=config.env --import tsx/esm src/publish-world.ts",
 		"status": "npm run build:status && open web/index.html",

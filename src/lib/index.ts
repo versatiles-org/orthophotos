@@ -30,6 +30,12 @@ export { defineTileRegion, type TileContext, type TileItem } from './process_til
 export { createProgress, type Progress, type ProgressOptions } from './progress.ts';
 export { fetchWithInterval, type FetchWithIntervalOptions } from './rate-limit.ts';
 export { listRemoteVersatilesFiles, type RemoteFile } from './remote-listing.ts';
+export {
+	ensureRemoteHashes,
+	type EnsureRemoteHashesOptions,
+	type HashType,
+	type RemoteHashStats,
+} from './remote-hashes.ts';
 export { RemoteZip, type ZipEntry } from './remote-zip.ts';
 export { withRetry, type RetryOptions } from './retry.ts';
 export {

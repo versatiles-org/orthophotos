@@ -78,13 +78,15 @@ function buildTmsXml(): string {
 export default defineTileRegion<FiItem, { srcPath: string }>({
 	name: 'fi',
 	meta: {
-		status: 'scraping',
+		status: 'blocked',
 		notes: [
+			"CURRENT SCRAPER NOT VIABLE: the NLS WMTS endpoint is too slow and returns frequent 5xx / timeouts when crawled at scale. Each 8192 px block fans out into 32×32 source tile fetches, and the dynamic renderer can't keep up — runs stall or fail. Re-implement against the file download service (next note) before flipping back to released.",
+			'Recommended replacement source: NLS open data file download service (Atom feed). Endpoint: https://tiedostopalvelu.maanmittauslaitos.fi/tp/feed/mtp/orto/ortokuva?format=image/jp2&api_key=<key> — paginated Atom 1.0 feed, one entry per ortho tile, links point at static JP2 files (also available as image/tiff). Files are in EPSG:3067 (ETRS89 / TM35FIN), ~12 km tile grid, named like `L4122F.jp2`. JP2 is GDAL-readable via OpenJPEG (see "Supported source formats" in CLAUDE.md). Static files dodge the dynamic-render bottleneck that breaks the WMTS path.',
 			'Maanmittauslaitos (NLS Finland) open WMTS — 0.5 m RGB national orthophoto, mosaic of latest available imagery.',
 			'Update cycle: 3 years for most of Finland, 12 years for Northern Lapland.',
-			'Requires a free / instant NLS API key (registration at https://omatili.maanmittauslaitos.fi/user/new/avoimet-rajapintapalvelut?lang=en); the key is hardcoded in source. Per NLS docs the key is "user-specific" — register your own if you want a clean attribution chain.',
+			'Requires a free / instant NLS API key (registration at https://omatili.maanmittauslaitos.fi/user/new/avoimet-rajapintapalvelut?lang=en); the key is hardcoded in source. Per NLS docs the key is "user-specific" — register your own if you want a clean attribution chain. The same key works for the file download service.',
 			'WMTS in WGS84_Pseudo-Mercator tile matrix set, accessed via the GDAL TMS driver so the standard extractWmsBlock helper works unchanged.',
-			'The open WCS exposes `ortokuva_vari` natively, but it caps GetCoverage at 2 km bboxes (~16 MP), making national coverage at zoom 17 infeasible (~75k requests at native 0.5 m). WMTS is the practical path.',
+			'The open WCS exposes `ortokuva_vari` natively but caps GetCoverage at 2 km bboxes (~16 MP), making national coverage at zoom 17 infeasible (~75k requests at native 0.5 m). WCS shares the same back-end as WMTS, so it suffers the same throughput problems — not a workaround.',
 			'Init filters blocks against the NUTS Finland polygon; download writes a `.skip` marker for tiles the WMTS returns as fully black (out of coverage / Russia / Sweden / open sea).',
 		],
 		entries: ['result'],

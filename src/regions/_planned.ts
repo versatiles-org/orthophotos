@@ -60,6 +60,63 @@ export default [
 		},
 	},
 	{
+		id: 'it/bologna',
+		metadata: {
+			status: 'planned',
+			notes: [
+				'Comune di Bologna publishes its own orthophoto tile server under CC BY 4.0 (ODbl compliant), independent of the national AGEA "all rights reserved" imagery.',
+				'Tile server info: https://opendata.comune.bologna.it/explore/dataset/tile-server-ortofoto-comune-di-bologna/information/ — year 2024.',
+				'Coverage is limited to the city boundary; consider including alongside `it/emilia_romagna` if ER open-data coverage has gaps over Bologna.',
+			],
+		},
+	},
+	{
+		id: 'it/emilia_romagna',
+		metadata: {
+			status: 'planned',
+			notes: [
+				'Regione Emilia-Romagna publishes a subset of its orthophoto under CC BY 4.0, distinct from the AGEA-licensed layer.',
+				'Metadata / download: https://geoportale.regione.emilia-romagna.it/catalogo/dati-cartografici/cartografia-di-base/immagini/layer-14 — year 2024, ~50% regional coverage in open data.',
+				'The AGEA-sourced WMS layer (agea2023_rgb) is "tutti i diritti riservati" and must not be used; target only the open-licensed dataset.',
+				'Investigate whether a download service (GeoTIFF / JP2) or a WMS restricted to the open tiles is available, or whether the coverage gap makes it impractical without `it/bologna` to fill in.',
+			],
+		},
+	},
+	{
+		id: 'it/suedtirol',
+		metadata: {
+			status: 'planned',
+			notes: [
+				'Autonomous Province of Bolzano / Südtirol publishes an aerial orthophoto under CC BY 4.0.',
+				'Metadata: https://mapview.civis.bz.it/maps/api/v1/geocatalog/metadata/layer_guid/ccpbosc:Orthoimagery:Aerial-2024-RGB — year 2024.',
+				'Investigate whether civis.bz.it exposes a WMS / WMTS or a direct tile download service. The province also operates an open geoportal at https://geoportal.buergernetz.bz.it/ which may list download endpoints.',
+			],
+		},
+	},
+	{
+		id: 'it/toscana',
+		metadata: {
+			status: 'planned',
+			notes: [
+				'Regione Toscana publishes orthophotos under CC BY 4.0 via the Geoscopio portal.',
+				'Portal: https://www502.regione.toscana.it/geoscopio/ortofoto.html — year 2025, but the portal was unresponsive at time of investigation and metadata requires an email request for download access.',
+				'Re-evaluate if the portal becomes accessible or a direct WMS / download endpoint is published without gating.',
+			],
+		},
+	},
+	{
+		id: 'it/trentino',
+		metadata: {
+			status: 'planned',
+			notes: [
+				'Provincia Autonoma di Trento publishes its 2019 orthophoto as open data under CC BY 4.0.',
+				'Dataset: https://dati.trentino.it/dataset/ortofoto-2019-open-data — GeoTIFF tiles, EPSG:25832.',
+				'This is a download service (direct file access), which is preferred over WMS. Investigate the tile index / Atom feed structure and implement using `defineTileRegion`.',
+				'Note: 2019 imagery is now ~6 years old; check if a newer open release is available on the same portal before implementing.',
+			],
+		},
+	},
+	{
 		id: 'mk',
 		metadata: { status: 'planned', notes: ['Data source not yet investigated.'] },
 	},
@@ -73,7 +130,14 @@ export default [
 	},
 	{
 		id: 'si',
-		metadata: { status: 'planned', notes: ['Data source not yet investigated.'] },
+		metadata: {
+			status: 'planned',
+			notes: [
+				'Surveying and Mapping Authority (GURS) publishes the national orthophoto under CC BY 4.0 via the e-Prostor geoportal.',
+				'Product page: https://www.e-prostor.gov.si/podrocja/drzavni-topografski-sistem/daljinsko-zaznavanje/?acitem=1292-1302 — most recent data from 2024.',
+				'Investigate whether a download service (GeoTIFF / JP2 tiles) or a WMS is available. The INSPIRE Geoportal record for Slovenia may list service endpoints: https://inspire-geoportal.ec.europa.eu/srv/eng/catalog.search#/overview?view=themeOverview&theme=oi',
+			],
+		},
 	},
 	{
 		id: 'tr',

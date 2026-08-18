@@ -11,6 +11,10 @@ updates:
       all:
         patterns:
           - '*'
+      security:
+        applies-to: security-updates
+        patterns:
+          - '*'
 
   # npm
   - package-ecosystem: 'npm'
@@ -21,5 +25,9 @@ updates:
       prefix: 'deps'
     groups:
       all:
+        patterns:
+          - '*'
+      security:
+        applies-to: security-updates
         patterns:
           - '*'

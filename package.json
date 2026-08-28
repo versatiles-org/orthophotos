@@ -31,15 +31,15 @@
 	},
 	"devDependencies": {
 		"@types/geojson": "^7946.0.16",
-		"@types/node": "^26.2.0",
+		"@types/node": "^26.3.0",
 		"@types/topojson-client": "^3.1.5",
 		"@versatiles/release-tool": "^2.9.1",
 		"@vitest/coverage-v8": "^4.1.11",
-		"eslint": "^10.9.0",
+		"eslint": "^10.9.1",
 		"prettier": "^3.9.6",
 		"tsx": "^4.23.12",
-		"typescript": "^6.0.3",
-		"typescript-eslint": "^8.67.0",
+		"typescript": "^7.0.2",
+		"typescript-eslint": "^8.68.0",
 		"vitest": "^4.1.11"
 	},
 	"allowScripts": {

@@ -23,7 +23,7 @@
 		"upgrade": "vrt deps-upgrade"
 	},
 	"dependencies": {
-		"fast-xml-parser": "^5.11.0",
+		"fast-xml-parser": "^5.11.1",
 		"topojson-client": "^3.1.0"
 	},
 	"engines": {
@@ -31,16 +31,16 @@
 	},
 	"devDependencies": {
 		"@types/geojson": "^7946.0.16",
-		"@types/node": "^26.2.0",
+		"@types/node": "^26.6.2",
 		"@types/topojson-client": "^3.1.5",
-		"@versatiles/release-tool": "^2.9.1",
-		"@vitest/coverage-v8": "^4.1.11",
-		"eslint": "^10.9.0",
-		"prettier": "^3.9.6",
-		"tsx": "^4.23.12",
-		"typescript": "^6.0.3",
-		"typescript-eslint": "^8.67.0",
-		"vitest": "^4.1.11"
+		"@versatiles/release-tool": "^2.17.0",
+		"@vitest/coverage-v8": "^5.0.1",
+		"eslint": "^10.11.0",
+		"prettier": "^3.9.8",
+		"tsx": "^4.23.15",
+		"typescript": "^7.0.2",
+		"typescript-eslint": "^8.70.1",
+		"vitest": "^5.0.1"
 	},
 	"allowScripts": {
 		"esbuild": true,

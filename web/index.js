@@ -1,4 +1,4 @@
-/* global agGrid, maplibregl, VersaTilesStyle, rowData, regionFeatures */
+/* global agGrid, maplibregl, rowData, regionFeatures */
 
 function StatusCellRenderer(params) {
 	if (!params.value) return '';
@@ -66,26 +66,11 @@ const gridApi = agGrid.createGrid(document.getElementById('grid'), gridOptions);
 
 // --- Map ---
 
-const style = VersaTilesStyle.colorful({
-	baseUrl: 'https://tiles.versatiles.org',
-	recolor: { saturate: -0.9, invertBrightness: true },
-});
-
-let labelLayers = style.layers
-	.filter((l) => l.type === 'symbol' && l.id.startsWith('label-boundary-country'))
-	.map((l) => {
-		l.paint['text-halo-blur'] = 1;
-		l.paint['text-halo-width'] = 1;
-		l.paint['text-halo-color'] = 'rgba(0,0,0,0.7)';
-		return l;
-	});
-style.layers = style.layers.filter((l) => l.type !== 'line' && l.type !== 'symbol');
-
 maplibregl.setRTLTextPlugin('https://tiles.versatiles.org/assets/lib/mapbox-gl-rtl-text/mapbox-gl-rtl-text.js', true);
 
 const map = new maplibregl.Map({
 	container: 'map',
-	style,
+	style: 'style.json',
 	bounds: [-12, 35, 41, 60],
 	attributionControl: { compact: true },
 	cooperativeGestures: true,
@@ -99,31 +84,41 @@ function escapeHtml(s) {
 }
 
 map.on('load', () => {
+	// Region layers go below the basemap's labels slot so country names stay readable.
+	const beforeId = map.getStyle().metadata?.beforeId;
 	map.addSource('regions', { type: 'geojson', data: regionFeatures });
 
-	map.addLayer({
-		id: 'regions-fill',
-		type: 'fill',
-		source: 'regions',
-		paint: { 'fill-color': ['get', 'statusColor'], 'fill-opacity': 0.7 },
-	});
-	map.addLayer({
-		id: 'regions-line',
-		type: 'line',
-		source: 'regions',
-		paint: { 'line-color': '#0d1117', 'line-width': 0.5 },
-	});
-	map.addLayer({
-		id: 'regions-hover',
-		type: 'line',
-		source: 'regions',
-		paint: {
-			'line-color': '#fff',
-			'line-width': 2,
-			'line-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 0.7, 0],
+	map.addLayer(
+		{
+			id: 'regions-fill',
+			type: 'fill',
+			source: 'regions',
+			paint: { 'fill-color': ['get', 'statusColor'], 'fill-opacity': 0.7 },
 		},
-	});
-	labelLayers.forEach((l) => map.addLayer(l));
+		beforeId,
+	);
+	map.addLayer(
+		{
+			id: 'regions-line',
+			type: 'line',
+			source: 'regions',
+			paint: { 'line-color': '#0d1117', 'line-width': 0.5 },
+		},
+		beforeId,
+	);
+	map.addLayer(
+		{
+			id: 'regions-hover',
+			type: 'line',
+			source: 'regions',
+			paint: {
+				'line-color': '#fff',
+				'line-width': 2,
+				'line-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 0.7, 0],
+			},
+		},
+		beforeId,
+	);
 
 	const popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 12 });
 	let hoveredId = null;

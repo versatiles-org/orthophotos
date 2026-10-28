@@ -7,4 +7,5 @@
 
 export { loadKnownRegions, reducePrecision, type KnownRegion, type ValidRegion } from './geojson.ts';
 export { generateStatusPage } from './html.ts';
+export { generateMapStyle } from './style.ts';
 export { scanRegions, type Region } from './regions.ts';

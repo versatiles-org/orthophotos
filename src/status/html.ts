@@ -97,7 +97,6 @@ export function generateStatusPage(
 <title>VersaTiles Orthophotos - Status</title>
 <link rel="icon" type="image/png" href="https://tiles.versatiles.org/assets/images/versatiles-logo.png">
 <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@33/dist/ag-grid-community.min.js"></script>
-<script src="https://tiles.versatiles.org/assets/lib/versatiles-style/versatiles-style.js"></script>
 <script src="https://tiles.versatiles.org/assets/lib/maplibre-gl/maplibre-gl.js"></script>
 <link rel="stylesheet" href="https://tiles.versatiles.org/assets/lib/maplibre-gl/maplibre-gl.css" />
 <link rel="stylesheet" href="index.css" />

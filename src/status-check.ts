@@ -1,7 +1,7 @@
 import { resolve, dirname } from 'node:path';
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { generateStatusPage, loadKnownRegions, scanRegions } from './status/index.ts';
+import { generateMapStyle, generateStatusPage, loadKnownRegions, scanRegions } from './status/index.ts';
 import { getAggregatedRegionMetadata } from './regions/index.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -26,3 +26,6 @@ const knownRegionMap = new Map(knownRegions.map((r) => [r.properties.id, r]));
 const html = generateStatusPage(allMetadata, knownRegionMap);
 writeFileSync(resolve(__dirname, '../web/index.html'), html);
 console.log(`Wrote status page with ${allMetadata.size} regions to web/index.html`);
+
+writeFileSync(resolve(__dirname, '../web/style.json'), JSON.stringify(await generateMapStyle()));
+console.log('Wrote map style to web/style.json');

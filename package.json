@@ -2,6 +2,7 @@
 	"name": "orthophotos",
 	"version": "1.0.0",
 	"type": "module",
+	"private": true,
 	"scripts": {
 		"build:status": "node --env-file=config.env --import tsx/esm src/status-check.ts",
 		"check:remote": "node --env-file=config.env --import tsx/esm src/check-remote.ts",

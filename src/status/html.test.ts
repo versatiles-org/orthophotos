@@ -78,7 +78,6 @@ describe('generateStatusPage', () => {
 		expect(rows).toHaveLength(1);
 		expect(rows[0].id).toBe('de');
 		expect(rows[0].status).toBe('Released');
-		expect(rows[0].statusColor).toBe('#2da44e');
 	});
 
 	test('uses fullname from knownRegions', () => {

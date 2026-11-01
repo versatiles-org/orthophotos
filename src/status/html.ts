@@ -10,10 +10,10 @@ const STATUS_LABELS: Record<RegionStatus, string> = {
 };
 
 const STATUS_COLORS: Record<RegionStatus, string> = {
-	released: '#2da44e',
-	scraping: '#bf8700',
-	planned: '#768390',
-	blocked: '#cf222e',
+	released: '#14b83d', // hsl(135, 80%, 40%)
+	scraping: '#b88f14', // hsl( 45, 80%, 40%)
+	planned: '#5c6670', // hsl(210, 10%, 40%)
+	blocked: '#730d0d', // hsl(  0, 80%, 25%)
 };
 
 interface RowData {

@@ -104,8 +104,8 @@ export function generateStatusPage(
 <body>
 <h1>VersaTiles Orthophotos</h1>
 <p class="summary">${allMetadata.size} regions &middot; ${summary}</p>
-<div id="grid"></div>
 <div id="map"></div>
+<div id="grid"></div>
 <script>
 const rowData = ${JSON.stringify(rows)};
 const regionFeatures = ${JSON.stringify(featureCollection)};

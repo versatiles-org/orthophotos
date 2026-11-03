@@ -26,8 +26,6 @@ a {
 }
 
 #grid {
-	margin-bottom: 16px;
-
 	/* The Notes cell renderer returns a <details> element, which is block-level
 	   by default and anchors to the top of the auto-height cell. Switching to
 	   inline-block + vertical-align:middle lets the row's line-box centre it,
@@ -61,6 +59,7 @@ a {
 }
 
 #map {
+	margin-bottom: 16px;
 	height: 600px;
 	border-radius: 4px;
 	overflow: hidden;

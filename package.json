@@ -24,7 +24,7 @@
 		"upgrade": "vrt deps-upgrade"
 	},
 	"dependencies": {
-		"fast-xml-parser": "^5.11.2",
+		"fast-xml-parser": "^5.12.0",
 		"topojson-client": "^3.1.0"
 	},
 	"engines": {
@@ -35,8 +35,8 @@
 		"@types/node": "^26.6.6",
 		"@types/topojson-client": "^3.1.5",
 		"@versatiles/release-tool": "^2.20.0",
-		"@versatiles/style": "^7.1.0",
-		"@vitest/coverage-v8": "^5.0.5",
+		"@versatiles/style": "^8.1.0",
+		"@vitest/coverage-v8": "^5.1.0",
 		"eslint": "^10.14.0",
 		"prettier": "^3.9.10",
 		"tsx": "^4.23.15",

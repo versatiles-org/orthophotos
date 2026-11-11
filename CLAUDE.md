@@ -16,6 +16,7 @@ npm run format:check       # Check formatting without modifying
 
 ./run.sh <region> <tasks>         # Run pipeline tasks for a region
 npm run build:status              # Scan regions, validate status, export JSON
+npm run build:quality-zones -- <planet.osm.pbf>  # Build the adaptive-quality GeoJSON, see docs/quality-zones.md
 npm run server                    # Prepare data + start server on port 8080
 ```
 

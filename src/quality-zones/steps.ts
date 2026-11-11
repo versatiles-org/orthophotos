@@ -17,8 +17,8 @@ export const MERCATOR_HALF_SIZE = 20037508.342789244;
 /** Latitude limit of EPSG:3857. Input polygons are clipped to it before reprojection. */
 export const MERCATOR_MAX_LAT = 85.0511287798066;
 
-/** Width and height of the rasterized mask (65536 px, about 611 m per pixel). */
-export const RASTER_SIZE = 65536;
+/** Width and height of the rasterized mask (16384 px, about 2446 m per pixel). */
+export const RASTER_SIZE = 16384;
 
 /** OSM `landuse` values that count as settlement, in addition to all buildings. */
 export const LANDUSE_VALUES = ['residential', 'commercial', 'industrial'];

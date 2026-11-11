@@ -38,10 +38,12 @@ describe('getSteps', () => {
 		expect(args).toContain('wr/landuse=residential,commercial,industrial');
 	});
 
-	test('rasterizes all-touched into a 64K byte grid over the Mercator square', () => {
+	test('rasterizes all-touched into a 16K byte grid over the Mercator square', () => {
 		const args = stepWritingTo(paths.raster).args;
 		expect(args).toContain('--all-touched');
-		expect(args).toContain('65536,65536');
+		expect(args).toContain('16384,16384');
+		expect(args).not.toContain('clip');
+		expect(args.indexOf('filter')).toBeLessThan(args.indexOf('reproject'));
 		expect(args).toContain('UInt8');
 		const e = MERCATOR_HALF_SIZE;
 		expect(args).toContain(`-${e},-${e},${e},${e}`);

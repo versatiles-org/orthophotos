@@ -16,7 +16,7 @@ The code is in `src/quality-zones/`: `steps.ts` holds the parameters and the exa
 
 1. **Filter** (`osmium tags-filter`): ways and relations with `building=*` or `landuse=residential|commercial|industrial`.
 2. **Export** (`osmium export`): their polygons as GeoJSONSeq. The node location index is a `sparse_file_array` in the temp dir. GDAL's GeoJSONSeq reader seeks backwards, so this must be a file, not a pipe.
-3. **Rasterize** (`gdal pipeline`): clip to the latitude limit of Web Mercator, reproject to EPSG:3857, then burn with `--all-touched` into a 65536 × 65536 byte grid over the full Mercator square (about 611 m per pixel). Settlement pixels are 255, all others 0 (nodata).
+3. **Rasterize** (`gdal pipeline`): drop polygons whose bounding box lies outside the latitude limit of Web Mercator, reproject to EPSG:3857, then burn with `--all-touched` into a 16384 × 16384 byte grid over the full Mercator square (about 2446 m per pixel). The rasterize extent cuts off whatever reaches beyond the Mercator square; a GEOS `clip` would do the same at about twice the cost per polygon. Settlement pixels are 255, all others 0 (nodata).
 4. **Polygonize** (`gdal raster polygonize`, diagonal pixels connected): the settlement pixels as polygons.
 5. **Buffer A**: buffer by 1000 m, union, simplify.
 6. **Buffer B**: buffer A by 4000 m, union, simplify.
@@ -27,7 +27,7 @@ Parameters, all in `src/quality-zones/steps.ts`:
 
 | Parameter       | Value                                                | Note                                            |
 | --------------- | ---------------------------------------------------- | ----------------------------------------------- |
-| Raster size     | 65536 px                                             | about 611 m per pixel                           |
+| Raster size     | 16384 px                                             | about 2446 m per pixel                          |
 | Buffer A / B    | 1000 m / 4000 m                                      | EPSG:3857 metres, see below                     |
 | Simplify        | 200 m                                                | tolerance                                       |
 | Buffer segments | 4 per quarter circle                                 | GEOS default is 8; fewer keeps the file smaller |

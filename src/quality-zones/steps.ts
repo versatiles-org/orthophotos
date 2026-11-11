@@ -14,7 +14,7 @@ import { join } from 'node:path';
 /** Half the side length of the EPSG:3857 square, in metres. */
 export const MERCATOR_HALF_SIZE = 20037508.342789244;
 
-/** Latitude limit of EPSG:3857. Input polygons are clipped to it before reprojection. */
+/** Latitude limit of EPSG:3857. Input polygons entirely beyond it are dropped before reprojection. */
 export const MERCATOR_MAX_LAT = 85.0511287798066;
 
 /** Width and height of the rasterized mask (16384 px, about 2446 m per pixel). */
@@ -208,7 +208,7 @@ export function getSteps(paths: QualityZonePaths): Step[] {
 			cleanup: [paths.nodeIndex],
 		},
 		{
-			// Uncompressed, so blocks are rewritten in place. GDAL_CACHEMAX holds the whole 4 GiB raster in memory.
+			// Uncompressed, so blocks are rewritten in place. GDAL_CACHEMAX is large enough to hold the whole raster in memory.
 			name: 'rasterize',
 			output: paths.raster,
 			cmd: 'gdal',
@@ -222,7 +222,9 @@ export function getSteps(paths: QualityZonePaths): Step[] {
 				'GeoJSONSeq',
 				paths.polygons,
 				'!',
-				'clip',
+				// Drops polygons outside Web Mercator's latitude range, which can't be projected near the poles.
+				// It only compares bounding boxes; the rasterize extent cuts everything else, much cheaper than `clip`.
+				'filter',
 				'--bbox',
 				`-180,-${lat},180,${lat}`,
 				'!',

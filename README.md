@@ -124,7 +124,7 @@ R["remote-zip.ts"]
 S["versatiles.ts"]
 T["wms.ts"]
 U["xml.ts"]
-13["framework.ts"]
+14["framework.ts"]
 end
 subgraph 4["status"]
 5["index.ts"]
@@ -133,37 +133,38 @@ subgraph 4["status"]
 8["html.ts"]
 9["regions.ts"]
 A["style.ts"]
-1K["status.ts"]
+1L["status.ts"]
 end
 subgraph V["quality-zones"]
 W["index.ts"]
 X["build.ts"]
-Y["steps.ts"]
+Y["progress.ts"]
+Z["steps.ts"]
 end
-Z["check-remote.ts"]
-subgraph 10["regions"]
-subgraph 11["**"]
-12["*.ts (49 files)"]
+10["check-remote.ts"]
+subgraph 11["regions"]
+subgraph 12["**"]
+13["*.ts (49 files)"]
 end
 end
-14["preview.ts"]
-subgraph 15["server"]
-16["index.ts"]
-17["frontend.ts"]
-18["vpl.ts"]
+15["preview.ts"]
+subgraph 16["server"]
+17["index.ts"]
+18["frontend.ts"]
+19["vpl.ts"]
 end
-19["publish-hashes.ts"]
-1A["publish-world-local.ts"]
-subgraph 1B["run"]
-1C["index.ts"]
-1D["args.ts"]
-1E["tasks.constants.ts"]
-1F["commands.ts"]
-1G["tasks.ts"]
+1A["publish-hashes.ts"]
+1B["publish-world-local.ts"]
+subgraph 1C["run"]
+1D["index.ts"]
+1E["args.ts"]
+1F["tasks.constants.ts"]
+1G["commands.ts"]
+1H["tasks.ts"]
 end
-1H["publish-world.ts"]
-1I["run.ts"]
-1J["status-check.ts"]
+1I["publish-world.ts"]
+1J["run.ts"]
+1K["status-check.ts"]
 end
 1-->3
 1-->W
@@ -221,43 +222,44 @@ S-->I
 T-->C
 T-->U
 W-->X
-W-->Y
+W-->Z
 X-->3
 X-->Y
-Z-->3
-Z-->12
-12-->3
-14-->3
-14-->16
-16-->17
-16-->18
-17-->3
+X-->Z
+10-->3
+10-->13
+13-->3
+15-->3
+15-->17
+17-->18
+17-->19
 18-->3
-18-->12
-18-->5
 19-->3
+19-->13
+19-->5
 1A-->3
-1A-->1C
-1A-->16
-1C-->1D
-1C-->1F
-1C-->1G
+1B-->3
+1B-->1D
+1B-->17
 1D-->1E
-1F-->3
+1D-->1G
+1D-->1H
+1E-->1F
 1G-->3
-1G-->12
-1G-->1F
-1G-->1E
 1H-->3
-1H-->1C
-1H-->16
+1H-->13
+1H-->1G
+1H-->1F
 1I-->3
-1I-->12
-1I-->1C
-1J-->12
-1J-->5
+1I-->1D
+1I-->17
+1J-->3
+1J-->13
+1J-->1D
+1K-->13
+1K-->5
 
-class 0,2,4,V,10,11,15,1B subgraphs;
+class 0,2,4,V,11,12,16,1C subgraphs;
 classDef subgraphs fill-opacity:0.1, fill:#888, color:#888, stroke:#888;
 ```
 

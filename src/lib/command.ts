@@ -25,6 +25,8 @@ export interface CommandOptions {
 	quiet?: boolean;
 	/** Suppress stdout/stderr even in error messages. Default: false */
 	quietOnError?: boolean;
+	/** Called with each chunk of piped output as it arrives, e.g. to parse a tool's progress. */
+	onOutput?: (stream: 'stdout' | 'stderr', chunk: string) => void;
 }
 
 /**
@@ -51,10 +53,12 @@ export async function runCommand(cmd: string, args: string[], options?: CommandO
 		child.stdout?.on('data', (chunk: Buffer) => {
 			stdoutChunks.push(chunk);
 			if (stdoutMode === 'inherit') process.stdout.write(chunk);
+			options?.onOutput?.('stdout', chunk.toString());
 		});
 		child.stderr?.on('data', (chunk: Buffer) => {
 			stderrChunks.push(chunk);
 			if (stderrMode === 'inherit') process.stderr.write(chunk);
+			options?.onOutput?.('stderr', chunk.toString());
 		});
 
 		child.on('error', (err) =>

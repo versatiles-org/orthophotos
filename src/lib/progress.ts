@@ -134,6 +134,9 @@ export function createProgress(total: number, options: ProgressOptions): Progres
 	let lastDrawTime = 0;
 	let pendingTimer: NodeJS.Timeout | null = null;
 	let finished = false;
+	// Non-TTY: last multiple of logInterval that was logged. Draws are throttled, so `done`
+	// can skip past a multiple between draws; logging on crossing one keeps the log complete.
+	let lastLoggedStep = -1;
 
 	function draw() {
 		if (finished) return;
@@ -162,8 +165,12 @@ export function createProgress(total: number, options: ProgressOptions): Progres
 			// leave trailing chars from the previous draw (e.g. "ETA: 0sss").
 			process.stderr.write(`\r${line}\x1b[K`);
 			updateTerminal();
-		} else if (getState().done % logInterval === 0) {
-			console.log(line);
+		} else {
+			const step = Math.floor(getState().done / logInterval);
+			if (step > lastLoggedStep) {
+				lastLoggedStep = step;
+				console.log(line);
+			}
 		}
 	}
 

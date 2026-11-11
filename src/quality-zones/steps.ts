@@ -175,6 +175,7 @@ export function getSteps(paths: QualityZonePaths): Step[] {
 			cmd: 'osmium',
 			args: [
 				'tags-filter',
+				'--progress',
 				'--overwrite',
 				'--output',
 				tmpPath(paths.filtered),
@@ -190,6 +191,7 @@ export function getSteps(paths: QualityZonePaths): Step[] {
 			cmd: 'osmium',
 			args: [
 				'export',
+				'--progress',
 				'--overwrite',
 				'--config',
 				paths.exportConfig,
@@ -212,6 +214,7 @@ export function getSteps(paths: QualityZonePaths): Step[] {
 			cmd: 'gdal',
 			args: [
 				'pipeline',
+				'--progress',
 				'--config',
 				'GDAL_CACHEMAX=5000',
 				'read',

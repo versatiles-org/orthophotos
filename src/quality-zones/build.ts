@@ -55,7 +55,7 @@ export async function buildQualityZones(input: string, output: string, tempDir: 
  * The tool's output is captured, not shown, and is included in the error if the step fails.
  */
 async function runStep(step: Step): Promise<void> {
-	const parse = createProgressParser(step.cmd);
+	const parse = createProgressParser(step.progress ?? step.cmd);
 	const progress = createProgress(100, { labels: ['%'], logInterval: 10 });
 	let shown = 0;
 	const advanceTo = (percent: number): void => {

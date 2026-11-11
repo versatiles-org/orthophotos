@@ -15,8 +15,8 @@ The code is in `src/quality-zones/`: `steps.ts` holds the parameters and the exa
 ## Steps
 
 1. **Filter** (`osmium tags-filter`): ways and relations with `building=*` or `landuse=residential|commercial|industrial`.
-2. **Export** (`osmium export`): their polygons as GeoJSONSeq. The node location index is a `sparse_file_array` in the temp dir. GDAL's GeoJSONSeq reader seeks backwards, so this must be a file, not a pipe.
-3. **Rasterize** (`gdal pipeline`): drop polygons whose bounding box lies outside the latitude limit of Web Mercator, reproject to EPSG:3857, then burn with `--all-touched` into a 16384 × 16384 byte grid over the full Mercator square (about 2446 m per pixel). The rasterize extent cuts off whatever reaches beyond the Mercator square; a GEOS `clip` would do the same at about twice the cost per polygon. Settlement pixels are 255, all others 0 (nodata).
+2. **Export** (`osmium export`): their polygons as GeoJSONSeq, piped through `gzip -1` because osmium can't compress it itself. The node location index is a `sparse_file_array` in the temp dir. GDAL's GeoJSONSeq reader seeks backwards, so this must be a file, not a pipe into the next step. It's gzip, not zstd, because GDAL reads gzip (`/vsigzip/`) but not zstd; reading it gzipped was no slower in testing.
+3. **Rasterize** (`gdal pipeline`): drop polygons whose bounding box lies outside the latitude limit of Web Mercator, reproject to EPSG:3857, then burn with `--all-touched` into a 16384 × 16384 byte grid over the full Mercator square (about 2446 m per pixel), stored ZSTD-compressed at level 1. The rasterize extent cuts off whatever reaches beyond the Mercator square; a GEOS `clip` would do the same at about twice the cost per polygon. Settlement pixels are 255, all others 0 (nodata).
 4. **Polygonize** (`gdal raster polygonize`, diagonal pixels connected): the settlement pixels as polygons.
 5. **Buffer A**: buffer by 1000 m, union, simplify.
 6. **Buffer B**: buffer A by 4000 m, union, simplify.

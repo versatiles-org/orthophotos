@@ -51,6 +51,8 @@ export interface Step {
 	output: string;
 	/** Executable to run. */
 	cmd: string;
+	/** Tool whose progress output to parse. Default: `cmd`. Needed when `cmd` wraps the tool, e.g. in a pipe. */
+	progress?: 'gdal' | 'osmium';
 	/** Arguments. The step writes to `tmpPath(output)`, which is renamed to `output` on success. */
 	args: string[];
 	/** Intermediate files to delete once the step has succeeded. */
@@ -90,7 +92,7 @@ export function getPaths(input: string, tempDir: string): QualityZonePaths {
 		exportConfig: p('osmium-export.json'),
 		nodeIndex: p('nodes.idx'),
 		filtered: p('filtered.osm.pbf'),
-		polygons: p('polygons.geojsonseq'),
+		polygons: p('polygons.geojsonseq.gz'),
 		raster: p('settlement.tif'),
 		pixels: p('settlement.gpkg'),
 		world: p('world.geojson'),
@@ -185,14 +187,22 @@ export function getSteps(paths: QualityZonePaths): Step[] {
 			],
 		},
 		{
-			// GDAL's GeoJSONSeq driver seeks backwards, so this can't be piped into the next step.
+			// osmium can't compress GeoJSONSeq itself, so its output is piped through gzip, which GDAL reads
+			// via /vsigzip/ (it can't read zstd). GDAL's GeoJSONSeq driver seeks backwards, so the export
+			// can't be piped straight into the rasterize step.
 			name: 'export polygons',
 			output: paths.polygons,
-			cmd: 'osmium',
+			cmd: 'bash',
+			progress: 'osmium',
 			args: [
+				'-c',
+				// Fixed script; paths are passed as arguments, never interpolated into it.
+				'set -euo pipefail; out="$1"; shift; "$@" | gzip -1 > "$out"',
+				'bash',
+				tmpPath(paths.polygons),
+				'osmium',
 				'export',
 				'--progress',
-				'--overwrite',
 				'--config',
 				paths.exportConfig,
 				'--output-format',
@@ -202,13 +212,14 @@ export function getSteps(paths: QualityZonePaths): Step[] {
 				'--index-type',
 				`sparse_file_array,${paths.nodeIndex}`,
 				'--output',
-				tmpPath(paths.polygons),
+				'-',
 				paths.filtered,
 			],
 			cleanup: [paths.nodeIndex],
 		},
 		{
-			// Uncompressed, so blocks are rewritten in place. GDAL_CACHEMAX is large enough to hold the whole raster in memory.
+			// Rasterize writes each block once, so compression doesn't bloat the file with rewritten blocks.
+			// ZSTD level 1 is as fast as no compression. GDAL_CACHEMAX holds the whole raster in memory.
 			name: 'rasterize',
 			output: paths.raster,
 			cmd: 'gdal',
@@ -220,7 +231,7 @@ export function getSteps(paths: QualityZonePaths): Step[] {
 				'read',
 				'--input-format',
 				'GeoJSONSeq',
-				paths.polygons,
+				`/vsigzip/${paths.polygons}`,
 				'!',
 				// Drops polygons outside Web Mercator's latitude range, which can't be projected near the poles.
 				// It only compares bounding boxes; the rasterize extent cuts everything else, much cheaper than `clip`.
@@ -255,6 +266,10 @@ export function getSteps(paths: QualityZonePaths): Step[] {
 				'SPARSE_OK=TRUE',
 				'--co',
 				'BIGTIFF=YES',
+				'--co',
+				'COMPRESS=ZSTD',
+				'--co',
+				'ZSTD_LEVEL=1',
 				tmpPath(paths.raster),
 			],
 			cleanup: [paths.polygons, paths.filtered],

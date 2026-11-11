@@ -50,6 +50,17 @@ describe('getSteps', () => {
 		expect(args.indexOf('reproject')).toBeLessThan(args.indexOf('rasterize'));
 	});
 
+	test('stores the polygon export gzipped and the raster ZSTD-compressed', () => {
+		const exportStep = stepWritingTo(paths.polygons);
+		expect(paths.polygons).toMatch(/\.geojsonseq\.gz$/);
+		expect(exportStep.progress).toBe('osmium');
+		expect(exportStep.args[1]).toContain('set -euo pipefail');
+		expect(exportStep.args[1]).toContain('gzip -1');
+		const rasterize = stepWritingTo(paths.raster).args;
+		expect(rasterize).toContain(`/vsigzip/${paths.polygons}`);
+		expect(rasterize).toContain('COMPRESS=ZSTD');
+	});
+
 	test('buffers zone A by 1 km and zone B by 4 km around A', () => {
 		const a = stepWritingTo(paths.bufferA).args;
 		expect(a).toContain(paths.pixels);

@@ -68,6 +68,8 @@ Task spec supports: numbers (`2`), names (`fetch`), ranges (`1-3`), comma lists 
 ./run.sh de/berlin all       # Full pipeline: fetch, merge, delete
 ```
 
+Before rebuilding regions for a release, work through [docs/building-a-release.md](docs/building-a-release.md).
+
 ## Preview Server
 
 The preview server shows all processed orthophoto data using VersaTiles. It generates a `.vpl` (VersaTiles Pipeline Language) file that references orthophoto and satellite containers via SFTP, with GeoJSON masks for clean region clipping.

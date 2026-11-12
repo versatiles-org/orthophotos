@@ -84,6 +84,10 @@ Only `'released'` regions are included in the VPL file for the server.
 
 Before adding a region or changing a region's fetch code, read `docs/adding-a-region.md`: it covers the `defineTileRegion` pipeline and the required fetch patterns (retries, validation, skip files, borders, temp files).
 
+### Building a Release
+
+Before rebuilding regions for a new release, follow the checklist in `docs/building-a-release.md`: tools, newer data sources, clearing remote files and local caches, testing on a sample, and the checks after the build.
+
 ### Versatiles CLI
 
 The project uses the `versatiles` CLI tool with the `mosaic` subcommand:

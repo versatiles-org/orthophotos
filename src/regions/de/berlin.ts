@@ -53,6 +53,8 @@ export default defineTileRegion({
 		date: '2026',
 		mask: 'de_berlin.geojson.gz',
 		releaseDate: '2026-03-24',
+		// 20 cm source pixels: zoom 18 (0.18–0.20 m on the ground in Germany) shows their full detail.
+		maxZoom: 18,
 	},
 	init: async (ctx) => {
 		const feedPath = join(ctx.tempDir, 'feed.xml');

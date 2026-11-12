@@ -58,6 +58,8 @@ export default defineTileRegion({
 		},
 		date: '2024',
 		releaseDate: '2026-03-24',
+		// 20 cm source pixels: zoom 18 (0.18–0.20 m on the ground in Germany) shows their full detail.
+		maxZoom: 18,
 	},
 	init: async (ctx) => {
 		const geojsonPath = join(ctx.tempDir, 'tiles.geojson');

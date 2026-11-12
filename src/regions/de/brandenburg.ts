@@ -40,6 +40,8 @@ export default defineTileRegion({
 		},
 		date: '2023',
 		releaseDate: '2026-03-19',
+		// 20 cm source pixels: zoom 18 (0.18–0.20 m on the ground in Germany) shows their full detail.
+		maxZoom: 18,
 	},
 	init: async (ctx) => {
 		const indexPath = join(ctx.tempDir, 'index.html');

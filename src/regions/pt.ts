@@ -1,10 +1,13 @@
 import { join } from 'node:path';
 import {
+	computeWmsBlocks,
 	convertToTiledTiff,
 	defineTileRegion,
 	downloadFile,
 	isValidRaster,
 	runMosaicTile,
+	type WmsBbox,
+	type WmsBlockItem,
 	withRetry,
 } from '../lib/index.ts';
 
@@ -12,37 +15,21 @@ const OGC_API_MAP_URL = 'https://ogcapi.dgterritorio.gov.pt/collections/ortos-rg
 const CRS_3857 = 'http://www.opengis.net/def/crs/EPSG/0/3857';
 
 // Bounding box in EPSG:3857 covering continental Portugal
-const XMIN = -1135000;
-const YMIN = 4406000;
-const XMAX = -636000;
-const YMAX = 5203000;
+const BBOX: WmsBbox = { xmin: -1135000, ymin: 4406000, xmax: -636000, ymax: 5203000 };
 
-const BLOCK_SIZE = 5000; // 5km blocks in meters
-const BLOCK_PX = 4096; // pixels per block
+/**
+ * Pixels per request. The blocks are sized for the region's zoom, so each request already has
+ * the resolution the tiles need. The old fixed 5 km blocks at 4096 px asked for 1.22 m per
+ * pixel, half of zoom 17, although the source has 30 cm.
+ */
+const MAX_BLOCK_PX = 4096;
 
-interface GridItem {
-	id: string;
-	x0: number;
-	y0: number;
-	x1: number;
-	y1: number;
+interface PtItem extends WmsBlockItem {
+	blockPx: number;
 }
 
-function generateGrid(): GridItem[] {
-	const items: GridItem[] = [];
-	for (let x0 = XMIN; x0 < XMAX; x0 += BLOCK_SIZE) {
-		for (let y0 = YMIN; y0 < YMAX; y0 += BLOCK_SIZE) {
-			const x1 = x0 + BLOCK_SIZE;
-			const y1 = y0 + BLOCK_SIZE;
-			const id = `${x0}_${y0}`.replace(/-/g, 'm'); // Replace negative sign with 'm' for better readability
-			items.push({ id, x0, y0, x1, y1 });
-		}
-	}
-	return items;
-}
-
-function buildTileUrl(item: GridItem): string {
-	return `${OGC_API_MAP_URL}?f=png&bbox=${item.x0},${item.y0},${item.x1},${item.y1}&width=${BLOCK_PX}&height=${BLOCK_PX}&bbox-crs=${encodeURIComponent(CRS_3857)}`;
+function buildTileUrl(item: PtItem): string {
+	return `${OGC_API_MAP_URL}?f=png&bbox=${item.x0},${item.y0},${item.x1},${item.y1}&width=${item.blockPx}&height=${item.blockPx}&bbox-crs=${encodeURIComponent(CRS_3857)}`;
 }
 
 export default defineTileRegion({
@@ -52,7 +39,7 @@ export default defineTileRegion({
 		notes: [
 			'No WMS available; uses OGC API Maps endpoint.',
 			'Server returns PNG tiles that need georeferencing.',
-			'Resolution is ~1.2m/px at zoom 17.',
+			'Source: OrtoSat 2023, a 30 cm satellite mosaic of continental Portugal.',
 		],
 		entries: ['result'],
 		license: {
@@ -64,15 +51,15 @@ export default defineTileRegion({
 			name: 'Direção-Geral do Território',
 			url: 'https://ogcapi.dgterritorio.gov.pt/collections/ortos-rgb',
 		},
-		date: '2018-2023',
+		date: '2023',
 		releaseDate: '2026-03-29',
 		mask: true,
 		maskBuffer: 3000,
 	},
-	init: async () => {
-		const items = generateGrid();
-		console.log(`  Generated ${items.length} grid cells`);
-		return items;
+	init: async (ctx) => {
+		const { items, blockPx } = computeWmsBlocks(BBOX, ctx.maxZoom, MAX_BLOCK_PX, MAX_BLOCK_PX);
+		console.log(`  ${items.length} blocks at ${blockPx}x${blockPx}px`);
+		return items.map((item): PtItem => ({ ...item, blockPx }));
 	},
 	downloadLimit: 2,
 	download: async (item, ctx) => {
@@ -107,5 +94,6 @@ export default defineTileRegion({
 	convert: async ({ tifPath }, { dest, maxZoom }) => {
 		await runMosaicTile(tifPath, dest, { maxZoom });
 	},
-	minFiles: 500,
+	// About 25,000 of the 67,035 blocks at zoom 17 contain imagery.
+	minFiles: 20000,
 });

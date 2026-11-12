@@ -3,23 +3,35 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { defineTileRegion, downloadFile, extractZipFile, runCommand, runMosaicTile, withRetry } from '../lib/index.ts';
 
-const INDEX_URL = 'https://geoportaal.maaamet.ee/docs/Avaandmed/epk10_eng.zip';
-const API_URL = 'https://geoportaal.maaamet.ee/index.php?lang_id=2&plugin_act=otsing&page_id=662';
-const DL_BASE = 'https://geoportaal.maaamet.ee/index.php?lang_id=2&plugin_act=otsing&page_id=662&dl=1';
+// The geoportal moved from geoportaal.maaamet.ee to geoportaal.maaruum.ee in 2026.
+const BASE_URL = 'https://geoportaal.maaruum.ee';
+const INDEX_URL = `${BASE_URL}/docs/Avaandmed/epk10_eng.zip`;
+const API_URL = `${BASE_URL}/index.php?lang_id=2&plugin_act=otsing&page_id=662`;
+const DL_BASE = `${API_URL}&dl=1`;
+
+/**
+ * Picks the newest RGB GeoTIFF from the download API's answer for a sheet. The answer
+ * lists every year (e.g. `54494_OF_RGB_GeoTIFF_2025_07_18.zip` down to `…_1995.zip`);
+ * the date in the name sorts as text, so the newest is the largest name.
+ */
+export function pickLatestFilename(html: string): string | null {
+	const names = [...html.matchAll(/f=(\d+_OF_RGB_GeoTIFF_[^&"]+\.zip)/g)].map((m) => m[1]);
+	return names.length > 0 ? names.sort().at(-1)! : null;
+}
 
 /**
  * Query the download API for the latest RGB GeoTIFF filename for a sheet.
  *
  * `--fail` makes HTTP errors throw instead of silently returning `null` — important
  * because callers treat `null` as "no data" and persist a `.skip` marker, so a
- * transient API outage would otherwise permanently mask legitimate sheets.
+ * transient API outage would otherwise permanently mask legitimate sheets. `--location`
+ * follows redirects for the same reason: after the 2026 domain move, the old domain
+ * answered with an empty 302, which `--fail` lets through.
  */
 async function getLatestFilename(nr: number): Promise<string | null> {
 	const url = `${API_URL}&kaardiruut=${nr}&andmetyyp=ortofoto_eesti_rgb`;
-	const result = await runCommand('curl', ['-sf', '--max-time', '15', url], { quiet: true });
-	const html = new TextDecoder().decode(result.stdout);
-	const match = html.match(/f=(\d+_OF_RGB_GeoTIFF_[^&"]+\.zip)/);
-	return match ? match[1] : null;
+	const result = await runCommand('curl', ['-sfL', '--max-time', '15', url], { quiet: true });
+	return pickLatestFilename(new TextDecoder().decode(result.stdout));
 }
 
 /** Extract sheet numbers from the shapefile index via ogr2ogr. */
@@ -59,7 +71,7 @@ export default defineTileRegion<EeItem, EeDownload>({
 		},
 		creator: {
 			name: 'Maa- ja Ruumiamet (Estonian Land and Spatial Development Board)',
-			url: 'https://geoportaal.maaamet.ee/eng/spatial-data/orthophotos-p309.html',
+			url: 'https://geoportaal.maaruum.ee/eng/spatial-data/orthophotos-p309.html',
 		},
 		date: '2024',
 		releaseDate: '2026-05-04',

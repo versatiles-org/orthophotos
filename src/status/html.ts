@@ -23,6 +23,8 @@ interface RowData {
 	statusColor: string;
 	releaseDate: string;
 	date: string;
+	resolution: string;
+	checked: string;
 	licenseName: string;
 	licenseUrl: string;
 	creatorName: string;
@@ -59,6 +61,8 @@ export function generateStatusPage(
 			statusColor,
 			releaseDate: meta.status === 'released' ? meta.releaseDate : '',
 			date: meta.date ?? '',
+			resolution: meta.resolution !== undefined ? `${meta.resolution} cm` : '',
+			checked: meta.checked ?? '',
 			licenseName: meta.license?.name ?? '',
 			licenseUrl: meta.license?.url ?? '',
 			creatorName: meta.creator?.name ?? '',

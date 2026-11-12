@@ -100,11 +100,46 @@ describe('applyAggregation', () => {
 		expect(applyAggregation(raw).get('fr')!.status).toBe('scraping');
 	});
 
+	test('takes the finest resolution and the oldest check date', () => {
+		const [aId, a] = child('fr/a', '2024', '2026-04-01');
+		const [bId, b] = child('fr/b', '2025', '2026-05-01');
+		const raw = new Map<string, RegionMetadata>([
+			[aId, { ...a, resolution: 20, checked: '2026-11-12' }],
+			[bId, { ...b, resolution: 15, checked: '2026-10-01' }],
+		]);
+		const fr = applyAggregation(raw).get('fr')!;
+		expect(fr.resolution).toBe(15);
+		expect(fr.checked).toBe('2026-10-01');
+	});
+
+	test('leaves checked out when a child was never checked', () => {
+		const [aId, a] = child('fr/a', '2024', '2026-04-01');
+		const [bId, b] = child('fr/b', '2025', '2026-05-01');
+		const raw = new Map<string, RegionMetadata>([
+			[aId, { ...a, checked: '2026-11-12' }],
+			[bId, b],
+		]);
+		expect(applyAggregation(raw).get('fr')!.checked).toBeUndefined();
+	});
+
 	test('throws when parent id collides with an existing entry', () => {
 		const raw = new Map<string, RegionMetadata>([
 			['fr', { status: 'planned', notes: [] }],
 			['fr/a', { status: 'planned', notes: [], aggregateUnder: 'fr' }],
 		]);
 		expect(() => applyAggregation(raw)).toThrow("Cannot aggregate children under 'fr'");
+	});
+});
+
+describe('region metadata', () => {
+	test('checked is a date and resolution a plausible pixel size', async () => {
+		const { getAllRegionMetadata } = await import('./index.ts');
+		for (const [id, meta] of getAllRegionMetadata()) {
+			if (meta.checked !== undefined) expect(meta.checked, id).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+			if (meta.resolution !== undefined) {
+				expect(meta.resolution, id).toBeGreaterThan(0);
+				expect(meta.resolution, id).toBeLessThanOrEqual(1000);
+			}
+		}
 	});
 });

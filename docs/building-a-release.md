@@ -17,7 +17,7 @@ A checklist for rebuilding orthophoto regions and publishing them. Work through 
 
 ## 2. Data sources
 
-- [ ] **Newer data per region.** For every region that will be rebuilt, check whether the provider offers a newer acquisition, a better resolution or a download service instead of WMS. Update the scraper and `meta.date` where it does. Some scrapers also check constants against the source, like `FR_DATE_RANGE` in `src/regions/fr/scraper.ts`.
+- [ ] **Newer data per region.** For every region that will be rebuilt, check whether the provider offers a newer acquisition, a better resolution or a download service instead of WMS. Update the scraper and `meta.date` where it does. How to check, what to record and the known traps are in [region-sources.md](region-sources.md); set `meta.checked` either way. Some scrapers also check constants against the source, like `FR_DATE_RANGE` in `src/regions/fr/scraper.ts`.
 - [ ] **Blocked and planned regions.** Check whether anything that blocked them has changed, such as a new open licence or download service.
 - [ ] **Top zoom per region.** Pick `maxZoom` from the source resolution, see "Top zoom" in [adding-a-region.md](adding-a-region.md). Regions without one are tiled to `MAX_ZOOM` (17).
 

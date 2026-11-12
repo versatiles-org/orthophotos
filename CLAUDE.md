@@ -82,7 +82,7 @@ Only `'released'` regions are included in the VPL file for the server.
 
 ### Adding or Changing a Region
 
-Before adding a region or changing a region's fetch code, read `docs/adding-a-region.md`: it covers the `defineTileRegion` pipeline and the required fetch patterns (retries, validation, skip files, borders, temp files).
+Before adding a region or changing a region's fetch code, read `docs/adding-a-region.md`: it covers the `defineTileRegion` pipeline and the required fetch patterns (retries, validation, skip files, borders, temp files). What to record about a source and how to check it for newer data is in `docs/region-sources.md`.
 
 ### Building a Release
 

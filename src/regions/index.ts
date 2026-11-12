@@ -157,6 +157,14 @@ function aggregateMetadata(children: RegionMetadata[]): RegionMetadata {
 	const releaseDates = children.map((c) => c.releaseDate).filter((d): d is string => typeof d === 'string');
 	const releaseDate = releaseDates.length > 0 ? releaseDates.reduce((a, b) => (a > b ? a : b)) : undefined;
 
+	// resolution: the finest of the children's. checked: the oldest, i.e. when all were last checked.
+	const resolutions = children.map((c) => c.resolution).filter((r): r is number => typeof r === 'number');
+	const resolution = resolutions.length > 0 ? Math.min(...resolutions) : undefined;
+	const checkedDates = children.map((c) => c.checked);
+	const checked = checkedDates.every((d): d is string => typeof d === 'string')
+		? checkedDates.reduce((a, b) => (a < b ? a : b))
+		: undefined;
+
 	// notes: deduped union preserving first-seen order.
 	const seen = new Set<string>();
 	const notes: string[] = [];
@@ -179,6 +187,8 @@ function aggregateMetadata(children: RegionMetadata[]): RegionMetadata {
 		date,
 		mask: first.mask,
 		maskBuffer: first.maskBuffer,
+		...(resolution !== undefined ? { resolution } : {}),
+		...(checked !== undefined ? { checked } : {}),
 	};
 
 	if (status === 'released') {

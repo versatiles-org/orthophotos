@@ -1,5 +1,7 @@
 # Adding a Region
 
+What to record about a source (date, resolution, decisions, issues) and how to check it for updates is in [region-sources.md](region-sources.md).
+
 ### New Tile Pipeline (`defineTileRegion`)
 
 All regions use `defineTileRegion()` from `src/lib/process_tiles.ts`. The pipeline is: **init → download → convert → merge**.

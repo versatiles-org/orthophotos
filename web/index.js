@@ -26,6 +26,8 @@ const columnDefs = [
 	{ field: 'status', headerName: 'Status', width: 110, cellRenderer: StatusCellRenderer, filter: true },
 	{ field: 'releaseDate', headerName: 'Released', width: 120, filter: true },
 	{ field: 'date', headerName: 'Date', width: 110, filter: true },
+	{ field: 'resolution', headerName: 'Resolution', width: 110, filter: true },
+	{ field: 'checked', headerName: 'Checked', width: 120, filter: true },
 	{ field: 'licenseName', headerName: 'License', width: 140, cellRenderer: LinkCellRenderer, filter: true },
 	{ field: 'creatorName', headerName: 'Creator', flex: 1, minWidth: 150, cellRenderer: LinkCellRenderer, filter: true },
 	{

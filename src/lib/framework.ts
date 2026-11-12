@@ -51,6 +51,14 @@ interface RegionMetadataBase {
 	 */
 	maxZoom?: number;
 	/**
+	 * Ground pixel size of the source imagery in centimetres, where it varies the finest one
+	 * (e.g. `20` for DOP20). Only set it once confirmed by the files, the provider's description
+	 * or an official product name like DOP20; leave it out rather than guess. See `docs/region-sources.md`.
+	 */
+	resolution?: number;
+	/** Date of the last check of the source for newer data (`YYYY-MM-DD`). See `docs/region-sources.md`. */
+	checked?: string;
+	/**
 	 * Roll this region up under a parent ID for status display (e.g. `'fr'` for all `fr/*`
 	 * sub-régions). The pipeline still runs per-child; only `getAggregatedRegionMetadata()`
 	 * collapses children into the named parent. Does not affect VPL generation.

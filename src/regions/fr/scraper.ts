@@ -96,6 +96,7 @@ function buildMeta(opts: FrSubRegionOptions): RegionMetadata {
 			url: 'https://geoservices.ign.fr/documentation/donnees/ortho/bdortho',
 		},
 		date: FR_DATE_RANGE,
+		resolution: 20,
 		checked: '2026-11-12',
 		releaseDate: opts.releaseDate,
 		mask: true,

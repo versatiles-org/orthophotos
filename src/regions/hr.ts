@@ -47,6 +47,7 @@ export default defineTileRegion<HrItem, { srcPath: string }>({
 			url: 'https://geoportal.dgu.hr/',
 		},
 		date: '2022-2023',
+		resolution: 25,
 		checked: '2026-11-12',
 		mask: true,
 	},

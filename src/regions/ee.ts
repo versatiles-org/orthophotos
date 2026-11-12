@@ -74,6 +74,7 @@ export default defineTileRegion<EeItem, EeDownload>({
 			url: 'https://geoportaal.maaruum.ee/eng/spatial-data/orthophotos-p309.html',
 		},
 		date: '2024',
+		resolution: 20,
 		checked: '2026-11-12',
 		releaseDate: '2026-05-04',
 		mask: true,

@@ -56,6 +56,7 @@ export default defineTileRegion({
 			url: 'https://geoportal.cuzk.gov.cz/(S(zggl1k35qp1wg4q33q1a5gov))/Default.aspx?mode=TextMeta&text=ortofoto_info&side=ortofoto',
 		},
 		date: '2024-2025',
+		resolution: 12.5,
 		checked: '2026-11-12',
 		releaseDate: '2026-03-25',
 		mask: true,

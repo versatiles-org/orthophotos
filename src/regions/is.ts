@@ -89,7 +89,7 @@ export default defineTileRegion<IsItem, { srcPath: string }>({
 	convert: async ({ srcPath }, { dest, maxZoom }) => {
 		await runMosaicTile(srcPath, dest, { maxZoom });
 	},
-	// Iceland ≈ 103,000 km². At MAX_ZOOM=17 with 8192-px blocks (~10 km wide in 3857
+	// Iceland ≈ 103,000 km². At MAX_ZOOM=17 with 8192-px blocks (~5 km wide in 3857
 	// units) we expect a few hundred land blocks. Tighten this once the first run
 	// gives a real count.
 	minFiles: 200,

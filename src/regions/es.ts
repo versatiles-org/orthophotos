@@ -95,7 +95,7 @@ export default defineTileRegion<EsItem, { srcPath: string }>({
 	convert: async ({ srcPath }, { dest, maxZoom }) => {
 		await runMosaicTile(srcPath, dest, { maxZoom });
 	},
-	// Spain ≈ 506k km². At MAX_ZOOM=17 with 4096-px blocks (each ~3.7 km wide at
+	// Spain ≈ 506k km². At MAX_ZOOM=17 with 4096-px blocks (each ~1.9 km wide at
 	// Spain's latitude) we expect a few thousand blocks after marine/no-coverage
 	// trimming. Tighten this once the first full run gives a concrete count.
 	minFiles: 3000,

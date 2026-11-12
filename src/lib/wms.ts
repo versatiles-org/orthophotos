@@ -10,8 +10,8 @@ import { runCommand } from './command.ts';
 import { createXmlParser } from './xml.ts';
 
 const WORLD_EXTENT = 20037508.342789244;
+/** Tile size of `versatiles mosaic tile`, which defines what a zoom level's pixel size is. */
 const TILE_PX = 512;
-const CANONICAL_TILE_PX = 256;
 
 export interface WmsBbox {
 	xmin: number;
@@ -151,7 +151,10 @@ export function bboxesOverlap(a: WmsBbox, b: WmsBbox): boolean {
 }
 
 /**
- * Compute a grid of blocks covering the given bbox at the specified zoom level.
+ * Compute a grid of blocks covering the given bbox at the specified zoom level. Each block is
+ * `blockPx` pixels at the pixel size of `zoom` with 512-pixel tiles (0.6 m in EPSG:3857 at zoom
+ * 17), so a block fetched at `blockPx` has exactly the resolution its tiles need. Until November
+ * 2026 this used 256-pixel tiles, so every WMS block had half the resolution of its top zoom.
  */
 export function computeWmsBlocks(
 	bbox: WmsBbox,
@@ -166,7 +169,7 @@ export function computeWmsBlocks(
 
 	const bw = blockPx / TILE_PX;
 	const bh = bw;
-	const res = (2 * WORLD_EXTENT) / (CANONICAL_TILE_PX * Math.pow(2, zoom));
+	const res = (2 * WORLD_EXTENT) / (TILE_PX * Math.pow(2, zoom));
 
 	const txmin = Math.floor((bbox.xmin + WORLD_EXTENT) / (TILE_PX * res));
 	const tymin = Math.floor((WORLD_EXTENT - bbox.ymax) / (TILE_PX * res));

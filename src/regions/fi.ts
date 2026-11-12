@@ -104,7 +104,7 @@ export default defineTileRegion<FiItem, { srcPath: string }>({
 			await writeFile(wmsXmlPath, buildTmsXml(), 'utf-8');
 		}
 		// 8192-px blocks = 32×32 source WMTS tiles per gdal_translate call.
-		// At MAX_ZOOM=17 this gives ~10 km blocks in EPSG:3857 units.
+		// At MAX_ZOOM=17 this gives ~5 km blocks in EPSG:3857 units.
 		const { items, blockPx } = computeWmsBlocks(BBOX, ctx.maxZoom, 8192, 8192);
 
 		// NUTS Finland polygon, projected to 3857 once so each block can be tested
@@ -154,7 +154,7 @@ export default defineTileRegion<FiItem, { srcPath: string }>({
 		// inside the block; treat black as nodata so the result is properly masked.
 		await runMosaicTile(srcPath, dest, { maxZoom, nodata: '0,0,0' });
 	},
-	// Finland ≈ 338k km². At MAX_ZOOM=17 with 8192-px blocks (~10 km wide in 3857
+	// Finland ≈ 338k km². At MAX_ZOOM=17 with 8192-px blocks (~5 km wide in 3857
 	// units) we expect a few thousand land blocks after polygon and empty-tile
 	// trimming. Tighten this once the first run gives a real count.
 	minFiles: 2000,

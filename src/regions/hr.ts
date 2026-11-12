@@ -90,7 +90,7 @@ export default defineTileRegion<HrItem, { srcPath: string }>({
 	convert: async ({ srcPath }, { dest, maxZoom }) => {
 		await runMosaicTile(srcPath, dest, { maxZoom });
 	},
-	// Croatia ≈ 56,600 km². At MAX_ZOOM=17 with 8192-px blocks (~10 km wide in 3857
+	// Croatia ≈ 56,600 km². At MAX_ZOOM=17 with 8192-px blocks (~5 km wide in 3857
 	// units) we expect a few hundred land blocks. Tighten this once the first run
 	// gives a real count.
 	minFiles: 200,

@@ -46,6 +46,15 @@ describe('computeWmsBlocks', () => {
 		expect(result4.blockPx).toBe(512);
 	});
 
+	test('blocks have the pixel size of the zoom level with 512-pixel tiles', () => {
+		const bbox: WmsBbox = { xmin: 1000000, ymin: 6000000, xmax: 1100000, ymax: 6100000 };
+		const { items, blockPx } = computeWmsBlocks(bbox, 17, 4096, 4096);
+		const pixelSize = (items[0].x1 - items[0].x0) / blockPx;
+		// 40,075,016.686 m / (512 px × 2^17) = 0.597 m: the resolution of versatiles' zoom 17.
+		expect(pixelSize).toBeCloseTo(40075016.686 / (512 * 2 ** 17), 6);
+		expect(pixelSize).toBeCloseTo(0.597, 3);
+	});
+
 	test('throws if maxWidth/maxHeight too small', () => {
 		const bbox: WmsBbox = { xmin: 0, ymin: 0, xmax: 1000000, ymax: 1000000 };
 

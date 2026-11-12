@@ -51,6 +51,9 @@ export default defineTileRegion({
 		resolution: 150,
 		checked: '2026-11-12',
 		releaseDate: '2025-10-05',
+		// 1.5 m source pixels: zoom 16 (about 0.8 m on the ground at 46° N) keeps all their detail; zoom 17
+		// would only enlarge them further, with four times the tiles.
+		maxZoom: 16,
 	},
 	init: async (ctx) => {
 		const atomPath = join(ctx.tempDir, 'index.xml');

@@ -6,4 +6,5 @@
 
 export { expandRegionPattern, getHelpText, parseArgs } from './args.ts';
 export { checkRequiredCommands, remoteFileExists, runScpUpload, runSshCommand } from './commands.ts';
+export { runRegions, type RegionFailure } from './regions.ts';
 export { formatUnknownRegionError, runTask, type TaskContext } from './tasks.ts';

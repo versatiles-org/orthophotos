@@ -23,6 +23,7 @@ import {
 	getHelpText,
 	parseArgs,
 	remoteFileExists,
+	runRegions,
 	runSshCommand,
 	runTask,
 	type TaskContext,
@@ -72,11 +73,26 @@ async function main(): Promise<void> {
 	}
 
 	const ssh = getConfig().ssh;
+	const requestedTasks = args.tasks;
 
-	for (const name of names) {
+	// In a batch, a failing region is reported and skipped (including its remaining tasks,
+	// so a failed fetch is never followed by merge or delete), and the batch goes on.
+	const failures = await runRegions(names, runRegion, (name, error) => {
+		console.error(`\nError in region ${name}: ${formatErrorChain(error)}`);
+		console.error('Continuing with the next region.');
+	});
+
+	if (failures.length > 0) {
+		console.error(`\n${failures.length} of ${names.length} regions failed: ${failures.map((f) => f.name).join(', ')}`);
+		process.exit(1);
+	}
+
+	console.log('\nDone.');
+
+	async function runRegion(name: string): Promise<void> {
 		if (names.length > 1) console.log(`\n=== Region: ${name} ===`);
 
-		let tasks = [...args.tasks];
+		let tasks = [...requestedTasks];
 
 		// If fetch or merge is requested and the final file already exists on
 		// the remote, skip those tasks — nothing to scrape or re-upload.
@@ -88,7 +104,7 @@ async function main(): Promise<void> {
 			}
 		}
 
-		if (tasks.length === 0) continue;
+		if (tasks.length === 0) return;
 
 		const dataDir = resolve(getConfig().dirData, name);
 		const tempDir = resolve(getConfig().dirTemp, name);
@@ -102,8 +118,6 @@ async function main(): Promise<void> {
 			await runTask(taskNum, ctx);
 		}
 	}
-
-	console.log('\nDone.');
 }
 
 // Run main

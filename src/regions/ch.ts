@@ -65,8 +65,8 @@ export default defineTileRegion({
 		if (result === 'invalid') return 'invalid';
 		return { src };
 	},
-	convert: async ({ src }, { dest }) => {
-		await runMosaicTile(src, dest);
+	convert: async ({ src }, { dest, maxZoom }) => {
+		await runMosaicTile(src, dest, { maxZoom });
 	},
 	minFiles: 42600,
 });

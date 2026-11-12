@@ -100,8 +100,8 @@ export default defineTileRegion({
 		if (result === 'invalid') return 'invalid';
 		return { tifPath };
 	},
-	convert: async ({ tifPath }, { dest }) => {
-		await runMosaicTile(tifPath, dest);
+	convert: async ({ tifPath }, { dest, maxZoom }) => {
+		await runMosaicTile(tifPath, dest, { maxZoom });
 	},
 	minFiles: 2220,
 });

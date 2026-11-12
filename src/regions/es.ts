@@ -6,7 +6,6 @@ import {
 	extractWmsBlock,
 	generateWmsXml,
 	isValidRaster,
-	MAX_ZOOM,
 	runMosaicTile,
 	type WmsBbox,
 	type WmsBlockItem,
@@ -69,7 +68,7 @@ export default defineTileRegion<EsItem, { srcPath: string }>({
 			await generateWmsXml(WMS_URL, LAYER, wmsXmlPath);
 		}
 
-		const { items, blockPx } = computeWmsBlocks(BBOX, MAX_ZOOM, 4096, 4096);
+		const { items, blockPx } = computeWmsBlocks(BBOX, ctx.maxZoom, 4096, 4096);
 		console.log(`  ${items.length} blocks at ${blockPx}x${blockPx}px`);
 
 		return items.map((item) => ({ ...item, wmsXmlPath, blockPx }));
@@ -93,8 +92,8 @@ export default defineTileRegion<EsItem, { srcPath: string }>({
 		}
 		return { srcPath: tifPath };
 	},
-	convert: async ({ srcPath }, { dest }) => {
-		await runMosaicTile(srcPath, dest);
+	convert: async ({ srcPath }, { dest, maxZoom }) => {
+		await runMosaicTile(srcPath, dest, { maxZoom });
 	},
 	// Spain ≈ 506k km². At MAX_ZOOM=17 with 4096-px blocks (each ~3.7 km wide at
 	// Spain's latitude) we expect a few thousand blocks after marine/no-coverage

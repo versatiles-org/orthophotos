@@ -30,8 +30,8 @@ export default defineTileRegion({
         if (result === 'invalid') return 'invalid';
         return { tifPath };
     },
-    convert: async ({ tifPath }, { dest }) => {
-        await runMosaicTile(tifPath, dest);
+    convert: async ({ tifPath }, { dest, maxZoom }) => {
+        await runMosaicTile(tifPath, dest, { maxZoom });
     },
     minFiles: 50,
 });
@@ -40,12 +40,12 @@ export default defineTileRegion({
 **Interface:**
 
 - `name` — region ID (e.g. `'de/thueringen'`)
-- `meta` — region metadata (status, notes, license, creator, date)
-- `init(ctx)` — returns `T[]` of items to process. Each item must have an `id: string`. Receives `StepContext` for access to `tempDir`/`dataDir`. Handle all index fetching and caching here.
+- `meta` — region metadata (status, notes, license, creator, date, optional `maxZoom`)
+- `init(ctx)` — returns `T[]` of items to process. Each item must have an `id: string`. Receives `TileInitContext`: `tempDir`/`dataDir`, and `maxZoom` for WMS block sizing (`computeWmsBlocks(bbox, ctx.maxZoom, …)`). Handle all index fetching and caching here.
 - `downloadLimit?` — concurrency for `download`. Number, or `{ concurrency, memoryGB }`. Default: 4.
 - `download(item, tileCtx)` — per-item download. Return data for `convert`, `'empty'` for missing tiles, `'invalid'` for bad downloads, or `void` for single-stage.
 - `convertLimit?` — concurrency for `convert`. Same shape as `downloadLimit`. Use `{ memoryGB: N }` when each convert spawns parallel GDAL readers and you want to cap by host RAM.
-- `convert(data, tileCtx)` — receives non-empty download result. Produce the final `.versatiles` file at `tileCtx.dest`.
+- `convert(data, tileCtx)` — receives non-empty download result. Produce the final `.versatiles` file at `tileCtx.dest`, passing `tileCtx.maxZoom` to `runMosaicTile`.
 - `minFiles` — minimum expected `*.versatiles` output files
 
 **`TileContext`** passed to download/convert callbacks:
@@ -102,9 +102,11 @@ For "the response decoded fine but contains no actual data" (e.g. an all-black W
 **Transparent borders:** Orthophoto tiles must not have black or white borders around the imagery. Borders cause visible rectangles when tiles are stacked. To ensure clean transparency:
 
 - **Alpha channel:** If the source has an alpha channel (e.g., WMS with `Transparent=TRUE`), use it directly — `versatiles mosaic tile` respects alpha.
-- **Nodata flag:** Use `runMosaicTile(input, output, { nodata: '0,0,0' })` to treat black as transparent, or `{ nodata: '255,255,255' }` for white. Multiple values can be joined with `;` (e.g., `{ nodata: '0,0,0;255,255,255' }`). Note: nodata only works reliably on lossless-compressed source data (e.g., DEFLATE, LZW, uncompressed). JPEG-compressed sources may have intermediate values at edges that don't match the exact nodata value.
+- **Nodata flag:** Use `runMosaicTile(input, output, { maxZoom, nodata: '0,0,0' })` to treat black as transparent, or `{ nodata: '255,255,255' }` for white. Multiple values can be joined with `;` (e.g., `{ nodata: '0,0,0;255,255,255' }`). Note: nodata only works reliably on lossless-compressed source data (e.g., DEFLATE, LZW, uncompressed). JPEG-compressed sources may have intermediate values at edges that don't match the exact nodata value.
 - **GeoJSON masks:** Set `mask: true` (NUTS border) or `mask: 'file.geojson.gz'` in region metadata to apply `raster_mask` clipping at serving time. This is a final safety net but doesn't fix the source tiles.
 - Always inspect the edges of a sample tile with `gdalinfo` + pixel value checks before assuming the border color.
+
+**Top zoom:** Every region is tiled up to `MAX_ZOOM` (17) unless its metadata sets `maxZoom`. With 512-px tiles, a zoom-17 pixel is 0.60 m in Web Mercator, which is about 0.42 m on the ground at 45° N and 0.30 m at 60° N. Set `maxZoom: 16` for sources coarser than that, so the top zoom isn't upsampled. Set 18 or more only where the source is fine enough and the storage is worth it: each level holds four times the tiles of the one below. Always pass `maxZoom` through to `runMosaicTile` rather than leaving it to versatiles, which would round the source resolution up.
 
 **Temp file cleanup:** Register every per-item temp path with `tileCtx.tempFile(...)`. The framework deletes them after the item finishes, regardless of outcome (success, error, or `'empty'`/`'invalid'`):
 
@@ -115,8 +117,8 @@ download: async ({ url, id }, ctx) => {
     if (result === 'invalid') return 'invalid';
     return { tifPath };
 },
-convert: async ({ tifPath }, { dest }) => {
-    await runMosaicTile(tifPath, dest);  // no try/finally needed
+convert: async ({ tifPath }, { dest, maxZoom }) => {
+    await runMosaicTile(tifPath, dest, { maxZoom });  // no try/finally needed
 },
 ```
 

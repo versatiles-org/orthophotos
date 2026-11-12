@@ -7,7 +7,6 @@ import {
 	extractWmsBlock,
 	generateWmsXml,
 	isValidRaster,
-	MAX_ZOOM,
 	parseWmsCapabilities,
 	runMosaicTile,
 	type WmsBlockItem,
@@ -66,7 +65,7 @@ export default defineTileRegion<CyItem, { srcPath: string }>({
 		}
 
 		const { bbox, maxWidth, maxHeight } = await parseWmsCapabilities(capsPath, LAYER);
-		const { items, blockPx } = computeWmsBlocks(bbox, MAX_ZOOM, maxWidth, maxHeight);
+		const { items, blockPx } = computeWmsBlocks(bbox, ctx.maxZoom, maxWidth, maxHeight);
 		console.log(`  ${items.length} blocks at ${blockPx}x${blockPx}px`);
 
 		return items.map((item) => ({ ...item, wmsXmlPath, blockPx }));
@@ -90,13 +89,13 @@ export default defineTileRegion<CyItem, { srcPath: string }>({
 		}
 		return { srcPath: tifPath };
 	},
-	convert: async ({ srcPath }, { dest }) => {
+	convert: async ({ srcPath }, { dest, maxZoom }) => {
 		// The ArcGIS WMS fills transparent pixels with pure white (255,255,255) under
 		// alpha=0. The alpha channel keeps them invisible at native zoom, but overview
 		// downsampling averages RGB without alpha weighting, bleeding white into coast
 		// and block edges as thin rectangular halos. Source is lossless PNG, so the
 		// white is exact — flag it as nodata so it is excluded from the downsample.
-		await runMosaicTile(srcPath, dest, { nodata: '255,255,255' });
+		await runMosaicTile(srcPath, dest, { maxZoom, nodata: '255,255,255' });
 	},
 	// Cyprus is small (~9,250 km²); even at MAX_ZOOM=17 with 8192-px blocks we expect
 	// only a few dozen blocks. Tighten this once the first run gives a real count.

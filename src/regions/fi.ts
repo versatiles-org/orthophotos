@@ -10,7 +10,6 @@ import {
 	isRasterAllZero,
 	isValidRaster,
 	loadKnownRegions,
-	MAX_ZOOM,
 	projectGeometry3857,
 	runMosaicTile,
 	type WmsBbox,
@@ -106,7 +105,7 @@ export default defineTileRegion<FiItem, { srcPath: string }>({
 		}
 		// 8192-px blocks = 32×32 source WMTS tiles per gdal_translate call.
 		// At MAX_ZOOM=17 this gives ~10 km blocks in EPSG:3857 units.
-		const { items, blockPx } = computeWmsBlocks(BBOX, MAX_ZOOM, 8192, 8192);
+		const { items, blockPx } = computeWmsBlocks(BBOX, ctx.maxZoom, 8192, 8192);
 
 		// NUTS Finland polygon, projected to 3857 once so each block can be tested
 		// in linear time without re-projecting per check.
@@ -150,10 +149,10 @@ export default defineTileRegion<FiItem, { srcPath: string }>({
 		}
 		return { srcPath: tifPath };
 	},
-	convert: async ({ srcPath }, { dest }) => {
+	convert: async ({ srcPath }, { dest, maxZoom }) => {
 		// Edge tiles can still contain partial black where the WMTS coverage ends
 		// inside the block; treat black as nodata so the result is properly masked.
-		await runMosaicTile(srcPath, dest, { nodata: '0,0,0' });
+		await runMosaicTile(srcPath, dest, { maxZoom, nodata: '0,0,0' });
 	},
 	// Finland ≈ 338k km². At MAX_ZOOM=17 with 8192-px blocks (~10 km wide in 3857
 	// units) we expect a few thousand land blocks after polygon and empty-tile

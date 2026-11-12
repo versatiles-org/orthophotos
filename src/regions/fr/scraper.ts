@@ -314,7 +314,7 @@ export function defineFrSubRegion(opts: FrSubRegionOptions): RegionPipeline {
 			return { extractDir };
 		},
 		convertLimit: { concurrency: 1 },
-		convert: async ({ extractDir }, { dest, tempDir }) => {
+		convert: async ({ extractDir }, { dest, tempDir, maxZoom }) => {
 			const tilesDir = join(tempDir, `tiles`);
 			try {
 				const files = await readdir(extractDir);
@@ -343,7 +343,7 @@ export function defineFrSubRegion(opts: FrSubRegionOptions): RegionPipeline {
 					})
 					.forEach({ memoryGB: 20 }, async ({ tifPath, tilePath }) => {
 						try {
-							await runMosaicTile(tifPath, tilePath);
+							await runMosaicTile(tifPath, tilePath, { maxZoom });
 							versatilesFiles.push(tilePath);
 							return 'converted';
 						} finally {

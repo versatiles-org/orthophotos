@@ -7,7 +7,6 @@ import {
 	extractWmsBlock,
 	generateWmsXml,
 	isValidRaster,
-	MAX_ZOOM,
 	parseWmsCapabilities,
 	runMosaicTile,
 	withRetry,
@@ -54,7 +53,7 @@ export default defineTileRegion({
 		}
 
 		const { bbox, maxWidth, maxHeight } = await parseWmsCapabilities(capsPath, LAYER);
-		const { items, blockPx } = computeWmsBlocks(bbox, MAX_ZOOM, maxWidth, maxHeight);
+		const { items, blockPx } = computeWmsBlocks(bbox, ctx.maxZoom, maxWidth, maxHeight);
 		console.log(`  ${items.length} blocks at ${blockPx}x${blockPx}px`);
 
 		return items.map((item) => ({ ...item, wmsXmlPath, blockPx }));
@@ -79,8 +78,8 @@ export default defineTileRegion({
 		// No mask color — pass TIF directly
 		return { srcPath: tifPath };
 	},
-	convert: async ({ srcPath }, { dest }) => {
-		await runMosaicTile(srcPath, dest);
+	convert: async ({ srcPath }, { dest, maxZoom }) => {
+		await runMosaicTile(srcPath, dest, { maxZoom });
 	},
 	minFiles: 123456,
 });

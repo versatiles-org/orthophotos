@@ -126,8 +126,8 @@ export default defineTileRegion<SkItem, { tifPath: string }>({
 		return { tifPath };
 	},
 	convertLimit: { memoryGB: 20 },
-	convert: async ({ tifPath }, { dest }) => {
-		await runMosaicTile(tifPath, dest, { crs: '3046', nodata: '0,0,0;255,255,255' });
+	convert: async ({ tifPath }, { dest, maxZoom }) => {
+		await runMosaicTile(tifPath, dest, { maxZoom, crs: '3046', nodata: '0,0,0;255,255,255' });
 	},
 	minFiles: 40,
 });

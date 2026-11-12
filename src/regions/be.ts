@@ -7,7 +7,6 @@ import {
 	extractWmsBlock,
 	generateWmsXml,
 	isValidRaster,
-	MAX_ZOOM,
 	parseWmsCapabilities,
 	runMosaicTile,
 	type WmsBlockItem,
@@ -56,7 +55,7 @@ export default defineTileRegion<BeItem, { srcPath: string }>({
 
 		const { bbox } = await parseWmsCapabilities(capsPath, LAYER);
 		// Server MaxWidth/MaxHeight is 4000 (from WMS 1.3.0 caps) but not advertised in 1.1.1
-		const { items, blockPx } = computeWmsBlocks(bbox, MAX_ZOOM, 4000, 4000);
+		const { items, blockPx } = computeWmsBlocks(bbox, ctx.maxZoom, 4000, 4000);
 		console.log(`  ${items.length} blocks at ${blockPx}x${blockPx}px`);
 
 		return items.map((item) => ({ ...item, wmsXmlPath, blockPx }));
@@ -90,8 +89,8 @@ export default defineTileRegion<BeItem, { srcPath: string }>({
 
 		return { srcPath: tifPath };
 	},
-	convert: async ({ srcPath }, { dest }) => {
-		await runMosaicTile(srcPath, dest);
+	convert: async ({ srcPath }, { dest, maxZoom }) => {
+		await runMosaicTile(srcPath, dest, { maxZoom });
 	},
 	minFiles: 500,
 });

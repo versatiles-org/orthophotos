@@ -21,7 +21,7 @@ import { createReadStream, existsSync, mkdirSync, readdirSync, writeFileSync } f
 import { createInterface } from 'node:readline';
 import { join } from 'node:path';
 import { shuffle } from './array.ts';
-import type { RegionMetadata, RegionPipeline, StepContext } from './framework.ts';
+import { getMaxZoom, type RegionMetadata, type RegionPipeline, type StepContext } from './framework.ts';
 import { safeRm } from './fs.ts';
 import { type ConcurrencyLimit, pipeline, resolveConcurrency, skip } from './pipeline.ts';
 import { ErrorBucket, expectMinFiles } from './validators.ts';
@@ -41,6 +41,8 @@ export interface TileContext {
 	tempDir: string;
 	/** Directory where output tiles live */
 	tilesDir: string;
+	/** Highest zoom level to tile at, from `getMaxZoom(meta)`. Pass it to `runMosaicTile`. */
+	maxZoom: number;
 	/** Collector for invalid download errors */
 	errors: ErrorBucket;
 	/**
@@ -51,13 +53,19 @@ export interface TileContext {
 	tempFile<P extends string>(path: P): P;
 }
 
+/** Context passed to init */
+export interface TileInitContext extends StepContext {
+	/** Highest zoom level to tile at, from `getMaxZoom(meta)`. WMS regions size their blocks for it. */
+	maxZoom: number;
+}
+
 export interface TileRegionOptions<T extends TileItem, D> {
 	/** Region identifier (e.g. 'de/thueringen') */
 	name: string;
 	/** Region metadata */
 	meta: RegionMetadata;
 	/** Generate the items to process */
-	init: (ctx: StepContext) => T[] | Promise<T[]>;
+	init: (ctx: TileInitContext) => T[] | Promise<T[]>;
 	/** Download concurrency (default: 4) */
 	/** Download concurrency limit. Default: 4. */
 	downloadLimit?: ConcurrencyLimit;
@@ -92,7 +100,7 @@ export function defineTileRegion<T extends TileItem, D>(options: TileRegionOptio
 				console.log('  Loading cached item list...');
 				items = await readNdjson<T>(itemsPath);
 			} else {
-				items = await options.init(ctx);
+				items = await options.init({ ...ctx, maxZoom: getMaxZoom(options.meta) });
 				mkdirSync(ctx.dataDir, { recursive: true });
 				writeFileSync(itemsPath, items.map((item) => JSON.stringify(item)).join('\n') + '\n');
 				console.log(`  Saved ${items.length} items to items.ndjson`);
@@ -128,6 +136,7 @@ async function processTiles<T extends TileItem, D>(
 	const skipDestFor = (item: T): string => join(tilesDir, `${item.id}.skip`);
 
 	const isSkipped = (item: T): boolean => existsSync(destFor(item)) || existsSync(skipDestFor(item));
+	const maxZoom = getMaxZoom(options.meta);
 
 	const makeCtx = (item: T): { tileCtx: TileContext; runCleanup: () => void } => {
 		const cleanupPaths: string[] = [];
@@ -136,6 +145,7 @@ async function processTiles<T extends TileItem, D>(
 			skipDest: skipDestFor(item),
 			tempDir: ctx.tempDir,
 			tilesDir,
+			maxZoom,
 			errors,
 			tempFile<P extends string>(path: P): P {
 				cleanupPaths.push(path);

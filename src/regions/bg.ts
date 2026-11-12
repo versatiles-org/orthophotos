@@ -9,7 +9,6 @@ import {
 	extractWmsBlock,
 	generateWmsXml,
 	isValidRaster,
-	MAX_ZOOM,
 	parseWmsCapabilities,
 	runMosaicTile,
 	type WmsBbox,
@@ -98,7 +97,7 @@ export default defineTileRegion<BgItem, { id: string; tifPaths: string[] }>({
 		if (!unionBbox) throw new Error('bg: no year layers resolved');
 
 		// MaxWidth/MaxHeight default to 8192 when the server doesn't advertise.
-		const { items, blockPx } = computeWmsBlocks(unionBbox, MAX_ZOOM, 8192, 8192);
+		const { items, blockPx } = computeWmsBlocks(unionBbox, ctx.maxZoom, 8192, 8192);
 
 		const bgItems: BgItem[] = [];
 		for (const item of items) {
@@ -159,12 +158,12 @@ export default defineTileRegion<BgItem, { id: string; tifPaths: string[] }>({
 	},
 	convert: async ({ id, tifPaths }, ctx) => {
 		if (tifPaths.length === 1) {
-			await runMosaicTile(tifPaths[0], ctx.dest);
+			await runMosaicTile(tifPaths[0], ctx.dest, { maxZoom: ctx.maxZoom });
 			return;
 		}
 		const compositePath = ctx.tempFile(join(ctx.tempDir, `${id}_composite.tif`));
 		await compositeRastersWithAlpha(tifPaths, compositePath);
-		await runMosaicTile(compositePath, ctx.dest);
+		await runMosaicTile(compositePath, ctx.dest, { maxZoom: ctx.maxZoom });
 	},
 	minFiles: 500,
 });

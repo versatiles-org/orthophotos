@@ -107,7 +107,7 @@ export default defineTileRegion<EeItem, EeDownload>({
 		if (!tifFile) throw new Error(`No .tif found in ZIP for sheet ${data.nr}`);
 		const tifPath = join(extractDir, tifFile);
 
-		await runMosaicTile(tifPath, ctx.dest, { crs: '3301' });
+		await runMosaicTile(tifPath, ctx.dest, { maxZoom: ctx.maxZoom, crs: '3301' });
 	},
 	minFiles: 2000,
 });

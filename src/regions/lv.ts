@@ -55,8 +55,8 @@ export default defineTileRegion({
 		await withRetry(() => downloadFile(tfwUrl, tfwPath), { maxAttempts: 3 });
 		return { src, tfwPath };
 	},
-	convert: async ({ src }, { dest }) => {
-		await runMosaicTile(src, dest);
+	convert: async ({ src }, { dest, maxZoom }) => {
+		await runMosaicTile(src, dest, { maxZoom });
 	},
 	minFiles: 123456,
 });

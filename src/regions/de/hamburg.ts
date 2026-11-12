@@ -73,7 +73,7 @@ export default defineTileRegion({
 		const { fileCount } = await extractZipAndBuildVrt(zipPath, extractDir, vrtPath, { recursive: true });
 		if (fileCount === 0) throw new Error(`No .tif files found in ${extractDir}`);
 
-		await runMosaicTile(vrtPath, ctx.dest);
+		await runMosaicTile(vrtPath, ctx.dest, { maxZoom: ctx.maxZoom });
 	},
 	minFiles: 7,
 });

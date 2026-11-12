@@ -80,10 +80,10 @@ export default defineTileRegion({
 
 		return { jp2Path };
 	},
-	convert: async ({ jp2Path }, { dest }) => {
+	convert: async ({ jp2Path }, { dest, maxZoom }) => {
 		// JP2 has no embedded CRS; coordinates come from .j2w worldfile in EPSG:3045.
 		// White borders (255,255,255) are treated as transparent via --nodata.
-		await runMosaicTile(jp2Path, dest, { crs: '3045', nodata: '255,255,255' });
+		await runMosaicTile(jp2Path, dest, { maxZoom, crs: '3045', nodata: '255,255,255' });
 	},
 	minFiles: 20000,
 });

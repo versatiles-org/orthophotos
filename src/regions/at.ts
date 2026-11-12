@@ -132,7 +132,7 @@ export default defineTileRegion({
 	// runMosaicTile builds a large random-access cache; one per ~8 GB of host RAM is safe.
 	convertLimit: { memoryGB: 8 },
 	convert: async ({ src }, ctx) => {
-		await runMosaicTile(src, ctx.dest, { cacheDirectory: ctx.tempDir });
+		await runMosaicTile(src, ctx.dest, { maxZoom: ctx.maxZoom, cacheDirectory: ctx.tempDir });
 	},
 	minFiles: 32,
 });

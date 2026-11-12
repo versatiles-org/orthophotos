@@ -7,7 +7,6 @@ import {
 	extractWmsBlock,
 	generateWmsXml,
 	isValidRaster,
-	MAX_ZOOM,
 	parseWmsCapabilities,
 	runMosaicTile,
 	type WmsBlockItem,
@@ -34,7 +33,7 @@ export default defineTileRegion<IsItem, { srcPath: string }>({
 			'Blocked because the layer is not national coverage: a full-extent render of `grunnkort-loftmynd` shows orthophoto only over the NE quarter plus two small patches in the SW (Reykjavík, most of the central highlands, the W and S coasts have no data). The same partial extent is mirrored on the geoserver endpoint `https://gis.lmi.is/geoserver/wms` (layer `loftmyndir:grunnkort_loftmynd_nidurhal`); a national mosaic simply does not exist in either endpoint today.',
 			'The geoserver also advertises wider-sounding layers (`loftmyndir:loftmyndir_natt_stakar_group`, `loftmyndir:loftmyndir_hnitsettar`) but `GetMap` against them returns a Java NullPointerException — the layers are listed but not actually served.',
 			'Re-evaluate when Náttúrufræðistofnun extends `grunnkort-loftmynd` to national coverage, or publishes a separate full-Iceland orthophoto layer. The init/download/convert code below is kept intact so the partial coverage can be exercised again the moment that happens.',
-			'Mapcache server caps GetMap at 4096 px per dimension — if reactivated, init should pass `computeWmsBlocks(bbox, MAX_ZOOM, 4096, 4096)` instead of relying on the (unadvertised) 8192 default.',
+			'Mapcache server caps GetMap at 4096 px per dimension — if reactivated, init should pass `computeWmsBlocks(bbox, ctx.maxZoom, 4096, 4096)` instead of relying on the (unadvertised) 8192 default.',
 		],
 		entries: ['result'],
 		license: {
@@ -63,7 +62,7 @@ export default defineTileRegion<IsItem, { srcPath: string }>({
 		}
 
 		const { bbox, maxWidth, maxHeight } = await parseWmsCapabilities(capsPath, LAYER);
-		const { items, blockPx } = computeWmsBlocks(bbox, MAX_ZOOM, maxWidth, maxHeight);
+		const { items, blockPx } = computeWmsBlocks(bbox, ctx.maxZoom, maxWidth, maxHeight);
 		console.log(`  ${items.length} blocks at ${blockPx}x${blockPx}px`);
 
 		return items.map((item) => ({ ...item, wmsXmlPath, blockPx }));
@@ -87,8 +86,8 @@ export default defineTileRegion<IsItem, { srcPath: string }>({
 		}
 		return { srcPath: tifPath };
 	},
-	convert: async ({ srcPath }, { dest }) => {
-		await runMosaicTile(srcPath, dest);
+	convert: async ({ srcPath }, { dest, maxZoom }) => {
+		await runMosaicTile(srcPath, dest, { maxZoom });
 	},
 	// Iceland ≈ 103,000 km². At MAX_ZOOM=17 with 8192-px blocks (~10 km wide in 3857
 	// units) we expect a few hundred land blocks. Tighten this once the first run

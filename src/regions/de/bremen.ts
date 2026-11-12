@@ -88,7 +88,7 @@ export default defineTileRegion({
 		await pipeline(imageFiles, { progress: { labels: ['converted'] } }).forEach(innerConcurrency, async (imgPath) => {
 			const tileName = basename(imgPath).replace(/\.[^.]+$/, '.versatiles');
 			const tilePath = join(tilesDir, tileName);
-			await runMosaicTile(imgPath, tilePath, { crs: '25832', nodata: '0,0,0' });
+			await runMosaicTile(imgPath, tilePath, { maxZoom: ctx.maxZoom, crs: '25832', nodata: '0,0,0' });
 			versatilesFiles.push(tilePath);
 			return 'converted';
 		});

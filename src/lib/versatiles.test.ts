@@ -40,14 +40,14 @@ test('runMosaicTile - calls versatiles with correct args', async () => {
 		return mockResult('info: finished mosaic tile');
 	});
 
-	await runMosaicTile('/input.tif', output);
+	await runMosaicTile('/input.tif', output, { maxZoom: 18 });
 
 	expect(mockRunCommand).toHaveBeenCalledWith('versatiles', expect.arrayContaining(['mosaic', 'tile', '/input.tif']), {
 		quiet: true,
 	});
-	const call = mockRunCommand.mock.calls[0];
-	// `mosaic tile` always caps at MAX_ZOOM so output pyramids stay consistent across regions.
-	expect(call[1]).toContain('--max-zoom');
+	const args: string[] = mockRunCommand.mock.calls[0][1];
+	// The region's zoom is always passed, so versatiles never picks one from the source resolution.
+	expect(args[args.indexOf('--max-zoom') + 1]).toBe('18');
 	expect(existsSync(output)).toBe(true);
 });
 
@@ -62,6 +62,7 @@ test('runMosaicTile - passes all options', async () => {
 	});
 
 	await runMosaicTile('/input.tif', output, {
+		maxZoom: 17,
 		bands: '1,2,3',
 		nodata: '255,255,255',
 		crs: '3045',
@@ -91,7 +92,7 @@ test('runMosaicTile - cleans up tmp file on error', async () => {
 
 	mockRunCommand.mockRejectedValue(new Error('versatiles failed'));
 
-	await expect(runMosaicTile('/input.tif', output)).rejects.toThrow('runMosaicTile failed');
+	await expect(runMosaicTile('/input.tif', output, { maxZoom: 17 })).rejects.toThrow('runMosaicTile failed');
 	expect(existsSync(join(testDir, '.tmp.out.versatiles'))).toBe(false);
 });
 

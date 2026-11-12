@@ -23,10 +23,16 @@ export {
 } from './command.ts';
 export { MAX_ZOOM, QUALITY } from './constants.ts';
 export { sleep } from './delay.ts';
-export type { RegionMetadata, RegionPipeline, RegionStatus, StepContext } from './framework.ts';
+export {
+	getMaxZoom,
+	type RegionMetadata,
+	type RegionPipeline,
+	type RegionStatus,
+	type StepContext,
+} from './framework.ts';
 export { extractZipFile, safeRm } from './fs.ts';
 export { pipeline, skip, type Skip } from './pipeline.ts';
-export { defineTileRegion, type TileContext, type TileItem } from './process_tiles.ts';
+export { defineTileRegion, type TileContext, type TileInitContext, type TileItem } from './process_tiles.ts';
 export { createProgress, type Progress, type ProgressOptions } from './progress.ts';
 export { fetchWithInterval, type FetchWithIntervalOptions } from './rate-limit.ts';
 export { listRemoteVersatilesFiles, type RemoteFile } from './remote-listing.ts';

@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { MAX_ZOOM } from './constants.ts';
 import type { StepContext } from './framework.ts';
 import { defineTileRegion } from './process_tiles.ts';
 
@@ -72,6 +73,47 @@ describe('defineTileRegion', () => {
 		const tilesDir = join(ctx.dataDir, 'tiles');
 		expect(readFileSync(join(tilesDir, 'x.versatiles'), 'utf-8')).toBe('X');
 		expect(readFileSync(join(tilesDir, 'y.versatiles'), 'utf-8')).toBe('Y');
+	});
+
+	it('passes the default MAX_ZOOM to init, download and convert', async () => {
+		const seen: number[] = [];
+		await runTileRegion(ctx, {
+			name: 'test/default-zoom',
+			meta: baseMeta,
+			init: ({ maxZoom }) => {
+				seen.push(maxZoom);
+				return [{ id: 'a' }];
+			},
+			download: async (_item, { maxZoom }) => {
+				seen.push(maxZoom);
+				return {};
+			},
+			convert: async (_data, { dest, maxZoom }) => {
+				seen.push(maxZoom);
+				writeFileSync(dest, '');
+			},
+			minFiles: 0,
+		});
+		expect(seen).toEqual([MAX_ZOOM, MAX_ZOOM, MAX_ZOOM]);
+	});
+
+	it("passes the region's own maxZoom", async () => {
+		const seen: number[] = [];
+		await runTileRegion(ctx, {
+			name: 'test/own-zoom',
+			meta: { ...baseMeta, maxZoom: 19 },
+			init: ({ maxZoom }) => {
+				seen.push(maxZoom);
+				return [{ id: 'a' }];
+			},
+			download: async () => ({}),
+			convert: async (_data, { dest, maxZoom }) => {
+				seen.push(maxZoom);
+				writeFileSync(dest, '');
+			},
+			minFiles: 0,
+		});
+		expect(seen).toEqual([19, 19]);
 	});
 
 	it('skips existing dest files', async () => {

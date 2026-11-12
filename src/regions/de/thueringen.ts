@@ -86,8 +86,8 @@ export default defineTileRegion({
 
 		return { srcTif: join(extractDir, tifFile) };
 	},
-	convert: async ({ srcTif }, { dest }) => {
-		await runMosaicTile(srcTif, dest);
+	convert: async ({ srcTif }, { dest, maxZoom }) => {
+		await runMosaicTile(srcTif, dest, { maxZoom });
 	},
 	minFiles: 35000,
 });

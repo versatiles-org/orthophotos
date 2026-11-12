@@ -1,5 +1,6 @@
 import { expect, test } from 'vitest';
-import type { RegionMetadata, RegionPipeline, StepContext } from './framework.ts';
+import { MAX_ZOOM } from './constants.ts';
+import { getMaxZoom, type RegionMetadata, type RegionPipeline, type StepContext } from './framework.ts';
 
 const dummyCtx: StepContext = {
 	name: 'test/region',
@@ -60,4 +61,19 @@ test('RegionPipeline - run receives context', async () => {
 	};
 	await pipeline.run!(dummyCtx);
 	expect(receivedCtx).toBe(dummyCtx);
+});
+
+test('getMaxZoom - defaults to MAX_ZOOM', () => {
+	expect(getMaxZoom(dummyMeta)).toBe(MAX_ZOOM);
+});
+
+test("getMaxZoom - uses the region's own value", () => {
+	expect(getMaxZoom({ ...dummyMeta, maxZoom: 16 })).toBe(16);
+	expect(getMaxZoom({ ...dummyMeta, maxZoom: 19 })).toBe(19);
+});
+
+test('getMaxZoom - rejects values that are not a zoom level', () => {
+	expect(() => getMaxZoom({ ...dummyMeta, maxZoom: 17.5 })).toThrow('maxZoom');
+	expect(() => getMaxZoom({ ...dummyMeta, maxZoom: -1 })).toThrow('maxZoom');
+	expect(() => getMaxZoom({ ...dummyMeta, maxZoom: 23 })).toThrow('maxZoom');
 });

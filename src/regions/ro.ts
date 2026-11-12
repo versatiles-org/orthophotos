@@ -73,7 +73,7 @@ export default defineTileRegion({
 			ctx.errors.add(`${id}.zip (no .tif inside)`);
 			return;
 		}
-		await runMosaicTile(vrtPath, ctx.dest);
+		await runMosaicTile(vrtPath, ctx.dest, { maxZoom: ctx.maxZoom });
 	},
 	minFiles: 123456,
 });

@@ -70,7 +70,7 @@ export default defineTileRegion({
 			return;
 		}
 
-		await runMosaicTile(vrtPath, ctx.dest);
+		await runMosaicTile(vrtPath, ctx.dest, { maxZoom: ctx.maxZoom });
 	},
 	minFiles: 14000,
 });

@@ -65,8 +65,8 @@ export default defineTileRegion({
 
 		return { jpgPath: join(extractDir, String(jpgFile)) };
 	},
-	convert: async ({ jpgPath }, { dest }) => {
-		await runMosaicTile(jpgPath, dest);
+	convert: async ({ jpgPath }, { dest, maxZoom }) => {
+		await runMosaicTile(jpgPath, dest, { maxZoom });
 	},
 	minFiles: 32000,
 });

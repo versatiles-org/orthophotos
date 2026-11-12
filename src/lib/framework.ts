@@ -2,6 +2,8 @@
  * Core types and interfaces for region pipeline definitions.
  */
 
+import { MAX_ZOOM } from './constants.ts';
+
 export interface StepContext {
 	name: string;
 	dataDir: string;
@@ -43,6 +45,12 @@ interface RegionMetadataBase {
 	/** Override the buffer distance (in meters) for the raster_mask in the VPL. Default: 0 */
 	maskBuffer?: number;
 	/**
+	 * Highest zoom level to tile this region at. Default: `MAX_ZOOM`. Raise it for sources fine
+	 * enough to fill a deeper zoom, lower it for coarse ones, so the top zoom isn't upsampled.
+	 * Each extra level holds four times the tiles of the one below.
+	 */
+	maxZoom?: number;
+	/**
 	 * Roll this region up under a parent ID for status display (e.g. `'fr'` for all `fr/*`
 	 * sub-régions). The pipeline still runs per-child; only `getAggregatedRegionMetadata()`
 	 * collapses children into the named parent. Does not affect VPL generation.
@@ -62,6 +70,15 @@ interface RegionMetadataOther extends RegionMetadataBase {
 }
 
 export type RegionMetadata = RegionMetadataReleased | RegionMetadataOther;
+
+/** The zoom level a region is tiled up to: its own `maxZoom`, or `MAX_ZOOM`. */
+export function getMaxZoom(metadata: RegionMetadata): number {
+	const maxZoom = metadata.maxZoom ?? MAX_ZOOM;
+	if (!Number.isInteger(maxZoom) || maxZoom < 0 || maxZoom > 22) {
+		throw new Error(`maxZoom must be an integer from 0 to 22, got ${maxZoom}`);
+	}
+	return maxZoom;
+}
 
 export interface RegionPipeline {
 	id: string;

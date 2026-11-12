@@ -5,7 +5,7 @@
 import { renameSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { runCommand } from './command.ts';
-import { MAX_ZOOM, QUALITY } from './constants.ts';
+import { QUALITY } from './constants.ts';
 import { safeRm } from './fs.ts';
 
 /**
@@ -24,25 +24,34 @@ function assertOutputContains(result: { stderr: Uint8Array }, marker: string, co
 export async function runMosaicTile(
 	input: string,
 	output: string,
-	options?: { bands?: string; nodata?: string; crs?: string; cacheDirectory?: string; gdalConcurrency?: number },
+	options: {
+		/**
+		 * Zoom level to tile at, from the tile context (`ctx.maxZoom`). Always set explicitly:
+		 * versatiles would otherwise pick the source's resolution rounded up, often a level or
+		 * two deeper than the region should be served at.
+		 */
+		maxZoom: number;
+		bands?: string;
+		nodata?: string;
+		crs?: string;
+		cacheDirectory?: string;
+		gdalConcurrency?: number;
+	},
 ): Promise<void> {
-	// Always cap at MAX_ZOOM so output pyramids across regions are consistent —
-	// sources finer than that (e.g. 12.5cm DK, 15cm FR) stop at the same zoom
-	// instead of producing extra levels nobody serves.
-	const args = ['mosaic', 'tile', '--quality', QUALITY, '--max-zoom', String(MAX_ZOOM)];
-	if (options?.bands) {
+	const args = ['mosaic', 'tile', '--quality', QUALITY, '--max-zoom', String(options.maxZoom)];
+	if (options.bands) {
 		args.push('--bands', options.bands);
 	}
-	if (options?.nodata) {
+	if (options.nodata) {
 		args.push('--nodata', options.nodata);
 	}
-	if (options?.crs) {
+	if (options.crs) {
 		args.push('--crs', options.crs);
 	}
-	if (options?.cacheDirectory) {
+	if (options.cacheDirectory) {
 		args.push('--cache-dir', options.cacheDirectory);
 	}
-	if (options?.gdalConcurrency !== undefined) {
+	if (options.gdalConcurrency !== undefined) {
 		args.push('--gdal-concurrency', String(options.gdalConcurrency));
 	}
 	const tmpOutput = join(dirname(output), `.tmp.${basename(output)}`);

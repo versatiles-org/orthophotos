@@ -128,8 +128,8 @@ export default defineTileRegion<SeItem, { tifPath: string }>({
 	},
 	// Each COG is ~600 MB at 16 cm; cap parallel converts by RAM budget.
 	convertLimit: { memoryGB: 8 },
-	convert: async ({ tifPath }, { dest }) => {
-		await runMosaicTile(tifPath, dest);
+	convert: async ({ tifPath }, { dest, maxZoom }) => {
+		await runMosaicTile(tifPath, dest, { maxZoom });
 	},
 	// Sweden ≈ 450k km², 2.5 km × 2.5 km tiles → ~72k cells at full coverage.
 	// Bump this once the first full run gives a concrete count.

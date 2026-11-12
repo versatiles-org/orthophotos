@@ -86,3 +86,4 @@ export { runMosaicAssemble, runMosaicTile } from './versatiles.ts';
 // `lib → status` / `lib → config` only at the barrel level.
 export { loadKnownRegions, type KnownRegion } from '../status/index.ts';
 export { getConfig } from './config.ts';
+export { maskWhiteBackground, maskWhiteBackgroundFile, type WhiteMaskOptions } from './white-mask.ts';

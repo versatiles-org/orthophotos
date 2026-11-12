@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { parseDatasetFeed, parseServiceFeed } from './at.ts';
+import { operatPriority, parseDatasetFeed, parseServiceFeed } from './at.ts';
 
 const SERVICE_FEED_XML = `<?xml version="1.0" encoding="UTF-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
@@ -73,5 +73,16 @@ describe('parseDatasetFeed', () => {
 			</entry>
 		</feed>`;
 		expect(parseDatasetFeed(xml)).toBeUndefined();
+	});
+});
+
+describe('operatPriority', () => {
+	test('ranks newer operats higher', () => {
+		expect(operatPriority('2025150_Mosaik_RGB')).toBeGreaterThan(operatPriority('2022260_Mosaik_RGB'));
+		expect(operatPriority('2024470_Mosaik_RGB')).toBe(2024470);
+	});
+
+	test('rejects IDs that do not start with an operat number', () => {
+		expect(() => operatPriority('Mosaik_RGB')).toThrow('Unexpected Austrian tile ID');
 	});
 });

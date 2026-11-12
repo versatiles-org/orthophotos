@@ -14,11 +14,30 @@ import {
 const ATOM_URL =
 	'https://data.bev.gv.at/geonetwork/srv/atom/describe/service?uuid=7f047345-4ebf-45cd-8900-6edf50a84638';
 
+/**
+ * The BEV "Operate" (flight blocks, named year + block code) to download. BEV flies Austria in a
+ * three-year cycle, so each year's blocks replace those from three years earlier, but the block
+ * outlines change a little each time.
+ *
+ * Selected in November 2026 from the footprints of all 2021–2025 operats (the mask band of each
+ * RGB mosaic at about 100 m, reprojected to EPSG:31287, since the operats use the three
+ * Gauss-Krüger zones 31254–31256): from newest to oldest, an operat is kept if more than 5 km² of
+ * it is not covered by a newer one. 2022260 still shows about 2,200 km² where 2025260 is smaller.
+ * The 32 operats cover about 87,900 km², the same as all 53. Newer operats are drawn on top
+ * (`priority` below), so where they overlap the newest imagery shows.
+ */
 const OPERATS = [
-	2021160, 2021250, 2021360, 2022150, 2022160, 2022250, 2022260, 2022350, 2022360, 2022370, 2022450, 2022460, 2022470,
-	2022650, 2023150, 2023160, 2023250, 2023260, 2023270, 2023350, 2023360, 2023370, 2023450, 2023460, 2023470, 2024150,
-	2024250, 2024260, 2024350, 2024450, 2024460, 2024470,
+	2022260, 2023150, 2023160, 2023250, 2023260, 2023270, 2023350, 2023360, 2023370, 2023450, 2023460, 2024150, 2024250,
+	2024260, 2024350, 2024450, 2024460, 2024470, 2025150, 2025160, 2025250, 2025260, 2025350, 2025360, 2025370, 2025450,
+	2025460, 2025470, 2025650, 2025750, 2025850, 2025950,
 ];
+
+/** The operat number at the start of a tile ID like `2025150_Mosaik_RGB`: newer operats rank higher. */
+export function operatPriority(id: string): number {
+	const operat = Number(id.slice(0, 7));
+	if (!/^\d{7}_/.test(id)) throw new Error(`Unexpected Austrian tile ID: ${id}`);
+	return operat;
+}
 
 const xmlParser = createXmlParser();
 
@@ -79,7 +98,7 @@ export default defineTileRegion({
 			name: 'BEV',
 			url: 'https://data.bev.gv.at/geonetwork/srv/api/records/3c3803b3-1b53-4fb5-9595-9217b9891862',
 		},
-		date: '2021-2024',
+		date: '2022-2025',
 		releaseDate: '2026-03-25',
 	},
 	init: async (ctx) => {
@@ -134,5 +153,7 @@ export default defineTileRegion({
 	convert: async ({ src }, ctx) => {
 		await runMosaicTile(src, ctx.dest, { maxZoom: ctx.maxZoom, cacheDirectory: ctx.tempDir });
 	},
-	minFiles: 32,
+	// Newer operats are drawn over older ones where they overlap.
+	priority: operatPriority,
+	minFiles: OPERATS.length,
 });

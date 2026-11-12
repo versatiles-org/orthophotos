@@ -83,6 +83,21 @@ export interface TileRegionOptions<T extends TileItem, D> {
 	 * or when init's order already encodes a useful priority).
 	 */
 	shuffle?: boolean;
+	/**
+	 * Which output is drawn on top where outputs overlap: a higher priority wins. Use it when
+	 * items overlap on purpose, e.g. a newer acquisition over an older one. Default: all equal,
+	 * and the merge order is the alphabetical order of the item IDs.
+	 */
+	priority?: (id: string) => number;
+}
+
+/**
+ * The order of the outputs in `filelist.txt`: highest `priority` first (drawn on top by
+ * `mosaic assemble`), then by ID, so the order never depends on the file system.
+ */
+export function orderTileIds(ids: string[], priority?: (id: string) => number): string[] {
+	const rank = (id: string): number => priority?.(id) ?? 0;
+	return [...ids].sort((a, b) => rank(b) - rank(a) || (a < b ? -1 : a > b ? 1 : 0));
 }
 
 /**
@@ -199,13 +214,12 @@ async function processTiles<T extends TileItem, D>(
 	errors.throwIfAny();
 	await expectMinFiles(tilesDir, '*.versatiles', options.minFiles);
 
-	// Write filelist.txt with all .versatiles paths for the merge step
-	const versatilesFiles: string[] = [];
-	for (const entry of readdirSync(tilesDir)) {
-		if (entry.endsWith('.versatiles')) {
-			versatilesFiles.push(join(tilesDir, entry));
-		}
-	}
+	// Write filelist.txt with all .versatiles paths for the merge step. `mosaic assemble` draws
+	// earlier files over later ones, so the order decides which file shows where they overlap.
+	const ids = readdirSync(tilesDir)
+		.filter((entry) => entry.endsWith('.versatiles'))
+		.map((entry) => entry.slice(0, -'.versatiles'.length));
+	const versatilesFiles = orderTileIds(ids, options.priority).map((id) => join(tilesDir, `${id}.versatiles`));
 	const filelistPath = join(ctx.dataDir, 'filelist.txt');
 	writeFileSync(filelistPath, versatilesFiles.join('\n'));
 	console.log(`  Wrote filelist.txt with ${versatilesFiles.length} entries.`);

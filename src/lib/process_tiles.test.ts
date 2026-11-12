@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { MAX_ZOOM } from './constants.ts';
 import type { StepContext } from './framework.ts';
-import { defineTileRegion } from './process_tiles.ts';
+import { defineTileRegion, orderTileIds } from './process_tiles.ts';
 
 /** Helper: run defineTileRegion config through the generated pipeline */
 async function runTileRegion<T extends { id: string; [k: string]: unknown }, D>(
@@ -434,5 +434,21 @@ describe('defineTileRegion', () => {
 			shuffle: false,
 		});
 		expect(seen).toEqual(ids);
+	});
+});
+
+describe('orderTileIds', () => {
+	it('sorts by ID when there is no priority', () => {
+		expect(orderTileIds(['c', 'a', 'b'])).toEqual(['a', 'b', 'c']);
+	});
+
+	it('puts higher priorities first, then sorts by ID', () => {
+		const priority = (id: string): number => Number(id.slice(0, 4));
+		expect(orderTileIds(['2023_b', '2025_a', '2023_a', '2024_a'], priority)).toEqual([
+			'2025_a',
+			'2024_a',
+			'2023_a',
+			'2023_b',
+		]);
 	});
 });

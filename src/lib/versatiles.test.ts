@@ -2,6 +2,7 @@ import { expect, test, vi } from 'vitest';
 import { mkdirSync, existsSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { QUALITY } from './constants.ts';
 import { runMosaicAssemble, runMosaicTile } from './versatiles.ts';
 
 // Mock runCommand from lib/command.ts
@@ -103,16 +104,7 @@ test('runMosaicAssemble - calls versatiles with correct args', async () => {
 
 	expect(mockRunCommand).toHaveBeenCalledWith(
 		'versatiles',
-		[
-			'mosaic',
-			'assemble',
-			'--max-buffer-size',
-			'50%',
-			'--quality',
-			'70,16:50,17:30',
-			'@/filelist.txt',
-			'/output.versatiles',
-		],
+		['mosaic', 'assemble', '--max-buffer-size', '50%', '--quality', QUALITY, '@/filelist.txt', '/output.versatiles'],
 		{ quiet: true, quietOnError: true },
 	);
 });
@@ -130,7 +122,7 @@ test('runMosaicAssemble - passes lossless option', async () => {
 			'--max-buffer-size',
 			'50%',
 			'--quality',
-			'70,16:50,17:30',
+			QUALITY,
 			'--lossless',
 			'@/filelist.txt',
 			'/output.versatiles',

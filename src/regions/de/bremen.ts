@@ -42,6 +42,9 @@ export default defineTileRegion({
 		},
 		date: '2025',
 		releaseDate: '2026-03-28',
+		// DOP10: 10 cm source pixels, about 0.09 m on the ground at zoom 19 at 53° N, so zoom 19 shows their
+		// full detail, like de/nordrhein_westfalen (#26). The archive names say 10 cm; a file wasn't checked.
+		maxZoom: 19,
 	},
 	init: async () => {
 		return DISTRICTS.map((d) => ({

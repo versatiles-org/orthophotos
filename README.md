@@ -125,8 +125,9 @@ Q["remote-hashes.ts"]
 R["remote-listing.ts"]
 S["remote-zip.ts"]
 T["versatiles.ts"]
-U["wms.ts"]
-V["xml.ts"]
+U["white-mask.ts"]
+V["wms.ts"]
+W["xml.ts"]
 end
 subgraph 4["status"]
 5["index.ts"]
@@ -135,42 +136,42 @@ subgraph 4["status"]
 8["html.ts"]
 9["regions.ts"]
 A["style.ts"]
-1M["status.ts"]
+1N["status.ts"]
 end
-subgraph W["quality-zones"]
-X["index.ts"]
-Y["build.ts"]
-Z["progress.ts"]
-10["steps.ts"]
+subgraph X["quality-zones"]
+Y["index.ts"]
+Z["build.ts"]
+10["progress.ts"]
+11["steps.ts"]
 end
-11["check-remote.ts"]
-subgraph 12["regions"]
-subgraph 13["**"]
-14["*.ts (49 files)"]
+12["check-remote.ts"]
+subgraph 13["regions"]
+subgraph 14["**"]
+15["*.ts (49 files)"]
 end
 end
-15["preview.ts"]
-subgraph 16["server"]
-17["index.ts"]
-18["frontend.ts"]
-19["vpl.ts"]
+16["preview.ts"]
+subgraph 17["server"]
+18["index.ts"]
+19["frontend.ts"]
+1A["vpl.ts"]
 end
-1A["publish-hashes.ts"]
-1B["publish-world-local.ts"]
-subgraph 1C["run"]
-1D["index.ts"]
-1E["args.ts"]
-1F["tasks.constants.ts"]
-1G["commands.ts"]
-1H["regions.ts"]
-1I["tasks.ts"]
+1B["publish-hashes.ts"]
+1C["publish-world-local.ts"]
+subgraph 1D["run"]
+1E["index.ts"]
+1F["args.ts"]
+1G["tasks.constants.ts"]
+1H["commands.ts"]
+1I["regions.ts"]
+1J["tasks.ts"]
 end
-1J["publish-world.ts"]
-1K["run.ts"]
-1L["status-check.ts"]
+1K["publish-world.ts"]
+1L["run.ts"]
+1M["status-check.ts"]
 end
 1-->3
-1-->X
+1-->Y
 3-->5
 3-->B
 3-->C
@@ -193,6 +194,7 @@ end
 3-->T
 3-->U
 3-->V
+3-->W
 5-->6
 5-->8
 5-->9
@@ -226,46 +228,48 @@ T-->C
 T-->H
 T-->J
 U-->C
-U-->V
-X-->Y
-Y-->3
+U-->J
+V-->C
+V-->W
 Y-->Z
-Y-->10
-11-->3
-11-->14
-14-->3
+Z-->3
+Z-->10
+Z-->11
+12-->3
+12-->15
 15-->3
-15-->17
-17-->18
-17-->19
-18-->3
+16-->3
+16-->18
+18-->19
+18-->1A
 19-->3
-19-->14
-19-->5
 1A-->3
+1A-->15
+1A-->5
 1B-->3
-1B-->1D
-1B-->17
-1D-->1E
-1D-->1G
-1D-->1H
-1D-->1I
+1C-->3
+1C-->1E
+1C-->18
 1E-->1F
-1G-->3
-1I-->3
-1I-->14
-1I-->1G
-1I-->1F
+1E-->1H
+1E-->1I
+1E-->1J
+1F-->1G
+1H-->3
 1J-->3
-1J-->1D
-1J-->17
+1J-->15
+1J-->1H
+1J-->1G
 1K-->3
-1K-->14
-1K-->1D
-1L-->14
-1L-->5
+1K-->1E
+1K-->18
+1L-->3
+1L-->15
+1L-->1E
+1M-->15
+1M-->5
 
-class 0,2,4,W,12,13,16,1C subgraphs;
+class 0,2,4,X,13,14,17,1D subgraphs;
 classDef subgraphs fill-opacity:0.1, fill:#888, color:#888, stroke:#888;
 ```
 

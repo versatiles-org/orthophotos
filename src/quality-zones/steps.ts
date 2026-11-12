@@ -30,7 +30,7 @@ export const BUFFER_A = 1000;
 export const BUFFER_B = 4000;
 
 /** Tolerance for simplifying the buffered polygons, in EPSG:3857 metres. */
-export const SIMPLIFY_TOLERANCE = 200;
+export const SIMPLIFY_TOLERANCE = 1000;
 
 /** Segments per quarter circle when buffering. Lower is smaller output; GEOS default is 8. */
 export const QUADRANT_SEGMENTS = 4;

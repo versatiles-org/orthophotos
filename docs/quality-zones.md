@@ -30,7 +30,7 @@ Parameters, all in `src/quality-zones/steps.ts`:
 | --------------- | ---------------------------------------------------- | ----------------------------------------------- |
 | Zoom level      | 14                                                   | one pixel per tile: 16384 px, about 2446 m each |
 | Buffer A / B    | 1000 m / 4000 m                                      | EPSG:3857 metres, see below                     |
-| Simplify        | 200 m                                                | tolerance                                       |
+| Simplify        | 1000 m                                               | tolerance; at most the buffer A distance        |
 | Buffer segments | 4 per quarter circle                                 | GEOS default is 8; fewer keeps the file smaller |
 | Zone A, B, C    | `70,16:50,17:30`, `70,16:40,17:20`, `70,16:30,17:10` |                                                 |
 

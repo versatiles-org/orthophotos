@@ -1,72 +1,88 @@
 import { describe, expect, test } from 'vitest';
-import { extractGridRef, parseDatasetFeed } from './pl.ts';
+import { flightDatePriority, type IndexEntry, parseIndexPage, parseIndexYears, selectSheets } from './pl.ts';
 
-describe('parseDatasetFeed', () => {
-	test('extracts polska_oi_<year>.zip links and sorts newest first', () => {
-		const xml = `<?xml version="1.0"?>
-		<feed xmlns="http://www.w3.org/2005/Atom">
-			<entry>
-				<link href="https://example.com/atom?name=polska_oi_2020.zip"/>
-				<link href="https://example.com/atom?name=polska_oi_2024.zip"/>
-				<link href="https://example.com/atom?name=polska_oi_2022.zip"/>
-			</entry>
-		</feed>`;
-		const out = parseDatasetFeed(xml);
-		expect(out.map((e) => e.year)).toEqual([2024, 2022, 2020]);
-	});
-
-	test('filters out entries before MIN_YEAR (2020)', () => {
-		const xml = `<?xml version="1.0"?>
-		<feed xmlns="http://www.w3.org/2005/Atom">
-			<entry>
-				<link href="https://example.com/atom?name=polska_oi_2018.zip"/>
-				<link href="https://example.com/atom?name=polska_oi_2021.zip"/>
-			</entry>
-		</feed>`;
-		expect(parseDatasetFeed(xml).map((e) => e.year)).toEqual([2021]);
-	});
-
-	test('decodes &amp; in href attributes', () => {
-		const xml = `<?xml version="1.0"?>
-		<feed xmlns="http://www.w3.org/2005/Atom">
-			<entry>
-				<link href="https://example.com/atom?a=1&amp;amp;name=polska_oi_2024.zip"/>
-			</entry>
-		</feed>`;
-		const out = parseDatasetFeed(xml);
-		expect(out).toHaveLength(1);
-		// fast-xml-parser decodes &amp; → & once; the function does the same again,
-		// reducing &amp;amp; → &amp; → &.
-		expect(out[0].url).toBe('https://example.com/atom?a=1&name=polska_oi_2024.zip');
-	});
-
-	test('returns empty array when no entry is present', () => {
-		expect(parseDatasetFeed('<?xml version="1.0"?><feed/>')).toEqual([]);
-	});
-
-	test('ignores links that do not match the polska_oi_<year>.zip pattern', () => {
-		const xml = `<?xml version="1.0"?>
-		<feed xmlns="http://www.w3.org/2005/Atom">
-			<entry>
-				<link href="https://example.com/something_else.zip"/>
-				<link href="https://example.com/atom?name=polska_oi_2024.zip"/>
-			</entry>
-		</feed>`;
-		expect(parseDatasetFeed(xml)).toHaveLength(1);
+describe('parseIndexYears', () => {
+	test('reads the years of the index layers', () => {
+		const caps = `<wfs:FeatureTypeList>
+			<FeatureType><Name>gugik:SkorowidzOrtofomapy2025</Name></FeatureType>
+			<FeatureType><Name>gugik:SkorowidzOrtofomapy1957</Name></FeatureType>
+			<FeatureType><Name>gugik:SkorowidzOrtofomapy2024</Name></FeatureType>
+		</wfs:FeatureTypeList>`;
+		expect(parseIndexYears(caps)).toEqual([1957, 2024, 2025]);
 	});
 });
 
-describe('extractGridRef', () => {
-	test('strips the operat-id and tile-id prefix from the filename', () => {
-		const url = 'https://opendata.geoportal.gov.pl/ortofotomapa/12345/12345_678_N-34-126-C-b-1-3.tif';
-		expect(extractGridRef(url)).toBe('N-34-126-C-b-1-3');
+describe('parseIndexPage', () => {
+	test('reads sheet, date, pixel size, colour, completeness and URL', () => {
+		const xml = `<wfs:FeatureCollection><wfs:member>
+			<gugik:SkorowidzOrtofomapy2025 gml:id="SkorowidzOrtofomapy2025.1529267">
+				<gugik:godlo>N-33-81-D-d-4-4</gugik:godlo>
+				<gugik:piksel>0.25</gugik:piksel>
+				<gugik:kolor>RGB</gugik:kolor>
+				<gugik:akt_data gml:id="SkorowidzOrtofomapy2025.1529267.akt_data"><gml:timePosition>2025-06-14</gml:timePosition></gugik:akt_data>
+				<gugik:czy_ark_wypelniony>TAK</gugik:czy_ark_wypelniony>
+				<gugik:url_do_pobrania>https://opendata.geoportal.gov.pl/ortofotomapa/83839/83839_1529267_N-33-81-D-d-4-4.tif</gugik:url_do_pobrania>
+			</gugik:SkorowidzOrtofomapy2025>
+		</wfs:member></wfs:FeatureCollection>`;
+		expect(parseIndexPage(xml)).toEqual([
+			{
+				sheet: 'N-33-81-D-d-4-4',
+				date: '2025-06-14',
+				pixelSize: 0.25,
+				color: 'RGB',
+				complete: true,
+				url: 'https://opendata.geoportal.gov.pl/ortofotomapa/83839/83839_1529267_N-33-81-D-d-4-4.tif',
+			},
+		]);
+	});
+});
+
+function entry(sheet: string, date: string, overrides: Partial<IndexEntry> = {}): IndexEntry {
+	return {
+		sheet,
+		date,
+		pixelSize: 0.25,
+		color: 'RGB',
+		complete: true,
+		url: `https://example.com/1_${date.slice(0, 4)}_${sheet}.tif`,
+		...overrides,
+	};
+}
+
+describe('selectSheets', () => {
+	test('takes the newest image per sheet', () => {
+		const items = selectSheets([entry('A', '2023-05-01'), entry('A', '2025-06-14'), entry('B', '2024-07-01')]);
+		expect(items.map((i) => i.id).sort()).toEqual(['20240701_1_2024_B', '20250614_1_2025_A']);
 	});
 
-	test('returns the basename minus .tif when there are no numeric segments to strip', () => {
-		expect(extractGridRef('https://example.com/path/grid_ref_only.tif')).toBe('grid_ref_only');
+	test('keeps older images under a partial one until a complete one', () => {
+		const items = selectSheets([
+			entry('A', '2025-06-14', { complete: false }),
+			entry('A', '2024-05-01', { complete: false }),
+			entry('A', '2023-05-01'),
+			entry('A', '2021-05-01'),
+		]);
+		expect(items.map((i) => i.id)).toEqual(['20250614_1_2025_A', '20240501_1_2024_A', '20230501_1_2023_A']);
 	});
 
-	test('returns empty string for malformed URLs without a path component', () => {
-		expect(extractGridRef('')).toBe('');
+	test('ignores CIR and the detailed city flights', () => {
+		const items = selectSheets([
+			entry('A', '2025-06-14', { color: 'CIR' }),
+			entry('B', '2025-06-14', { pixelSize: 0.05 }),
+			entry('C', '2025-06-14'),
+		]);
+		expect(items.map((i) => i.id)).toEqual(['20250614_1_2025_C']);
+	});
+});
+
+describe('flightDatePriority', () => {
+	test('ranks newer flights higher', () => {
+		expect(flightDatePriority('20250614_83839_1529267_N-33-81-D-d-4-4')).toBeGreaterThan(
+			flightDatePriority('20240501_80000_1_N-33-81-D-d-4-4'),
+		);
+	});
+
+	test('rejects IDs without a date', () => {
+		expect(() => flightDatePriority('N-33-81-D-d-4-4')).toThrow('Unexpected Polish tile ID');
 	});
 });

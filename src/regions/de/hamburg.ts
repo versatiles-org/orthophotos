@@ -3,6 +3,11 @@ import { readFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { defineTileRegion, downloadFile, extractZipAndBuildVrt, runMosaicTile, withRetry } from '../../lib/index.ts';
 
+/**
+ * The leaf-on ("belaubt") time series, newest 2024. Hamburg also publishes leaf-off imagery
+ * ("unbelaubt", 2025 and 2026), but bare trees would stand out next to the summer imagery of
+ * the neighbouring states, so we wait for the next leaf-on year (decided November 2026).
+ */
 const CKAN_API_URL =
 	'https://suche.transparenz.hamburg.de/api/3/action/package_show?id=luftbilder-hamburg-dop-zeitreihe-belaubt2';
 

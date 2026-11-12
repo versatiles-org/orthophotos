@@ -13,6 +13,13 @@ import {
 	withRetry,
 } from '../lib/index.ts';
 
+/**
+ * The INSPIRE feed serves the 2nd cycle of the orthophoto mosaic (2020–2022, 20 cm). A 3rd cycle
+ * exists (2023–2025, 15 cm, EPSG:5514: six archives `Ortofoto_<year>_<part>_rgb_<n>.zip` in
+ * https://opendata.skgeodesy.sk/static/Ortofotomozaika_SR/3_cyklus_2023-2025/, about 920 GB), but
+ * it has "© GKÚ, NLC" and the year printed into the imagery as a repeating watermark, so we keep
+ * the clean 2nd cycle (decided November 2026).
+ */
 const ATOM_URL = 'https://inspirews.skgeodesy.sk/atom/7efad194-3006-408f-9e6c-c06dc79703bd_dataFeed.atom';
 
 const xmlParser = createXmlParser();

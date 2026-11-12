@@ -17,6 +17,7 @@ npm run format:check       # Check formatting without modifying
 ./run.sh <region> <tasks>         # Run pipeline tasks for a region
 npm run build:status              # Scan regions, validate status, export JSON
 npm run build:quality-zones -- <osm.versatiles>  # Build the settlement-proximity PNG, see docs/quality-zones.md
+./run.sh satellite/sentinel2 1-3          # Build the satellite base layer, see docs/satellite.md
 npm run server                    # Prepare data + start server on port 8080
 ```
 

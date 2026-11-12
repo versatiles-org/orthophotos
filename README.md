@@ -136,7 +136,7 @@ subgraph 4["status"]
 8["html.ts"]
 9["regions.ts"]
 A["style.ts"]
-1N["status.ts"]
+1Q["status.ts"]
 end
 subgraph X["quality-zones"]
 Y["index.ts"]
@@ -150,25 +150,29 @@ subgraph 14["**"]
 15["*.ts (49 files)"]
 end
 end
-16["preview.ts"]
-subgraph 17["server"]
-18["index.ts"]
-19["frontend.ts"]
-1A["vpl.ts"]
+subgraph 16["satellite"]
+17["index.ts"]
+18["sentinel2.ts"]
 end
-1B["publish-hashes.ts"]
-1C["publish-world-local.ts"]
-subgraph 1D["run"]
-1E["index.ts"]
-1F["args.ts"]
-1G["tasks.constants.ts"]
-1H["commands.ts"]
-1I["regions.ts"]
-1J["tasks.ts"]
+19["preview.ts"]
+subgraph 1A["server"]
+1B["index.ts"]
+1C["frontend.ts"]
+1D["vpl.ts"]
 end
-1K["publish-world.ts"]
-1L["run.ts"]
-1M["status-check.ts"]
+1E["publish-hashes.ts"]
+1F["publish-world-local.ts"]
+subgraph 1G["run"]
+1H["index.ts"]
+1I["args.ts"]
+1J["tasks.constants.ts"]
+1K["commands.ts"]
+1L["regions.ts"]
+1M["tasks.ts"]
+end
+1N["publish-world.ts"]
+1O["run.ts"]
+1P["status-check.ts"]
 end
 1-->3
 1-->Y
@@ -237,39 +241,42 @@ Z-->10
 Z-->11
 12-->3
 12-->15
+15-->17
 15-->3
-16-->3
-16-->18
-18-->19
-18-->1A
+17-->18
+18-->3
 19-->3
-1A-->3
-1A-->15
-1A-->5
-1B-->3
+19-->1B
+1B-->1C
+1B-->1D
 1C-->3
-1C-->1E
-1C-->18
-1E-->1F
-1E-->1H
-1E-->1I
-1E-->1J
-1F-->1G
-1H-->3
-1J-->3
-1J-->15
-1J-->1H
-1J-->1G
+1D-->3
+1D-->15
+1D-->5
+1E-->3
+1F-->3
+1F-->1H
+1F-->1B
+1H-->1I
+1H-->1K
+1H-->1L
+1H-->1M
+1I-->1J
 1K-->3
-1K-->1E
-1K-->18
-1L-->3
-1L-->15
-1L-->1E
+1M-->3
 1M-->15
-1M-->5
+1M-->1K
+1M-->1J
+1N-->3
+1N-->1H
+1N-->1B
+1O-->3
+1O-->15
+1O-->1H
+1P-->15
+1P-->5
 
-class 0,2,4,X,13,14,17,1D subgraphs;
+class 0,2,4,X,13,14,16,1A,1G subgraphs;
 classDef subgraphs fill-opacity:0.1, fill:#888, color:#888, stroke:#888;
 ```
 

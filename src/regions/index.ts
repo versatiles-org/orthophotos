@@ -3,6 +3,7 @@
  */
 
 import type { RegionMetadata, RegionPipeline, RegionStatus } from '../lib/index.ts';
+import { satellitePipelines } from '../satellite/index.ts';
 
 import _planned from './_planned.ts';
 import al from './al.ts';
@@ -72,10 +73,11 @@ for (const p of pipelines) {
 }
 
 /**
- * Returns the pipeline for a region, or undefined if no definition exists.
+ * Returns the pipeline for a region, or undefined if no definition exists. Also finds the
+ * satellite pipelines (`satellite/…`), which can be run like regions but are not regions.
  */
 export function getRegionPipeline(regionId: string): RegionPipeline | undefined {
-	return registry.get(regionId);
+	return registry.get(regionId) ?? satellitePipelines.find((p) => p.id === regionId);
 }
 
 /**

@@ -6,6 +6,13 @@ export interface Config {
 	dirData: string;
 	dirTemp: string;
 	ssh?: SshConfig;
+	/** S3 credentials of the Copernicus Data Space Ecosystem, for the satellite pipeline. */
+	cdse?: CdseConfig;
+}
+
+export interface CdseConfig {
+	accessKey: string;
+	secretKey: string;
 }
 
 export interface SshConfig {
@@ -45,6 +52,12 @@ export function getConfig(): Config {
 			keyFile: getOptionalEnv('ssh_id'),
 			dir: getOptionalEnv('ssh_dir') || '/',
 		};
+	}
+
+	const cdseAccessKey = getOptionalEnv('cdse_s3_access_key');
+	const cdseSecretKey = getOptionalEnv('cdse_s3_secret_key');
+	if (cdseAccessKey && cdseSecretKey) {
+		cachedConfig.cdse = { accessKey: cdseAccessKey, secretKey: cdseSecretKey };
 	}
 
 	return cachedConfig;

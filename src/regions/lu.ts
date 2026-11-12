@@ -1,26 +1,45 @@
 import { existsSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
-	computeWmsBlocks,
+	convertToTiledTiff,
 	defineTileRegion,
 	downloadFile,
-	extractWmsBlock,
-	generateWmsXml,
-	isValidRaster,
-	parseWmsCapabilities,
+	downloadRaster,
 	runMosaicTile,
+	safeRm,
 	withRetry,
 } from '../lib/index.ts';
 
-// GML source: https://download.data.public.lu/resources/inspire-annex-ii-theme-orthoimagery-orthoimagecoverage-2025-summer/20260324-074957/oi.ortho-rgb-2025-summer.gml
-const WMS_URL = 'https://wms.geoportail.lu/opendata/service';
-const LAYER = 'ortho_2025';
+/**
+ * The summer 2025 orthophoto, as one 10 cm JPEG 2000 per municipality (100 files, about 69 GB).
+ * The file URLs contain upload timestamps and some files get replaced, so they are read from the
+ * dataset API. The country-wide JPEG 2000 of the same dataset was corrupt when we tried it, so we
+ * used the WMS until the per-municipality files appeared; they decode cleanly (November 2026).
+ */
+const DATASET_API =
+	'https://data.public.lu/api/1/datasets/orthophoto-officielle-du-grand-duche-de-luxembourg-edition-ete-2025/';
+
+interface DatasetResource {
+	title?: string;
+	url?: string;
+}
+
+/** The per-municipality RGB files in the dataset, one item per municipality. */
+export function parseMunicipalityFiles(dataset: { resources?: DatasetResource[] }): { id: string; url: string }[] {
+	const items: { id: string; url: string }[] = [];
+	for (const { url } of dataset.resources ?? []) {
+		const match = url?.match(/\/orthophoto-2025-ete-10cm-rgb-([a-z0-9-]+)\.jp2$/);
+		if (url && match) items.push({ id: match[1], url });
+	}
+	return items.sort((a, b) => (a.id < b.id ? -1 : 1));
+}
 
 export default defineTileRegion({
 	name: 'lu',
 	meta: {
 		status: 'released',
-		notes: ['JP2 download is corrupt; using WMS instead.'],
+		notes: ['One JPEG 2000 per municipality, clipped to the municipality with a white background.'],
 		entries: ['result'],
 		license: {
 			name: 'CC0',
@@ -33,49 +52,34 @@ export default defineTileRegion({
 		},
 		date: '2025',
 		releaseDate: '2026-03-28',
+		// 10 cm source pixels: zoom 19 (about 0.10 m on the ground at 49.7° N) shows their full detail.
+		maxZoom: 19,
 	},
 	init: async (ctx) => {
-		const capsPath = join(ctx.tempDir, 'caps.xml');
-		if (!existsSync(capsPath)) {
-			console.log('  Fetching WMS capabilities...');
-			await withRetry(() => downloadFile(`${WMS_URL}?SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.1.1`, capsPath), {
-				maxAttempts: 3,
-			});
+		const datasetPath = join(ctx.tempDir, 'dataset.json');
+		if (!existsSync(datasetPath)) {
+			await withRetry(() => downloadFile(DATASET_API, datasetPath), { maxAttempts: 3 });
 		}
-
-		const wmsXmlPath = join(ctx.tempDir, 'wms.xml');
-		if (!existsSync(wmsXmlPath)) {
-			await generateWmsXml(WMS_URL, LAYER, wmsXmlPath);
-		}
-
-		const { bbox, maxWidth, maxHeight } = await parseWmsCapabilities(capsPath, LAYER);
-		const { items, blockPx } = computeWmsBlocks(bbox, ctx.maxZoom, maxWidth, maxHeight);
-		console.log(`  ${items.length} blocks at ${blockPx}x${blockPx}px`);
-
-		return items.map((item) => ({ ...item, wmsXmlPath, blockPx }));
+		const items = parseMunicipalityFiles(JSON.parse(await readFile(datasetPath, 'utf-8')));
+		console.log(`  ${items.length} municipalities`);
+		return items;
 	},
 	downloadLimit: 2,
-	download: async (item, ctx) => {
-		const tifPath = ctx.tempFile(join(ctx.tempDir, `${item.id}.tif`));
-
-		await withRetry(
-			() =>
-				extractWmsBlock(
-					{ wmsXmlPath: item.wmsXmlPath, x0: item.x0, y0: item.y0, x1: item.x1, y1: item.y1, blockPx: item.blockPx },
-					tifPath,
-				),
-			{ maxAttempts: 3 },
-		);
-
-		if (!(await isValidRaster(tifPath))) {
-			ctx.errors.add(`${item.id}.tif`);
-			return 'invalid';
-		}
-
-		return { srcPath: tifPath };
+	download: async ({ url, id }, ctx) => {
+		const jp2Path = ctx.tempFile(join(ctx.tempDir, `${id}.jp2`));
+		const result = await downloadRaster(url, jp2Path, ctx.errors, `${id}.jp2`);
+		if (result === 'invalid') return 'invalid';
+		return { jp2Path, id };
 	},
-	convert: async ({ srcPath }, { dest, maxZoom }) => {
-		await runMosaicTile(srcPath, dest, { maxZoom, nodata: '255,255,255' });
+	// Decoding the largest files (up to 2.7 GB of JPEG 2000) needs a lot of memory.
+	convertLimit: { memoryGB: 20 },
+	convert: async ({ jp2Path, id }, ctx) => {
+		const tifPath = ctx.tempFile(join(ctx.tempDir, `${id}.tif`));
+		// GDAL's JPEG 2000 decoder is more robust than versatiles's; a tiled TIFF is fast to read.
+		await convertToTiledTiff(jp2Path, tifPath, { compress: 'lzw', predictor: false });
+		safeRm(jp2Path);
+		await runMosaicTile(tifPath, ctx.dest, { maxZoom: ctx.maxZoom, nodata: '255,255,255' });
 	},
-	minFiles: 50,
+	// 100 municipalities in November 2026.
+	minFiles: 95,
 });

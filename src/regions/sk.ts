@@ -70,6 +70,8 @@ export default defineTileRegion<SkItem, { tifPath: string }>({
 		resolution: 20,
 		checked: '2026-11-12',
 		releaseDate: '2026-03-28',
+		// The white outside Slovakia is a lossy near-white the white nodata misses (#59, #79).
+		mask: true,
 	},
 	init: async (ctx) => {
 		const atomPath = join(ctx.tempDir, 'index.xml');

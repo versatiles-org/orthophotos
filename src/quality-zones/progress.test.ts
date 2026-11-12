@@ -29,29 +29,42 @@ describe('gdal', () => {
 	});
 });
 
-describe('osmium', () => {
-	test('reads the last percentage of a chunk', () => {
-		const parse = createProgressParser('osmium')!;
-		expect(parse('stderr', '[==>   ]  7% \r[===>  ]  8% \r')).toBe(8);
+// Redraws as `versatiles dev measure-tile-sizes` writes them.
+const bar = (label: string, done: number, total: number, percent: number): string =>
+	`\r\x1b[2K${label}▕███▏${done}/${total} (${String(percent).padStart(3)}%)   0/s    0s\x1b]9;4;1;${percent}\x07`;
+const index = (percent: number) => bar('reading the tile index', percent * 3, 300, percent);
+const scan = (percent: number) => bar('Scanning tile sizes', percent, 100, percent);
+
+describe('versatiles', () => {
+	test('follows the tile scan, not the index read before it', () => {
+		const parse = createProgressParser('versatiles')!;
+		expect(feed(parse, 'stderr', [index(50), index(100), scan(0), scan(7) + scan(8)])).toEqual([
+			undefined,
+			undefined,
+			undefined,
+			8,
+		]);
 	});
 
-	test('joins a percentage split across chunks', () => {
-		const parse = createProgressParser('osmium')!;
-		expect(feed(parse, 'stderr', ['[====>  ]  4', '5% \r'])).toEqual([undefined, 45]);
+	test('joins a redraw split across chunks', () => {
+		const line = scan(45);
+		const cut = line.indexOf('45%') + 1;
+		const parse = createProgressParser('versatiles')!;
+		expect(feed(parse, 'stderr', [line.slice(0, cut), line.slice(cut)])).toEqual([undefined, 45]);
 	});
 
 	test('never goes backwards and ignores stdout', () => {
-		const parse = createProgressParser('osmium')!;
-		expect(feed(parse, 'stderr', ['[=>] 50% \r', '[>] 10% \r'])).toEqual([50, undefined]);
-		expect(parse('stdout', '99%')).toBeUndefined();
+		const parse = createProgressParser('versatiles')!;
+		expect(feed(parse, 'stderr', [scan(50), scan(10)])).toEqual([50, undefined]);
+		expect(parse('stdout', scan(99))).toBeUndefined();
 	});
 });
 
 test('other commands have no parser', () => {
-	expect(createProgressParser('versatiles')).toBeUndefined();
+	expect(createProgressParser('osmium')).toBeUndefined();
 });
 
-test('stripProgress keeps warnings and drops osmium bar redraws', () => {
-	const stderr = '[====>     ]  4% \r[=====>    ]  5% \rWarning: something\n[==========] 100% \n\n';
-	expect(stripProgress(stderr)).toEqual(['Warning: something']);
+test('stripProgress keeps warnings and drops escapes and bar redraws', () => {
+	const stderr = `${index(100)}${scan(0)}\nWARN: something\n${scan(100)}\x1b]9;4;0;\x07\n\n`;
+	expect(stripProgress(stderr)).toEqual(['WARN: something']);
 });

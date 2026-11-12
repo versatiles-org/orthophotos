@@ -8,14 +8,15 @@
 import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { createProgress, runCommand } from '../lib/index.ts';
 import { createProgressParser, stripProgress } from './progress.ts';
-import { getExportConfig, getPaths, getSteps, getWorldGeoJSON, tmpPath, type Step } from './steps.ts';
+import { getPaths, getSettlementVPL, getSteps, getWorldGeoJSON, tmpPath, type Step } from './steps.ts';
 
+/** `input` is an `osm.versatiles` container: a local path or an http(s) URL. */
 export async function buildQualityZones(input: string, output: string, tempDir: string): Promise<void> {
-	if (!existsSync(input)) throw new Error(`Input file not found: ${input}`);
+	if (!isUrl(input) && !existsSync(input)) throw new Error(`Input file not found: ${input}`);
 	mkdirSync(tempDir, { recursive: true });
 
 	const paths = getPaths(input, tempDir);
-	writeFileSync(paths.exportConfig, getExportConfig());
+	writeFileSync(paths.vpl, getSettlementVPL(input));
 	writeFileSync(paths.world, getWorldGeoJSON());
 
 	const steps = getSteps(paths);
@@ -55,7 +56,7 @@ export async function buildQualityZones(input: string, output: string, tempDir: 
  * The tool's output is captured, not shown, and is included in the error if the step fails.
  */
 async function runStep(step: Step): Promise<void> {
-	const parse = createProgressParser(step.progress ?? step.cmd);
+	const parse = createProgressParser(step.cmd);
 	const progress = createProgress(100, { labels: ['%'], logInterval: 10 });
 	let shown = 0;
 	const advanceTo = (percent: number): void => {
@@ -74,6 +75,10 @@ async function runStep(step: Step): Promise<void> {
 	progress.done();
 	// Warnings don't fail a step, but can mean a broken result, so show them.
 	for (const line of stripProgress(new TextDecoder().decode(result.stderr))) console.warn(`  ${line}`);
+}
+
+export function isUrl(input: string): boolean {
+	return /^https?:\/\//.test(input);
 }
 
 function formatSeconds(seconds: number): string {

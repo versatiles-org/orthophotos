@@ -5,8 +5,10 @@ Tiles of settlements should be compressed with a higher quality than tiles of a 
 ## Building it
 
 ```bash
-npm run build:quality-zones -- <planet.osm.pbf> [output.geojson]
+npm run build:quality-zones -- <osm.versatiles> [output.geojson]
 ```
+
+The input is the VersaTiles OSM planet (Shortbread schema), as published on download.versatiles.org: a local path or a URL. A local copy is much faster, because every zoom-14 tile is read. It needs `versatiles` 5.10.0 or later, the first version with the `vector_branch` operation.
 
 The output defaults to `<dir_data>/quality_zones.geojson`. Intermediate files go to `<dir_temp>/quality_zones/`. Each step writes to a `.tmp.` file and renames it on success, and a step whose output exists is skipped, so an interrupted run resumes where it stopped. Delete a step's output to rerun it, and delete all of them when the OSM input changes.
 
@@ -14,20 +16,19 @@ The code is in `src/quality-zones/`: `steps.ts` holds the parameters and the exa
 
 ## Steps
 
-1. **Filter** (`osmium tags-filter`): ways and relations with `building=*` or `landuse=residential|commercial|industrial`.
-2. **Export** (`osmium export`): their polygons as GeoJSONSeq, piped through `gzip -1` because osmium can't compress it itself. The node location index is a `sparse_file_array` in the temp dir. GDAL's GeoJSONSeq reader seeks backwards, so this must be a file, not a pipe into the next step. It's gzip, not zstd, because GDAL reads gzip (`/vsigzip/`) but not zstd; reading it gzipped was no slower in testing.
-3. **Rasterize** (`gdal pipeline`): drop polygons whose bounding box lies outside the latitude limit of Web Mercator, reproject to EPSG:3857, then burn with `--all-touched` into a 16384 × 16384 byte grid over the full Mercator square (about 2446 m per pixel), stored ZSTD-compressed at level 1. The rasterize extent cuts off whatever reaches beyond the Mercator square; a GEOS `clip` would do the same at about twice the cost per polygon. Settlement pixels are 255, all others 0 (nodata).
-4. **Polygonize** (`gdal raster polygonize`, diagonal pixels connected): the settlement pixels as polygons.
-5. **Buffer A**: buffer by 1000 m, union, simplify.
-6. **Buffer B**: buffer A by 4000 m, union, simplify.
-7. **Zones**: A is buffer A. B is buffer B minus buffer A. C is the world square minus buffer B.
-8. **Write and check**: tag each zone with its `quality`, write the GeoJSON, and fail if `gdal vector check-geometry` finds invalid geometries or `gdal vector check-coverage` finds gaps or overlaps.
+1. **Measure tile sizes** (`versatiles dev measure-tile-sizes --level 14`): reads the input through a VPL pipeline (`settlement.vpl` in the temp dir) that keeps only the `buildings` layer and the `land` features of kind `residential`, `commercial` or `industrial`. The result is a 16384 × 16384 grayscale PNG with one pixel per zoom-14 tile and a value of `10 × log2(size in bytes)`. A tile with no features left measures 0, any other tile more, so the PNG is a settlement map at tile resolution. versatiles processes the tiles on all cores, but it re-encodes each filtered tile, brotli-compressed, just to measure it.
+2. **Settlement mask** (`gdal raster pipeline`): georeference the PNG to the Web Mercator square (pixel row 0 is tile row 0, the northern edge), set every nonzero pixel to 255 and make 0 nodata. Stored as a ZSTD-compressed GeoTIFF, about 2446 m per pixel.
+3. **Polygonize** (`gdal raster polygonize`, diagonal pixels connected): the settlement pixels as polygons.
+4. **Buffer A**: buffer by 1000 m, union, simplify.
+5. **Buffer B**: buffer A by 4000 m, union, simplify.
+6. **Zones**: A is buffer A. B is buffer B minus buffer A. C is the world square minus buffer B.
+7. **Write and check**: tag each zone with its `quality`, write the GeoJSON, and fail if `gdal vector check-geometry` finds invalid geometries or `gdal vector check-coverage` finds gaps or overlaps.
 
 Parameters, all in `src/quality-zones/steps.ts`:
 
 | Parameter       | Value                                                | Note                                            |
 | --------------- | ---------------------------------------------------- | ----------------------------------------------- |
-| Raster size     | 16384 px                                             | about 2446 m per pixel                          |
+| Zoom level      | 14                                                   | one pixel per tile: 16384 px, about 2446 m each |
 | Buffer A / B    | 1000 m / 4000 m                                      | EPSG:3857 metres, see below                     |
 | Simplify        | 200 m                                                | tolerance                                       |
 | Buffer segments | 4 per quarter circle                                 | GEOS default is 8; fewer keeps the file smaller |

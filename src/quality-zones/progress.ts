@@ -1,8 +1,10 @@
 /**
- * Parses the progress output of `gdal` and `osmium` into a percentage.
+ * Parses the progress output of `gdal` and `versatiles` into a percentage.
  *
  * - `gdal` writes `0...10...20...` … `100 - done.` to stdout: a number every 10 %, a dot every 2.5 %.
- * - `osmium --progress` redraws `[====>   ]  45% ` on stderr, separated by `\r`.
+ * - `versatiles dev measure-tile-sizes` redraws two bars on stderr, separated by `\r`: first
+ *   `reading the tile index▕…▏307/307 (100%)`, then `Scanning tile sizes▕…▏12/268435456 (  0%)`.
+ *   Only the second one is the step's progress.
  *
  * Output can arrive split at any character, so both parsers keep state between chunks.
  */
@@ -12,16 +14,23 @@ export type ProgressParser = (stream: 'stdout' | 'stderr', chunk: string) => num
 /** Returns a parser for the given command, or `undefined` if it reports no progress we understand. */
 export function createProgressParser(cmd: string): ProgressParser | undefined {
 	if (cmd === 'gdal') return createGdalParser();
-	if (cmd === 'osmium') return createOsmiumParser();
+	if (cmd === 'versatiles') return createVersatilesParser();
 	return undefined;
 }
 
-/** The non-empty lines of a tool's stderr, without osmium's progress bar redraws. */
+// Terminal escapes in versatiles' output: "clear line" (CSI 2K) and the OSC 9;4 tab progress.
+const ESCAPES = /\x1b\[[0-9;]*[A-Za-z]|\x1b\][^\x07]*\x07/g;
+
+// A redraw of a versatiles progress bar, once escapes are removed.
+const BAR = /\(\s*\d{1,3}%\)/;
+
+/** The non-empty lines of a tool's stderr, without terminal escapes and progress bar redraws. */
 export function stripProgress(stderr: string): string[] {
 	return stderr
+		.replace(ESCAPES, '')
 		.split(/[\r\n]+/)
 		.map((line) => line.trim())
-		.filter((line) => line !== '' && !/^\[[= >]*\]\s*\d{1,3}%$/.test(line));
+		.filter((line) => line !== '' && !BAR.test(line));
 }
 
 function createGdalParser(): ProgressParser {
@@ -53,20 +62,23 @@ function createGdalParser(): ProgressParser {
 	};
 }
 
-function createOsmiumParser(): ProgressParser {
+function createVersatilesParser(): ProgressParser {
 	let percent = 0;
 	let carry = '';
 
 	return (stream, chunk) => {
 		if (stream !== 'stderr') return undefined;
+		// Keep the unfinished redraw for the next chunk; a complete one ends where the next "\r" starts.
 		const text = carry + chunk;
-		carry = text.slice(-8);
-		const matches = [...text.matchAll(/(\d{1,3})%/g)];
-		const last = matches.at(-1);
-		if (!last) return undefined;
-		const value = Math.min(100, Number(last[1]));
-		if (value <= percent) return undefined;
-		percent = value;
+		const lastStart = text.lastIndexOf('\r');
+		carry = lastStart >= 0 ? text.slice(lastStart) : text;
+		let found: number | undefined;
+		for (const redraw of text.replace(ESCAPES, '').split('\r')) {
+			const match = /^Scanning tile sizes.*\(\s*(\d{1,3})%\)/.exec(redraw.trim());
+			if (match) found = Math.min(100, Number(match[1]));
+		}
+		if (found === undefined || found <= percent) return undefined;
+		percent = found;
 		return percent;
 	};
 }

@@ -4,5 +4,5 @@
  * rather than reaching into individual files.
  */
 
-export { buildQualityZones } from './build.ts';
+export { buildQualityZones, isUrl } from './build.ts';
 export { ZONES } from './steps.ts';

@@ -1,11 +1,11 @@
 /**
- * Step plan for building the quality-zones GeoJSON from an OSM planet (or extract).
+ * Step plan for building the quality-zones GeoJSON from the VersaTiles OSM vector tiles.
  *
  * The result is a polygon coverage of the whole Web Mercator square, split into three
  * non-overlapping zones. Each zone carries a `quality` string that sets the WebP
  * compression quality per zoom level for tiles inside it. See `docs/quality-zones.md`.
  *
- * Everything here is pure: it only builds file paths and command arguments.
+ * Everything here is pure: it only builds file paths, file contents and command arguments.
  * `build.ts` runs the steps.
  */
 
@@ -14,14 +14,14 @@ import { join } from 'node:path';
 /** Half the side length of the EPSG:3857 square, in metres. */
 export const MERCATOR_HALF_SIZE = 20037508.342789244;
 
-/** Latitude limit of EPSG:3857. Input polygons entirely beyond it are dropped before reprojection. */
-export const MERCATOR_MAX_LAT = 85.0511287798066;
+/** Zoom level whose tiles are measured. Each tile becomes one pixel of the settlement mask. */
+export const ZOOM = 14;
 
-/** Width and height of the rasterized mask (16384 px, about 2446 m per pixel). */
-export const RASTER_SIZE = 16384;
+/** Width and height of the settlement mask: one pixel per tile (16384 px, about 2446 m per pixel). */
+export const RASTER_SIZE = 2 ** ZOOM;
 
-/** OSM `landuse` values that count as settlement, in addition to all buildings. */
-export const LANDUSE_VALUES = ['residential', 'commercial', 'industrial'];
+/** Shortbread `land` kinds that count as settlement, in addition to all buildings. */
+export const LAND_KINDS = ['residential', 'commercial', 'industrial'];
 
 /** Buffer around the rasterized settlement pixels that forms zone A, in EPSG:3857 metres. */
 export const BUFFER_A = 1000;
@@ -49,10 +49,8 @@ export interface Step {
 	name: string;
 	/** Final output path. The step is skipped if it already exists. */
 	output: string;
-	/** Executable to run. */
-	cmd: string;
-	/** Tool whose progress output to parse. Default: `cmd`. Needed when `cmd` wraps the tool, e.g. in a pipe. */
-	progress?: 'gdal' | 'osmium';
+	/** Executable to run. Its progress output is parsed for the progress bar. */
+	cmd: 'gdal' | 'versatiles';
 	/** Arguments. The step writes to `tmpPath(output)`, which is renamed to `output` on success. */
 	args: string[];
 	/** Intermediate files to delete once the step has succeeded. */
@@ -60,12 +58,11 @@ export interface Step {
 }
 
 export interface QualityZonePaths {
+	/** `osm.versatiles`: a local path or a URL. */
 	input: string;
 	tempDir: string;
-	exportConfig: string;
-	nodeIndex: string;
-	filtered: string;
-	polygons: string;
+	vpl: string;
+	tileSizes: string;
 	raster: string;
 	pixels: string;
 	world: string;
@@ -89,10 +86,8 @@ export function getPaths(input: string, tempDir: string): QualityZonePaths {
 	return {
 		input,
 		tempDir,
-		exportConfig: p('osmium-export.json'),
-		nodeIndex: p('nodes.idx'),
-		filtered: p('filtered.osm.pbf'),
-		polygons: p('polygons.geojsonseq.gz'),
+		vpl: p('settlement.vpl'),
+		tileSizes: p('tile_sizes.png'),
 		raster: p('settlement.tif'),
 		pixels: p('settlement.gpkg'),
 		world: p('world.geojson'),
@@ -107,11 +102,21 @@ export function getPaths(input: string, tempDir: string): QualityZonePaths {
 }
 
 /**
- * osmium export config: keep only the tags we filtered on, so the export stays small.
- * Without any kept tag osmium drops the feature, so we can't drop tags entirely.
+ * VPL that keeps only settlement features at zoom 14: all buildings, and `land` features of the
+ * settlement kinds. A tile that ends up without features measures 0 bytes, any other tile more.
  */
-export function getExportConfig(): string {
-	return JSON.stringify({ include_tags: ['building', 'landuse'] });
+export function getSettlementVPL(input: string): string {
+	if (/["\\\n]/.test(input)) throw new Error(`Input can't contain quotes, backslashes or newlines: ${input}`);
+	const kinds = LAND_KINDS.map((kind) => `'${kind}'`).join(',');
+	return [
+		`from_container filename="${input}"`,
+		`  | filter level_min=${ZOOM} level_max=${ZOOM}`,
+		'  | vector_filter_layers filter=["buildings","land"] invert=true',
+		`  | vector_branch expr="$layer == 'land'" [`,
+		`      vector_filter_features expr="kind in [${kinds}]"`,
+		'    ]',
+		'',
+	].join('\n');
 }
 
 /**
@@ -168,95 +173,41 @@ function bufferSteps(distance: number): string[] {
 /** All steps, in order. Each step reads only outputs of earlier steps. */
 export function getSteps(paths: QualityZonePaths): Step[] {
 	const e = String(MERCATOR_HALF_SIZE);
-	const lat = String(MERCATOR_MAX_LAT);
 
 	const steps: Step[] = [
 		{
-			name: 'filter OSM',
-			output: paths.filtered,
-			cmd: 'osmium',
-			args: [
-				'tags-filter',
-				'--progress',
-				'--overwrite',
-				'--output',
-				tmpPath(paths.filtered),
-				paths.input,
-				'wr/building',
-				`wr/landuse=${LANDUSE_VALUES.join(',')}`,
-			],
+			// Writes a grayscale PNG with one pixel per tile: 10 * log2(average tile size in bytes),
+			// so 0 for missing or empty tiles. Needs versatiles >= 5.10.0 for `vector_branch`.
+			name: 'measure tile sizes',
+			output: paths.tileSizes,
+			cmd: 'versatiles',
+			args: ['dev', 'measure-tile-sizes', '--level', String(ZOOM), paths.vpl, tmpPath(paths.tileSizes)],
 		},
 		{
-			// osmium can't compress GeoJSONSeq itself, so its output is piped through gzip, which GDAL reads
-			// via /vsigzip/ (it can't read zstd). GDAL's GeoJSONSeq driver seeks backwards, so the export
-			// can't be piped straight into the rasterize step.
-			name: 'export polygons',
-			output: paths.polygons,
-			cmd: 'bash',
-			progress: 'osmium',
-			args: [
-				'-c',
-				// Fixed script; paths are passed as arguments, never interpolated into it.
-				'set -euo pipefail; out="$1"; shift; "$@" | gzip -1 > "$out"',
-				'bash',
-				tmpPath(paths.polygons),
-				'osmium',
-				'export',
-				'--progress',
-				'--config',
-				paths.exportConfig,
-				'--output-format',
-				'geojsonseq',
-				'--geometry-types',
-				'polygon',
-				'--index-type',
-				`sparse_file_array,${paths.nodeIndex}`,
-				'--output',
-				'-',
-				paths.filtered,
-			],
-			cleanup: [paths.nodeIndex],
-		},
-		{
-			// Rasterize writes each block once, so compression doesn't bloat the file with rewritten blocks.
-			// ZSTD level 1 is as fast as no compression. GDAL_CACHEMAX holds the whole raster in memory.
-			name: 'rasterize',
+			// Pixel row 0 is tile row 0, the northern edge, so the PNG maps onto the Mercator square as it is.
+			// Any tile with settlement becomes 255, everything else 0 (nodata).
+			name: 'settlement mask',
 			output: paths.raster,
 			cmd: 'gdal',
 			args: [
+				'raster',
 				'pipeline',
-				'--progress',
-				'--config',
-				'GDAL_CACHEMAX=5000',
 				'read',
-				'--input-format',
-				'GeoJSONSeq',
-				`/vsigzip/${paths.polygons}`,
+				paths.tileSizes,
 				'!',
-				// Drops polygons outside Web Mercator's latitude range, which can't be projected near the poles.
-				// It only compares bounding boxes; the rasterize extent cuts everything else, much cheaper than `clip`.
-				'filter',
-				'--bbox',
-				`-180,-${lat},180,${lat}`,
-				'!',
-				'reproject',
-				'--dst-crs',
+				'edit',
+				'--crs',
 				'EPSG:3857',
+				'--bbox',
+				`-${e},-${e},${e},${e}`,
 				'!',
-				'rasterize',
-				'--all-touched',
-				'--burn',
-				'255',
-				'--init',
-				'0',
+				'reclassify',
+				'--mapping',
+				'0=0; [1,255]=255',
+				'!',
+				'edit',
 				'--nodata',
 				'0',
-				'--ot',
-				'UInt8',
-				'--size',
-				`${RASTER_SIZE},${RASTER_SIZE}`,
-				'--extent',
-				`-${e},-${e},${e},${e}`,
 				'!',
 				'write',
 				'--overwrite',
@@ -265,14 +216,11 @@ export function getSteps(paths: QualityZonePaths): Step[] {
 				'--co',
 				'SPARSE_OK=TRUE',
 				'--co',
-				'BIGTIFF=YES',
-				'--co',
 				'COMPRESS=ZSTD',
 				'--co',
 				'ZSTD_LEVEL=1',
 				tmpPath(paths.raster),
 			],
-			cleanup: [paths.polygons, paths.filtered],
 		},
 		{
 			// Pixels with value 0 are nodata, so only settlement pixels become polygons.

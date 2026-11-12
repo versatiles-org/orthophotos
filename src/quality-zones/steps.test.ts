@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
-import { getPaths, getSteps, getWorldGeoJSON, MERCATOR_HALF_SIZE, tmpPath, ZONES } from './steps.ts';
+import { getPaths, getSettlementVPL, getSteps, getWorldGeoJSON, MERCATOR_HALF_SIZE, tmpPath, ZONES } from './steps.ts';
 
-const paths = getPaths('/in/planet.osm.pbf', '/tmp/qz');
+const paths = getPaths('/in/osm.versatiles', '/tmp/qz');
 const steps = getSteps(paths);
 
 function stepWritingTo(output: string) {
@@ -16,13 +16,33 @@ describe('tmpPath', () => {
 	});
 });
 
+describe('getSettlementVPL', () => {
+	test('keeps buildings and settlement land at zoom 14', () => {
+		expect(getSettlementVPL('/data/osm.versatiles')).toBe(
+			[
+				'from_container filename="/data/osm.versatiles"',
+				'  | filter level_min=14 level_max=14',
+				'  | vector_filter_layers filter=["buildings","land"] invert=true',
+				`  | vector_branch expr="$layer == 'land'" [`,
+				`      vector_filter_features expr="kind in ['residential','commercial','industrial']"`,
+				'    ]',
+				'',
+			].join('\n'),
+		);
+	});
+
+	test('rejects inputs that would break the VPL string', () => {
+		expect(() => getSettlementVPL('/data/"x".versatiles')).toThrow();
+	});
+});
+
 describe('getSteps', () => {
 	test('every step writes to the tmp path of its output', () => {
 		for (const step of steps) expect(step.args).toContain(tmpPath(step.output));
 	});
 
 	test('every step reads only the input or outputs of earlier steps', () => {
-		const available = new Set([paths.input, paths.exportConfig, paths.world]);
+		const available = new Set([paths.vpl, paths.world]);
 		const produced = new Set(steps.map((s) => s.output));
 		for (const step of steps) {
 			for (const arg of step.args) {
@@ -32,33 +52,22 @@ describe('getSteps', () => {
 		}
 	});
 
-	test('filters buildings and settlement landuse', () => {
-		const args = stepWritingTo(paths.filtered).args;
-		expect(args).toContain('wr/building');
-		expect(args).toContain('wr/landuse=residential,commercial,industrial');
+	test('measures zoom 14 tile sizes through the VPL', () => {
+		const step = stepWritingTo(paths.tileSizes);
+		expect(step.cmd).toBe('versatiles');
+		expect(step.args).toEqual(['dev', 'measure-tile-sizes', '--level', '14', paths.vpl, tmpPath(paths.tileSizes)]);
+		expect(tmpPath(paths.tileSizes)).toMatch(/\.png$/);
 	});
 
-	test('rasterizes all-touched into a 16K byte grid over the Mercator square', () => {
+	test('turns every nonzero tile into a 255 pixel on the Mercator square', () => {
 		const args = stepWritingTo(paths.raster).args;
-		expect(args).toContain('--all-touched');
-		expect(args).toContain('16384,16384');
-		expect(args).not.toContain('clip');
-		expect(args.indexOf('filter')).toBeLessThan(args.indexOf('reproject'));
-		expect(args).toContain('UInt8');
+		expect(args).toContain(paths.tileSizes);
 		const e = MERCATOR_HALF_SIZE;
 		expect(args).toContain(`-${e},-${e},${e},${e}`);
-		expect(args.indexOf('reproject')).toBeLessThan(args.indexOf('rasterize'));
-	});
-
-	test('stores the polygon export gzipped and the raster ZSTD-compressed', () => {
-		const exportStep = stepWritingTo(paths.polygons);
-		expect(paths.polygons).toMatch(/\.geojsonseq\.gz$/);
-		expect(exportStep.progress).toBe('osmium');
-		expect(exportStep.args[1]).toContain('set -euo pipefail');
-		expect(exportStep.args[1]).toContain('gzip -1');
-		const rasterize = stepWritingTo(paths.raster).args;
-		expect(rasterize).toContain(`/vsigzip/${paths.polygons}`);
-		expect(rasterize).toContain('COMPRESS=ZSTD');
+		expect(args).toContain('EPSG:3857');
+		expect(args).toContain('0=0; [1,255]=255');
+		expect(args[args.indexOf('--nodata') + 1]).toBe('0');
+		expect(args).toContain('COMPRESS=ZSTD');
 	});
 
 	test('buffers zone A by 1 km and zone B by 4 km around A', () => {

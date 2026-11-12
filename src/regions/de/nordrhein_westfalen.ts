@@ -35,9 +35,10 @@ export default defineTileRegion({
 		},
 		date: '2025',
 		releaseDate: '2026-03-22',
-		// 10 cm source pixels, about 0.16 m in Web Mercator at 51° N: fine enough for zoom 18
-		// (0.30 m), so the extra level adds real detail (#26).
-		maxZoom: 18,
+		// 10 cm source pixels, about 0.16 m in Web Mercator at 51° N: zoom 19 (0.15 m) shows the
+		// full resolution, at QUALITY's low quality for zooms 18 and 19 (#26). A test on Cologne
+		// estimated about 127 GB for the region, 5.3 times the zoom-17 release.
+		maxZoom: 19,
 	},
 	init: async (ctx) => {
 		const indexPath = join(ctx.tempDir, 'index.xml');

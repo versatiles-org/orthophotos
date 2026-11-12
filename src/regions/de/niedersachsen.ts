@@ -43,6 +43,8 @@ export default defineTileRegion({
 			url: 'https://ni-lgln-opengeodata.hub.arcgis.com/apps/lgln-opengeodata::digitales-orthophoto-dop/about',
 		},
 		date: '2025',
+		resolution: 20,
+		checked: '2026-11-12',
 		releaseDate: '2026-03-24',
 		// 20 cm source pixels: zoom 18 (0.18–0.20 m on the ground in Germany) shows their full detail.
 		maxZoom: 18,

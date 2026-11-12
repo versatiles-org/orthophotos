@@ -39,6 +39,8 @@ export default defineTileRegion({
 			url: 'https://data.geobasis-bb.de/geobasis/daten/dop/rgb_jpg/',
 		},
 		date: '2023-2026',
+		resolution: 20,
+		checked: '2026-11-12',
 		releaseDate: '2026-03-19',
 		// 20 cm source pixels: zoom 18 (0.18–0.20 m on the ground in Germany) shows their full detail.
 		maxZoom: 18,

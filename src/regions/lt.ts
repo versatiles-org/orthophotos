@@ -37,6 +37,7 @@ export default defineTileRegion({
 			url: 'https://www.geoportal.lt/geoportal/paieska',
 		},
 		date: '2022-2026',
+		checked: '2026-11-12',
 		releaseDate: '2025-10-06',
 	},
 	init: async (ctx) => {

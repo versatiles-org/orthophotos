@@ -34,6 +34,8 @@ export default defineTileRegion({
 			url: 'https://www.opengeodata.nrw.de/produkte/geobasis/lusat/akt/dop/dop_jp2_f10/',
 		},
 		date: '2025',
+		resolution: 10,
+		checked: '2026-11-12',
 		releaseDate: '2026-03-22',
 		// 10 cm source pixels, about 0.16 m in Web Mercator at 51° N: zoom 19 (0.15 m) shows the
 		// full resolution, at QUALITY's low quality for zooms 18 and 19 (#26). A test on Cologne

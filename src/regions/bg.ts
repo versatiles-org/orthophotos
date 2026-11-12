@@ -66,6 +66,7 @@ export default defineTileRegion<BgItem, { id: string; tifPaths: string[] }>({
 			url: 'https://www.mzh.government.bg/bg/politiki-i-programi/programi-za-finansirane/direktni-plashaniya/cifrova-ortofotokarta/',
 		},
 		date: '2020-2025',
+		checked: '2026-11-12',
 	},
 	init: async (ctx) => {
 		const capsPath = join(ctx.tempDir, 'caps.xml');

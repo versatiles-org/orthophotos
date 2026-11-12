@@ -73,6 +73,8 @@ export default defineTileRegion({
 			url: 'https://geoportal.saarland.de/app-article/geobasisdatenuebersicht/',
 		},
 		date: '2025',
+		resolution: 20,
+		checked: '2026-11-12',
 		releaseDate: '2026-03-22',
 		// 20 cm source pixels: zoom 18 (0.18–0.20 m on the ground in Germany) shows their full detail.
 		maxZoom: 18,

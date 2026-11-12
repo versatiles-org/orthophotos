@@ -48,6 +48,8 @@ export default defineTileRegion({
 			url: 'https://www.swisstopo.admin.ch/de/orthobilder-swissimage-10-cm',
 		},
 		date: '2025',
+		resolution: 10,
+		checked: '2026-11-12',
 		releaseDate: '2026-04-23',
 		mask: true,
 		// 10 cm source pixels: zoom 19 (about 0.10 m on the ground at 47° N) shows their full detail.

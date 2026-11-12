@@ -70,6 +70,7 @@ export default defineTileRegion<MtItem, MtDownload>({
 			url: 'https://www.pa.org.mt/',
 		},
 		date: '2018',
+		checked: '2026-11-12',
 		releaseDate: '2026-03-29',
 	},
 	init: () => generateGrid(),

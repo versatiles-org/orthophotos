@@ -51,6 +51,8 @@ export default defineTileRegion({
 			url: 'https://metaver.de/trefferanzeige?docuuid=5DF0990B-9195-41E7-9960-9214BC85B4DA',
 		},
 		date: '2024',
+		resolution: 20,
+		checked: '2026-11-12',
 		releaseDate: '2026-03-24',
 		// 20 cm source pixels: zoom 18 (0.18–0.20 m on the ground in Germany) shows their full detail.
 		maxZoom: 18,

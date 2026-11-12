@@ -30,6 +30,8 @@ export default defineTileRegion({
 			url: 'https://www.geodaten.sachsen.de/luftbild-produkte-3995.html',
 		},
 		date: '2024',
+		resolution: 20,
+		checked: '2026-11-12',
 		releaseDate: '2026-03-23',
 		// 20 cm source pixels: zoom 18 (0.18–0.20 m on the ground in Germany) shows their full detail.
 		maxZoom: 18,

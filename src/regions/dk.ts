@@ -77,6 +77,8 @@ export default defineTileRegion<DkItem, { zipPath: string }>({
 			url: 'https://dataforsyningen.dk/data/981',
 		},
 		date: '2025',
+		resolution: 12.5,
+		checked: '2026-11-12',
 		releaseDate: '2026-04-27',
 		mask: true,
 	},

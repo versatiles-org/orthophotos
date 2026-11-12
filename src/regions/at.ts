@@ -99,6 +99,8 @@ export default defineTileRegion({
 			url: 'https://data.bev.gv.at/geonetwork/srv/api/records/3c3803b3-1b53-4fb5-9595-9217b9891862',
 		},
 		date: '2022-2025',
+		resolution: 20,
+		checked: '2026-11-12',
 		releaseDate: '2026-03-25',
 	},
 	init: async (ctx) => {

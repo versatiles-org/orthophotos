@@ -30,6 +30,7 @@ export default defineTileRegion<CyItem, { srcPath: string }>({
 	meta: {
 		status: 'released',
 		notes: [
+			'Newer imagery from 2019 exists only as a basemap cache without licence terms, so it is not used (#89).',
 			'INSPIRE View Service for Orthoimagery from the Department of Lands and Surveys.',
 			'Source data: 50 cm aerial photography from 2014.',
 			'WMS only — no documented open download service for the rasters themselves.',
@@ -48,6 +49,8 @@ export default defineTileRegion<CyItem, { srcPath: string }>({
 			url: 'https://portal.dls.moi.gov.cy/',
 		},
 		date: '2014',
+		resolution: 50,
+		checked: '2026-11-12',
 		releaseDate: '2026-05-18',
 	},
 	init: async (ctx) => {

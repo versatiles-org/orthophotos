@@ -25,6 +25,7 @@ export default defineTileRegion({
 	meta: {
 		status: 'released',
 		notes: [
+			'Download API down since November 2026; the data cannot be rebuilt until it is back (#88).',
 			'No API, such as an ATOM feed, available.',
 			'Parsing JSON or hardcoded IDs are required.',
 			'Images are unnecessarily packed into container files, such as ZIP.',
@@ -44,6 +45,7 @@ export default defineTileRegion({
 			url: 'https://geoportal.thueringen.de/gdi-th/download-offene-geodaten/download-luftbilder-und-orthophotos',
 		},
 		date: '2024',
+		checked: '2026-11-12',
 		releaseDate: '2026-03-23',
 	},
 	init: () => generateCoords(),

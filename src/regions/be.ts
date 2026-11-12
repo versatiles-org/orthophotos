@@ -37,6 +37,7 @@ export default defineTileRegion<BeItem, { srcPath: string }>({
 			url: 'https://www.ngi.be/en',
 		},
 		date: '2023',
+		checked: '2026-11-12',
 		releaseDate: '2026-03-29',
 	},
 	init: async (ctx) => {

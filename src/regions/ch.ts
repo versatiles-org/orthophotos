@@ -41,6 +41,8 @@ export default defineTileRegion({
 			url: 'https://www.swisstopo.admin.ch/de/orthobilder-swissimage-10-cm',
 		},
 		date: '2017-2024',
+		resolution: 10,
+		checked: '2026-11-12',
 		releaseDate: '2026-03-27',
 	},
 	init: async (ctx) => {

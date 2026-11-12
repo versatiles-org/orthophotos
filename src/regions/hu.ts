@@ -29,6 +29,7 @@ export default defineTileRegion<HuItem, { srcPath: string }>({
 	meta: {
 		status: 'released',
 		notes: [
+			'The WMS raster layer was removed in 2026; the data cannot be rebuilt until a new source is found (#90).',
 			'INSPIRE View Service for the 2022 national orthophoto, served by Lechner Tudásközpont (formerly FÖMI).',
 			'Source data: 40 cm RGB orthophoto from the 2022 capture.',
 			'Licence is CC BY 4.0 with INSPIRE "noLimitations" public access (per https://inspire-geoportal.ec.europa.eu/srv/api/records/orto2022m-2e5d-474c-9de5-910a2e8edd62).',
@@ -46,6 +47,7 @@ export default defineTileRegion<HuItem, { srcPath: string }>({
 			url: 'https://lechnerkozpont.hu/',
 		},
 		date: '2022',
+		checked: '2026-11-12',
 		releaseDate: '2026-05-14',
 		mask: true,
 	},

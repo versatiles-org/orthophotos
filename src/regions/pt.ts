@@ -52,6 +52,8 @@ export default defineTileRegion({
 			url: 'https://ogcapi.dgterritorio.gov.pt/collections/ortos-rgb',
 		},
 		date: '2023',
+		resolution: 30,
+		checked: '2026-11-12',
 		releaseDate: '2026-03-29',
 		mask: true,
 		maskBuffer: 3000,

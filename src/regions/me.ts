@@ -32,6 +32,7 @@ export default defineTileRegion<MeItem, { srcPath: string }>({
 	meta: {
 		status: 'released',
 		notes: [
+			'The WMS host answers 503 since November 2026; the data cannot be rebuilt until it is back (#91).',
 			'WMS published by Uprava za nekretnine (Real Estate Administration of Montenegro) via the ERDAS APOLLO server at https://geoportalcg.me/erdas-iws/ogc/wms/Ortofoto. The public viewer at https://geoportal.co.me/ embeds this endpoint.',
 			'Source data: 20 cm RGB orthophoto from the DOF 2018 campaign — verified to cover all of Montenegro by a full-country render.',
 			'Server is ERDAS APOLLO, caps GetMap requests at 4000 px per dimension; computeWmsBlocks picks 2048-px blocks accordingly.',
@@ -49,6 +50,8 @@ export default defineTileRegion<MeItem, { srcPath: string }>({
 			url: 'https://www.gov.me/en/uzn',
 		},
 		date: '2018',
+		resolution: 20,
+		checked: '2026-11-12',
 		releaseDate: '2026-05-14',
 		mask: true,
 	},

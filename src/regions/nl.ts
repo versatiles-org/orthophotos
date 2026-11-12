@@ -22,6 +22,7 @@ export default defineTileRegion({
 			url: 'https://www.beeldmateriaal.nl/dataroom',
 		},
 		date: '2025',
+		checked: '2026-11-12',
 		releaseDate: '2026-03-29',
 		mask: true,
 		maskBuffer: 1000,

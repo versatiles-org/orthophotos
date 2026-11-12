@@ -108,6 +108,8 @@ export default defineTileRegion({
 			url: 'https://www.geoportal.gov.pl/en/data/orthophotomap-orto/',
 		},
 		date: `${MIN_YEAR}-2025`,
+		resolution: 25,
+		checked: '2026-11-12',
 	},
 	init: async (ctx) => {
 		const capsPath = join(ctx.tempDir, 'wfs_capabilities.xml');

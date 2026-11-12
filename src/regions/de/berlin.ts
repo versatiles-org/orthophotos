@@ -51,6 +51,8 @@ export default defineTileRegion({
 			url: 'https://gdi.berlin.de/geonetwork/srv/ger/catalog.search#/metadata/ba965749-6f08-4f81-ba98-f46e569d3e57',
 		},
 		date: '2026',
+		resolution: 20,
+		checked: '2026-11-12',
 		mask: 'de_berlin.geojson.gz',
 		releaseDate: '2026-03-24',
 		// 20 cm source pixels: zoom 18 (0.18–0.20 m on the ground in Germany) shows their full detail.

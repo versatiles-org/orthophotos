@@ -54,6 +54,8 @@ export default defineTileRegion({
 		resolution: 10,
 		checked: '2026-11-12',
 		releaseDate: '2026-03-28',
+		// Clips the near-white JPEG 2000 rim the white nodata leaves along the national border.
+		mask: true,
 		// 10 cm source pixels: zoom 19 (about 0.10 m on the ground at 49.7° N) shows their full detail.
 		maxZoom: 19,
 	},

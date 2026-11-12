@@ -166,7 +166,8 @@ function bufferSteps(distance: number): string[] {
 		String(SIMPLIFY_TOLERANCE),
 		'!',
 		'set-geom-type',
-		'--multi',
+		'--geometry-type',
+		'MULTIPOLYGON',
 	];
 }
 
@@ -297,7 +298,8 @@ export function getSteps(paths: QualityZonePaths): Step[] {
 				`SELECT '${zone}' AS zone, '${quality}' AS quality, geom FROM ${layerName(paths.zoneLayers[zone])}`,
 				'!',
 				'set-geom-type',
-				'--multi',
+				'--geometry-type',
+				'MULTIPOLYGON',
 				'!',
 				'write',
 				'--overwrite',

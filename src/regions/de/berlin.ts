@@ -10,7 +10,8 @@ import {
 	withRetry,
 } from '../../lib/index.ts';
 
-const ATOM_URL = 'https://gdi.berlin.de/data/oi_dop2025_sommer/atom/';
+// Each campaign gets its own feed (oi_dop2025_sommer, oi_dop2026, …), so a new year needs a new URL.
+const ATOM_URL = 'https://gdi.berlin.de/data/oi_dop2026/atom/';
 const xmlParser = createXmlParser();
 
 export function parseTileUrls(xml: string): string[] {
@@ -47,9 +48,9 @@ export default defineTileRegion({
 		},
 		creator: {
 			name: 'Geoportal Berlin',
-			url: 'https://daten.berlin.de/datensaetze/orthofotografie-im-inspire-datenmodell-truedop20rgbi-2025-sommer-f9369d23',
+			url: 'https://gdi.berlin.de/geonetwork/srv/ger/catalog.search#/metadata/ba965749-6f08-4f81-ba98-f46e569d3e57',
 		},
-		date: '2025',
+		date: '2026',
 		mask: 'de_berlin.geojson.gz',
 		releaseDate: '2026-03-24',
 	},

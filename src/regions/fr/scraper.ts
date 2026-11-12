@@ -50,8 +50,9 @@ const REQUEST_INTERVAL_MS = 1200;
 
 // Date range covered by the BD ORTHO feed, derived from editionDate years of all
 // zones. Verified at init time against the feed and surfaced via buildMeta(). If
-// the check fails with a new range, update this constant.
-const FR_DATE_RANGE = '2004-2025';
+// the check fails with a new range, update this constant. The index is cached in
+// `<dir_temp>/fr/index/` and never refetched, so delete that folder to see a new feed.
+const FR_DATE_RANGE = '2004-2026';
 
 /** An item produced by init — one per selected département. */
 interface BdorthoItem {

@@ -24,6 +24,7 @@ export default defineTileRegion({
 			'Only WMS is usable.',
 			'Server is very, very slow.',
 			'No license information found.',
+			'The national mosaic ORT10LT is patched every year: aerial imagery from 2022 to 2026, partly satellite imagery from 2024 to 2026 (per the flight-date layers of the same service).',
 		],
 		entries: ['result'],
 		license: {
@@ -35,7 +36,7 @@ export default defineTileRegion({
 			name: 'Nacionalinė žemės tarnyba prie Aplinkos ministerijos',
 			url: 'https://www.geoportal.lt/geoportal/paieska',
 		},
-		date: '2019',
+		date: '2022-2026',
 		releaseDate: '2025-10-06',
 	},
 	init: async (ctx) => {

@@ -1,6 +1,13 @@
 import { statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { defineTileRegion, downloadFile, extractZipAndBuildVrt, runMosaicTile, withRetry } from '../../lib/index.ts';
+import {
+	defineTileRegion,
+	downloadFile,
+	extractZipAndBuildVrt,
+	runCommand,
+	runMosaicTile,
+	withRetry,
+} from '../../lib/index.ts';
 
 const BASE_URL = 'https://opengeodata.lgl-bw.de/data/dop20/';
 
@@ -12,6 +19,26 @@ export function generateTileIds(): string[] {
 		}
 	}
 	return ids;
+}
+
+/**
+ * Downloads `url` to `dest`. Returns `false` if the server answers 404, so a missing archive
+ * is not retried; any other failure is rethrown for `withRetry`.
+ */
+export async function downloadUnlessMissing(url: string, dest: string): Promise<boolean> {
+	try {
+		await downloadFile(url, dest);
+		return true;
+	} catch (err) {
+		const status = await runCommand('curl', ['-s', '-o', '/dev/null', '-r', '0-0', '-w', '%{http_code}', url], {
+			quiet: true,
+		}).then(
+			(probe) => new TextDecoder().decode(probe.stdout).trim(),
+			() => undefined,
+		);
+		if (status === '404') return false;
+		throw err;
+	}
 }
 
 export default defineTileRegion({
@@ -43,12 +70,13 @@ export default defineTileRegion({
 	init: () => generateTileIds().map((id) => ({ id })),
 	download: async ({ id }, ctx) => {
 		const zipPath = ctx.tempFile(join(ctx.tempDir, `${id}.zip`));
-		await withRetry(() => downloadFile(`${BASE_URL}dop20rgb_32_${id}_2_bw.zip`, zipPath), { maxAttempts: 3 });
+		const url = `${BASE_URL}dop20rgb_32_${id}_2_bw.zip`;
 
-		// Filename probing: many guessed IDs don't correspond to a real archive.
-		// The server returns a tiny error response in those cases — persist a `.skip`
-		// marker so re-runs don't retry these forever.
-		if (statSync(zipPath).size < 1000) {
+		// Filename probing: many guessed IDs lie outside the state and have no archive.
+		// The server answers those with 404 (until early 2026 with a tiny error response).
+		// Persist a `.skip` marker in both cases so re-runs don't retry them forever.
+		const found = await withRetry(() => downloadUnlessMissing(url, zipPath), { maxAttempts: 3 });
+		if (!found || statSync(zipPath).size < 1000) {
 			writeFileSync(ctx.skipDest, '');
 			return 'empty';
 		}
@@ -72,5 +100,6 @@ export default defineTileRegion({
 
 		await runMosaicTile(vrtPath, ctx.dest, { maxZoom: ctx.maxZoom });
 	},
-	minFiles: 14000,
+	// 9,356 of the 14,112 guessed squares intersect the state; the server has no archive for the rest.
+	minFiles: 8500,
 });

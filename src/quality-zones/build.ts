@@ -1,14 +1,14 @@
 /**
- * Runs the quality-zones step plan from `steps.ts`.
+ * Runs the settlement-proximity step plan from `steps.ts`.
  *
  * Steps are resumable: a step whose output exists is skipped, and every step writes
  * to a `.tmp.` file that is only renamed on success. Delete a step's output to rerun it.
  */
 
-import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { createProgress, runCommand } from '../lib/index.ts';
 import { createProgressParser, stripProgress } from './progress.ts';
-import { getPaths, getSettlementVPL, getSteps, getWorldGeoJSON, tmpPath, type Step } from './steps.ts';
+import { getPaths, getSettlementVPL, getSteps, tmpPath, type Step } from './steps.ts';
 
 /** `input` is an `osm.versatiles` container: a local path or an http(s) URL. */
 export async function buildQualityZones(input: string, output: string, tempDir: string): Promise<void> {
@@ -17,7 +17,6 @@ export async function buildQualityZones(input: string, output: string, tempDir: 
 
 	const paths = getPaths(input, tempDir);
 	writeFileSync(paths.vpl, getSettlementVPL(input));
-	writeFileSync(paths.world, getWorldGeoJSON());
 
 	const steps = getSteps(paths);
 	for (const [index, step] of steps.entries()) {
@@ -34,17 +33,7 @@ export async function buildQualityZones(input: string, output: string, tempDir: 
 		await runStep(step);
 		if (!existsSync(tmp)) throw new Error(`Step "${step.name}" did not write ${tmp}`);
 		renameSync(tmp, step.output);
-		for (const file of step.cleanup ?? []) rmSync(file, { force: true });
 		console.log(`  took ${formatSeconds((Date.now() - start) / 1000)}`);
-	}
-
-	const invalid = countFeatures(paths.geometryErrors);
-	if (invalid > 0) {
-		throw new Error(`Geometry check found ${invalid} invalid geometries, see ${paths.geometryErrors}`);
-	}
-	const gaps = countFeatures(paths.coverageErrors);
-	if (gaps > 0) {
-		throw new Error(`Coverage check found ${gaps} gaps or overlaps, see ${paths.coverageErrors}`);
 	}
 
 	copyFileSync(paths.result, output);
@@ -85,9 +74,4 @@ function formatSeconds(seconds: number): string {
 	if (seconds < 60) return `${seconds.toFixed(0)} s`;
 	if (seconds < 3600) return `${Math.floor(seconds / 60)} min ${(seconds % 60).toFixed(0)} s`;
 	return `${Math.floor(seconds / 3600)} h ${Math.round((seconds % 3600) / 60)} min`;
-}
-
-function countFeatures(geojsonPath: string): number {
-	const data = JSON.parse(readFileSync(geojsonPath, 'utf8')) as { features?: unknown[] };
-	return data.features?.length ?? 0;
 }

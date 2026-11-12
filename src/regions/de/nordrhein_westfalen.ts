@@ -35,6 +35,9 @@ export default defineTileRegion({
 		},
 		date: '2025',
 		releaseDate: '2026-03-22',
+		// 10 cm source pixels, about 0.16 m in Web Mercator at 51° N: fine enough for zoom 18
+		// (0.30 m), so the extra level adds real detail (#26).
+		maxZoom: 18,
 	},
 	init: async (ctx) => {
 		const indexPath = join(ctx.tempDir, 'index.xml');

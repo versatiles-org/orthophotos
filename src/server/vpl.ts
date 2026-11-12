@@ -110,7 +110,7 @@ export function generateVPL(outputDir: string, filename: string, options: VPLOpt
 	const vpl = `from_stacked_raster auto_overscale=true [
   ${layers.join(',\n  ')}
 ] | meta_update
-  name="VersaTiles - Satellite + Orthophotos"
+  name="VersaTiles Satellite + Orthophotos"
   description="High-resolution satellite and orthophoto imagery from various providers, merged by VersaTiles."
   schema="rgb"
   attribution="<a href='https://versatiles.org/sources/'>VersaTiles sources</a>"

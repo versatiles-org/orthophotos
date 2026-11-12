@@ -59,7 +59,7 @@ export default defineTileRegion<SkItem, { tifPath: string }>({
 			name: 'GKÚ',
 			url: 'https://rpi.gov.sk/metadata/3b046df1-7867-4377-b15b-6ae6bac999da',
 		},
-		date: '2023',
+		date: '2020-2022',
 		releaseDate: '2026-03-28',
 	},
 	init: async (ctx) => {

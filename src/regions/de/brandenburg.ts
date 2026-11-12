@@ -38,7 +38,7 @@ export default defineTileRegion({
 			name: 'GeoBasis-DE/LGB; Geoportal Berlin',
 			url: 'https://data.geobasis-bb.de/geobasis/daten/dop/rgb_jpg/',
 		},
-		date: '2023',
+		date: '2023-2026',
 		releaseDate: '2026-03-19',
 		// 20 cm source pixels: zoom 18 (0.18–0.20 m on the ground in Germany) shows their full detail.
 		maxZoom: 18,

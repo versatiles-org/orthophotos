@@ -36,7 +36,7 @@ export default defineTileRegion<BeItem, { srcPath: string }>({
 			name: 'National Geographic Institute (NGI) of Belgium',
 			url: 'https://www.ngi.be/en',
 		},
-		date: '2024',
+		date: '2023',
 		releaseDate: '2026-03-29',
 	},
 	init: async (ctx) => {

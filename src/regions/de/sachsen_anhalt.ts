@@ -55,7 +55,7 @@ export default defineTileRegion({
 			name: 'GeoBasis-DE / LVermGeo ST',
 			url: 'https://www.lvermgeo.sachsen-anhalt.de/de/gdp-open-data.html',
 		},
-		date: '2020',
+		date: '2024-2025',
 		releaseDate: '2026-03-23',
 		// 20 cm source pixels: zoom 18 (0.18–0.20 m on the ground in Germany) shows their full detail.
 		maxZoom: 18,

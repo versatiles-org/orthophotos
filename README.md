@@ -17,7 +17,7 @@ This repository contains scripts and tools to fetch, process, and serve raster t
 ### Prerequisites
 
 - Node.js >= 22
-- External CLI tools: `7z`, `curl`, `gdal_translate`, `gdalbuildvrt`, `osmium`, `ssh`, `unzip`, `versatiles`
+- External CLI tools: `7z`, `curl`, `gdal_translate`, `gdalbuildvrt`, `ssh`, `unzip`, `versatiles`
 
 Install CLI dependencies (macOS or Linux):
 

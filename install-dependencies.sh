@@ -12,7 +12,7 @@ case "$OS" in
 			exit 1
 		fi
 
-		brew install curl gdal osmium-tool sevenzip unzip
+		brew install curl gdal sevenzip unzip
 
 		# Homebrew's sevenzip provides 7zz but many scripts expect 7z.
 		# Create a symlink if 7z is not already available.
@@ -32,7 +32,6 @@ case "$OS" in
 		apt-get install -y \
 			curl \
 			gdal-bin \
-			osmium-tool \
 			p7zip-full \
 			unzip
 		;;

@@ -140,6 +140,6 @@ Before adopting a new source, confirm GDAL can open a sample with a vanilla inst
 
 ### External CLI Dependencies
 
-Required tools: `7z`, `curl`, `gdal_translate`, `gdalbuildvrt`, `osmium`, `ssh`, `unzip`, `versatiles`
+Required tools: `7z`, `curl`, `gdal_translate`, `gdalbuildvrt`, `ssh`, `unzip`, `versatiles`
 
 Install via `./install-dependencies.sh` (supports macOS via Homebrew and Linux via apt).

@@ -61,7 +61,7 @@ describe('versatiles', () => {
 });
 
 test('other commands have no parser', () => {
-	expect(createProgressParser('osmium')).toBeUndefined();
+	expect(createProgressParser('curl')).toBeUndefined();
 });
 
 test('stripProgress keeps warnings and drops escapes and bar redraws', () => {

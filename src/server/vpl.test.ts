@@ -2,7 +2,7 @@ import { expect, test } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { generateVPL } from './vpl.ts';
+import { BLUEMARBLE_LEVELS, generateVPL } from './vpl.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TEST_DIR = resolve(__dirname, '../../test-data/vpl');
@@ -41,14 +41,11 @@ test('generateVPL - includes satellite layers via sftp', () => {
 	expect(vpl).toContain('bluemarble/bluemarble.versatiles');
 });
 
-test('generateVPL - applies gamma/brightness/contrast to bluemarble', () => {
+test('generateVPL - applies the levels to bluemarble', () => {
 	generateVPL(TEST_DIR, 'gamma.vpl', { coastline: COASTLINE });
 	const vpl = readFileSync(resolve(TEST_DIR, 'gamma.vpl'), 'utf-8');
 
-	expect(vpl).toContain('gamma=0.8');
-	expect(vpl).toContain('brightness=0.2');
-	expect(vpl).toContain('contrast=0.8');
-	expect(vpl).toContain('raster_levels');
+	expect(vpl).toContain(`bluemarble.versatiles" | raster_levels ${BLUEMARBLE_LEVELS}`);
 });
 
 test('generateVPL - includes meta_update with attribution', () => {

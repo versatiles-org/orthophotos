@@ -42,9 +42,25 @@ Sentinel-2 looks good on land and in a narrow strip of coastal water. Further ou
 
 The prototype for this was built around Lisbon, comparing it with masks from the Sentinel-2 coverage and from `coastline-fade-mask`'s land buffered by 10 km. Both left a wide band of grey or dark sea along the coast.
 
+## Blue Marble's levels
+
+Blue Marble only shows at sea, so its levels (`BLUEMARBLE_LEVELS` in `src/server/vpl.ts`) are tuned for the ocean: it should have the same character as the satellite land, not the colour of Sentinel-2's grey sea. Measured on the whole globe at zoom 3:
+
+|                                                              | Mean luma | Luma std | HSV saturation |
+| ------------------------------------------------------------ | --------- | -------- | -------------- |
+| Satellite land (S2GM)                                        | 115       | 50       | 0.28           |
+| Blue Marble ocean, raw                                       | 23        | 18       | 0.86           |
+| Blue Marble ocean, previous levels                           | 62        | 16       | 0.42           |
+| Blue Marble ocean, `saturation=0.65 brightness=65 gamma=1.1` | 80        | 18       | 0.28           |
+
+- **Saturation** matches the land. It needs versatiles with the `saturation` option of `raster_levels` (versatiles-rs#328, after v5.12.0).
+- **Contrast** isn't matched: the ocean's variation is bathymetry, not texture, and stretching it to the land's breaks the image.
+- **Brightness** is a choice: the ocean stays darker than the land. Means of 60 and 100 looked grey or pale. The previous `brightness=0.2` is in 0–255 units, so it had practically no effect.
+
+Re-measure once the Sentinel-2 layer replaces S2GM. Its colour stretch was tuned to S2GM, so the values should hold.
+
 ## Still to do
 
 - **Blue Marble:** its build exists only as scripts on the storage box (`/home/satellite/bluemarble/`); move it here.
-- **Blue Marble's levels:** tone its ocean to the saturation of the land (HSV saturation 0.28 instead of 0.86), measured globally at zoom 3. That needs a `saturation` option in `raster_levels` (versatiles-rs#328). A first fit for a mean ocean luma of 80 is `saturation=0.65 brightness=65 gamma=1.1`. Today's `brightness=0.2` is in 0–255 units, so it has practically no effect.
 - **VPL:** point `src/server/vpl.ts` at the new satellite file once it's built and checked. The coastline mask applies to whichever satellite file it points at, today still S2GM.
 - **Clean up:** archive `versatiles-satellite`, move its open issue (snow becoming nodata, versatiles-satellite#2) here, and close #30.

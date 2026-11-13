@@ -10,6 +10,13 @@ import { getCoastlineLayers, getCoastlinePath } from './coastline.ts';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = resolve(__dirname, '../../data');
 
+/**
+ * `raster_levels` for Blue Marble, which shows only at sea. Fitted on the whole globe at zoom 3:
+ * its ocean gets the mean HSV saturation of the satellite land (0.28 instead of 0.86) and a mean
+ * luma of 80, darker than the land (115). Needs versatiles with `saturation` (versatiles-rs#328).
+ */
+export const BLUEMARBLE_LEVELS = 'saturation=0.65 brightness=65 gamma=1.1';
+
 export interface VPLOptions {
 	/** If true, shows all orthophoto layers with level_min = 0 for debugging. */
 	debug?: boolean;
@@ -108,9 +115,8 @@ export function generateVPL(outputDir: string, filename: string, options: VPLOpt
 	// The satellite layer shows on land and in a strip of coastal water; Blue Marble shows the sea.
 	const satelliteLayers = getCoastlineLayers(sourceUrl(s2gmPath), resolve(coastline));
 	layers.push(...satelliteLayers);
-	layers.push(
-		`from_container filename="${sourceUrl(bluemarblePath)}" | raster_levels gamma=0.8 brightness=0.2 contrast=0.8`,
-	);
+	// Blue Marble's ocean, toned to the saturation of the satellite land, see "Blue Marble's levels" in docs/satellite.md.
+	layers.push(`from_container filename="${sourceUrl(bluemarblePath)}" | raster_levels ${BLUEMARBLE_LEVELS}`);
 
 	const vpl = `from_stacked_raster auto_overscale=true [
   ${layers.join(',\n  ')}

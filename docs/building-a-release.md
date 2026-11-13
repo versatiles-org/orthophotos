@@ -12,7 +12,7 @@ A checklist for rebuilding orthophoto regions and publishing them. Work through 
 
       Check with `versatiles --version` and `versatiles mosaic --help`, which must list `tile`. Make sure no older `versatiles` comes earlier in `PATH`. `./run.sh` stops at "Checking required commands" if `mosaic tile` is missing.
 
-- [ ] **The release contains the fixes this build needs.** Read the versatiles-rs changelog since the last build, especially for `mosaic tile` and `mosaic assemble`.
+- [ ] **The release contains the fixes this build needs.** Read the versatiles-rs changelog since the last build, especially for `mosaic tile` and `mosaic assemble`. The machine that publishes needs a release with `saturation` in `raster_levels` (versatiles-rs#328, after v5.12.0), which the VPL uses for Blue Marble.
 - [ ] **The checkout is current** and `npm run check` passes.
 
 ## 2. Data sources

@@ -61,6 +61,7 @@ export default defineTileRegion({
 		status: 'released',
 		notes: [
 			'Images are unnecessarily packed into container files, such as ZIP.',
+			'Each update of the dataset is published as a new CKAN package, and the old ones keep download links that no longer work.',
 			'License requires attribution.',
 			'National license instead of an international standard.',
 			'Rather than a national mosaic, inconsistent regional mosaics with different access and formats are available instead.',

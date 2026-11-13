@@ -42,6 +42,7 @@ export default defineTileRegion({
 		notes: [
 			'No API, such as an ATOM feed, available.',
 			'A hacky solution is required: Parse gemeinde.kml in the hope that it is up to date and references all images.',
+			'Server is very slow: 3–10 MiB/s on a 10 Gbit/s connection (November 2026).',
 			'License requires attribution.',
 			'Rather than a national mosaic, inconsistent regional mosaics with different access and formats are available instead.',
 		],

@@ -13,6 +13,7 @@ import { existsSync, mkdirSync, readdirSync, renameSync, rmSync, writeFileSync }
 import { readFile, readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import {
+	convertToTiledTiff,
 	createProgress,
 	defineTileRegion,
 	downloadFile,
@@ -335,15 +336,19 @@ export function defineFrSubRegion(opts: FrSubRegionOptions): RegionPipeline {
 				await pipeline(jp2Files, { progress: { labels: ['converted'] } })
 					.map({ memoryGB: 5 }, async (jp2Path) => {
 						const baseName = basename(jp2Path, '.jp2');
+						const decodedPath = join(tilesDir, `${baseName}.decoded.tif`);
 						const tifPath = join(tilesDir, `${baseName}.tif`);
 						try {
-							// Decode the JP2 with GDAL, which is more robust than versatiles's decoder,
-							// and make the white fill over the sea in coastal tiles transparent (La Réunion,
+							// Decode the JP2 with GDAL, which is more robust than versatiles's decoder, into a
+							// tiled TIFF, which the block-wise mask below can read window by window.
+							await convertToTiledTiff(jp2Path, decodedPath, { compress: 'lzw', predictor: false });
+							safeRm(jp2Path);
+							// Make the white fill over the sea in coastal tiles transparent (La Réunion,
 							// November 2026). Masking here rather than with `whiteBorder: 'mask'` in the
 							// tile step keeps it in the parallel stage.
-							await maskWhiteBackgroundFile(jp2Path, tifPath, WHITE_BORDER_OPTIONS);
+							await maskWhiteBackgroundFile(decodedPath, tifPath, WHITE_BORDER_OPTIONS);
 						} finally {
-							safeRm(jp2Path);
+							safeRm(decodedPath);
 						}
 						return { tifPath, tilePath: join(tilesDir, `${baseName}.versatiles`) };
 					})

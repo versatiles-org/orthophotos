@@ -173,7 +173,8 @@ export default defineTileRegion<Sentinel2Item, { tifPath: string }>({
 	},
 	convertLimit: { memoryGB: 8 },
 	convert: async ({ tifPath }, { dest, maxZoom }) => {
-		await runMosaicTile(tifPath, dest, { maxZoom });
+		// Snow, ice and clouds are white up to the tile edges; that is imagery, not a fill.
+		await runMosaicTile(tifPath, dest, { maxZoom, whiteBorder: 'ignore' });
 	},
 	// 29,513 tiles for 2025 Q3.
 	minFiles: 25000,

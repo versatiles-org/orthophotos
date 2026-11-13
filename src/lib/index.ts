@@ -79,11 +79,17 @@ export {
 	type CompositeRastersOptions,
 	type ExtractZipBuildVrtOptions,
 } from './gdal.ts';
-export { runMosaicAssemble, runMosaicTile } from './versatiles.ts';
+export { runMosaicAssemble, runMosaicTile, type WhiteBorder } from './versatiles.ts';
 
 // Cross-tree re-exports — pragmatic facade for region scrapers, routed through
 // each subsystem's own index.ts so the directional dependency stays
 // `lib → status` / `lib → config` only at the barrel level.
 export { loadKnownRegions, type KnownRegion } from '../status/index.ts';
 export { getConfig } from './config.ts';
-export { maskWhiteBackground, maskWhiteBackgroundFile, type WhiteMaskOptions } from './white-mask.ts';
+export {
+	maskWhiteBackground,
+	maskWhiteBackgroundFile,
+	measureWhiteBorder,
+	WHITE_BORDER_OPTIONS,
+	type WhiteMaskOptions,
+} from './white-mask.ts';

@@ -99,7 +99,7 @@ The project uses the `versatiles` CLI tool with the `mosaic` subcommand:
 
 These are wrapped in `src/lib/versatiles.ts` as `runMosaicTile()` and `runMosaicAssemble()`. Quality and the default top zoom are defined as constants (`QUALITY`, `MAX_ZOOM`) in `src/lib/constants.ts`; a region can set its own `maxZoom` in its metadata (see `docs/adding-a-region.md`). Both run with `quiet: true` to suppress output during normal operation. (GDAL CLI wrappers — `convertToTiledTiff()`, `extractWmsBlock()` — live in `src/lib/gdal.ts`. Region scrapers should import all of these via `src/regions/lib.ts`, never directly.)
 
-`runMosaicTile()` requires `maxZoom` (pass `ctx.maxZoom` from the tile context) and supports options: `bands`, `nodata`, `crs`, `cacheDirectory`. Use `crs` to override the source CRS (e.g., `{ crs: '3045' }` for EPSG:3045) — this avoids needing `gdal raster edit` to assign CRS before conversion. Use `nodata` to treat specific pixel values as transparent (e.g., `{ nodata: '255,255,255' }` for white borders).
+`runMosaicTile()` requires `maxZoom` (pass `ctx.maxZoom` from the tile context) and supports options: `bands`, `nodata`, `crs`, `cacheDirectory`, `whiteBorder`. By default it refuses an input with an opaque white border; `whiteBorder: 'mask'` makes the white transparent (see "Transparent borders" in `docs/adding-a-region.md`). Use `crs` to override the source CRS (e.g., `{ crs: '3045' }` for EPSG:3045) — this avoids needing `gdal raster edit` to assign CRS before conversion. Use `nodata` to treat specific pixel values as transparent (e.g., `{ nodata: '255,255,255' }` for white borders).
 
 `runMosaicAssemble()` supports `lossless` option for lossless WebP encoding of translucent tiles.
 

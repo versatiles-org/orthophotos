@@ -13,13 +13,13 @@ import { existsSync, mkdirSync, readdirSync, renameSync, rmSync, writeFileSync }
 import { readFile, readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import {
-	convertToTiledTiff,
 	createProgress,
 	defineTileRegion,
 	downloadFile,
 	downloadFiles,
 	fetchWithInterval,
 	getConfig,
+	maskWhiteBackgroundFile,
 	pipeline,
 	type RegionMetadata,
 	type RegionPipeline,
@@ -28,6 +28,7 @@ import {
 	runMosaicTile,
 	safeRm,
 	sleep,
+	WHITE_BORDER_OPTIONS,
 	withRetry,
 } from '../../lib/index.ts';
 import {
@@ -83,6 +84,7 @@ function buildMeta(opts: FrSubRegionOptions): RegionMetadata {
 			'Data source: IGN Géoplateforme BD ORTHO® ATOM feed (https://data.geopf.fr/telechargement/resource/BDORTHO).',
 			'The feed is paginated (~141 pages) and rate-limited to roughly one request per second.',
 			'Images are packed into 7z archives containing JPEG2000 tiles.',
+			'Coastal tiles are opaque white over the sea, which is made transparent before tiling.',
 			'National license (Licence Ouverte 2.0) — attribution required.',
 		],
 		entries: ['result'],
@@ -335,10 +337,11 @@ export function defineFrSubRegion(opts: FrSubRegionOptions): RegionPipeline {
 						const baseName = basename(jp2Path, '.jp2');
 						const tifPath = join(tilesDir, `${baseName}.tif`);
 						try {
-							// Decompress JP2 → tiled LZW GeoTIFF first. GDAL's JP2 decoder is
-							// more robust than versatiles's; tiled + light compression keeps the
-							// intermediate both fast to write and efficient to random-access.
-							await convertToTiledTiff(jp2Path, tifPath, { compress: 'lzw', predictor: false, alpha: true });
+							// Decode the JP2 with GDAL, which is more robust than versatiles's decoder,
+							// and make the white fill over the sea in coastal tiles transparent (La Réunion,
+							// November 2026). Masking here rather than with `whiteBorder: 'mask'` in the
+							// tile step keeps it in the parallel stage.
+							await maskWhiteBackgroundFile(jp2Path, tifPath, WHITE_BORDER_OPTIONS);
 						} finally {
 							safeRm(jp2Path);
 						}
@@ -346,7 +349,8 @@ export function defineFrSubRegion(opts: FrSubRegionOptions): RegionPipeline {
 					})
 					.forEach({ memoryGB: 20 }, async ({ tifPath, tilePath }) => {
 						try {
-							await runMosaicTile(tifPath, tilePath, { maxZoom });
+							// Already masked above; skips measuring every tile again in this single-slot stage.
+							await runMosaicTile(tifPath, tilePath, { maxZoom, whiteBorder: 'ignore' });
 							versatilesFiles.push(tilePath);
 							return 'converted';
 						} finally {

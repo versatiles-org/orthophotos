@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { maskWhiteBackground } from './white-mask.ts';
+import { applyNodata, findWhiteBackground, maskWhiteBackground, parseNodata } from './white-mask.ts';
 
 /** Builds band-sequential RGBA bytes from one `[r, g, b, a]` per pixel, row by row. */
 function image(pixels: number[][]): Uint8Array {
@@ -46,6 +46,58 @@ describe('maskWhiteBackground', () => {
 	});
 
 	test('rejects a buffer of the wrong size', () => {
-		expect(() => maskWhiteBackground(new Uint8Array(10), 2, 2)).toThrow('expected 16 bytes');
+		expect(() => maskWhiteBackground(new Uint8Array(10), 2, 2)).toThrow('expected 16 bytes of RGBA');
+	});
+});
+
+describe('findWhiteBackground with edgeOnly', () => {
+	// 5 × 3: white at the left edge, and a white roof in the middle that touches nothing.
+	const pixels = [W, G, G, G, G, W, G, W, G, G, W, G, G, G, G];
+
+	test('counts white at the edge of the raster, not a white roof inside', () => {
+		const background = findWhiteBackground(image(pixels), 5, 3, { edgeOnly: true });
+		expect([...background]).toEqual([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0]);
+	});
+
+	test('counts white next to a transparent pixel', () => {
+		const T = [0, 0, 0, 0];
+		const rgba = image([G, G, G, G, G, G, T, W, G, G, G, G, G, G, G]);
+		expect(findWhiteBackground(rgba, 5, 3, { edgeOnly: true })[7]).toBe(1);
+	});
+
+	test('leaves white areas smaller than minArea', () => {
+		// The edge area has 3 of 15 pixels: 20%.
+		expect(findWhiteBackground(image(pixels), 5, 3, { edgeOnly: true, minArea: 0.25 }).every((v) => v === 0)).toBe(
+			true,
+		);
+		expect(findWhiteBackground(image(pixels), 5, 3, { edgeOnly: true, minArea: 0.2 })[0]).toBe(1);
+	});
+
+	test('without edgeOnly every pure white pixel starts an area', () => {
+		expect(findWhiteBackground(image(pixels), 5, 3)[7]).toBe(1);
+	});
+});
+
+describe('nodata', () => {
+	test('parses colours and a single grey value', () => {
+		expect(parseNodata('0,0,0;255,255,255')).toEqual([
+			[0, 0, 0],
+			[255, 255, 255],
+		]);
+		expect(parseNodata('255')).toEqual([[255, 255, 255]]);
+		expect(() => parseNodata('1,2')).toThrow('Invalid nodata colour "1,2"');
+	});
+
+	test('makes nodata colours transparent', () => {
+		const rgba = image([W, G, [0, 0, 0, 255]]);
+		applyNodata(rgba, 3, 1, '0,0,0');
+		expect(alpha(rgba)).toEqual([255, 255, 0]);
+	});
+
+	test('a white nodata colour is no white background any more', () => {
+		const rgba = image([W, W, G]);
+		maskWhiteBackground(rgba, 3, 1, { erode: 0, edgeOnly: true, nodata: '255,255,255' });
+		expect(alpha(rgba)).toEqual([0, 0, 255]);
+		expect([...findWhiteBackground(rgba, 3, 1, { edgeOnly: true })]).toEqual([0, 0, 0]);
 	});
 });

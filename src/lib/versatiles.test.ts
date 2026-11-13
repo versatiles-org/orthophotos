@@ -1,5 +1,5 @@
-import { expect, test, vi } from 'vitest';
-import { mkdirSync, existsSync, writeFileSync } from 'node:fs';
+import { expect, onTestFinished, test, vi } from 'vitest';
+import { mkdirSync, existsSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { QUALITY } from './constants.ts';
@@ -18,6 +18,20 @@ vi.mock('./command.ts', async (importOriginal) => {
 
 import { runCommand } from './command.ts';
 const mockRunCommand = vi.mocked(runCommand);
+
+// The white-border step runs GDAL; its own tests are in white-mask.test.ts.
+vi.mock('./white-mask.ts', async (importOriginal) => {
+	const original = await importOriginal<typeof import('./white-mask.ts')>();
+	return {
+		...original,
+		measureWhiteBorder: vi.fn().mockResolvedValue(0),
+		maskWhiteBackgroundFile: vi.fn().mockResolvedValue(undefined),
+	};
+});
+
+import { maskWhiteBackgroundFile, measureWhiteBorder } from './white-mask.ts';
+const mockMeasure = vi.mocked(measureWhiteBorder);
+const mockMask = vi.mocked(maskWhiteBackgroundFile);
 
 function mockResult(stderr = '') {
 	return {
@@ -95,6 +109,54 @@ test('runMosaicTile - cleans up tmp file on error', async () => {
 
 	await expect(runMosaicTile('/input.tif', output, { maxZoom: 17 })).rejects.toThrow('runMosaicTile failed');
 	expect(existsSync(join(testDir, '.tmp.out.versatiles'))).toBe(false);
+});
+
+/** An output path in a fresh directory, and a `runCommand` mock that plays a successful tiling. */
+function tileSetup(name: string): string {
+	const testDir = join(tmpdir(), `mosaic-${name}-${Date.now()}`);
+	mkdirSync(testDir, { recursive: true });
+	onTestFinished(() => rmSync(testDir, { recursive: true, force: true }));
+	const output = join(testDir, 'out.versatiles');
+	mockRunCommand.mockImplementation(async () => {
+		writeFileSync(join(testDir, '.tmp.out.versatiles'), 'fake');
+		return mockResult('info: finished mosaic tile');
+	});
+	return output;
+}
+
+test('runMosaicTile - refuses an input with a white border by default', async () => {
+	const output = tileSetup('white');
+	mockMeasure.mockResolvedValueOnce(0.3);
+	await expect(runMosaicTile('/input.tif', output, { maxZoom: 17 })).rejects.toThrow(
+		/30\.0% of "\/input\.tif" is opaque white along its edge/,
+	);
+	expect(mockRunCommand).not.toHaveBeenCalledWith('versatiles', expect.anything(), expect.anything());
+});
+
+test('runMosaicTile - accepts a little white and passes nodata to the check', async () => {
+	const output = tileSetup('little-white');
+	mockMeasure.mockResolvedValueOnce(0.005);
+	await runMosaicTile('/input.tif', output, { maxZoom: 17, nodata: '255,255,255' });
+	expect(mockMeasure).toHaveBeenLastCalledWith('/input.tif', expect.any(String), { nodata: '255,255,255' });
+	expect(existsSync(output)).toBe(true);
+});
+
+test('runMosaicTile - tiles the masked copy with whiteBorder: mask', async () => {
+	const output = tileSetup('mask');
+	mockMeasure.mockClear();
+	await runMosaicTile('/input.tif', output, { maxZoom: 17, whiteBorder: 'mask' });
+	const masked = mockMask.mock.lastCall![1];
+	expect(mockMask).toHaveBeenLastCalledWith('/input.tif', masked, expect.objectContaining({ edgeOnly: true }));
+	expect(mockRunCommand).toHaveBeenCalledWith('versatiles', expect.arrayContaining([masked]), { quiet: true });
+	expect(mockMeasure).not.toHaveBeenCalled();
+});
+
+test('runMosaicTile - skips the check with whiteBorder: ignore', async () => {
+	const output = tileSetup('ignore');
+	mockMeasure.mockClear();
+	await runMosaicTile('/input.tif', output, { maxZoom: 17, whiteBorder: 'ignore' });
+	expect(mockMeasure).not.toHaveBeenCalled();
+	expect(existsSync(output)).toBe(true);
 });
 
 test('runMosaicAssemble - calls versatiles with correct args', async () => {

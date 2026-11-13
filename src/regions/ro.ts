@@ -51,8 +51,8 @@ export default defineTileRegion({
 		resolution: 150,
 		checked: '2026-11-12',
 		releaseDate: '2025-10-05',
-		// The tiles are filled with black outside Romania (#24): nodata removes the exact black, the mask
-		// the near-black JPEG rim beyond the border. The buffer keeps the coarse NUTS coast from cutting beaches.
+		// The tiles are filled with black outside Romania (#24): `border: 'mask'` removes it with its
+		// near-black JPEG rim, the NUTS mask clips at the border. The buffer keeps the coarse NUTS coast from cutting beaches.
 		mask: true,
 		maskBuffer: 2000,
 		// 1.5 m source pixels: zoom 16 (about 0.8 m on the ground at 46° N) keeps all their detail; zoom 17
@@ -82,7 +82,7 @@ export default defineTileRegion({
 			ctx.errors.add(`${id}.zip (no .tif inside)`);
 			return;
 		}
-		await runMosaicTile(vrtPath, ctx.dest, { maxZoom: ctx.maxZoom, nodata: '0,0,0' });
+		await runMosaicTile(vrtPath, ctx.dest, { maxZoom: ctx.maxZoom, border: 'mask' });
 	},
 	minFiles: 123456,
 });

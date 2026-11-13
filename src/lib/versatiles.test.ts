@@ -19,19 +19,19 @@ vi.mock('./command.ts', async (importOriginal) => {
 import { runCommand } from './command.ts';
 const mockRunCommand = vi.mocked(runCommand);
 
-// The white-border step runs GDAL; its own tests are in white-mask.test.ts.
-vi.mock('./white-mask.ts', async (importOriginal) => {
-	const original = await importOriginal<typeof import('./white-mask.ts')>();
+// The border-fill step runs GDAL; its own tests are in fill-mask.test.ts.
+vi.mock('./fill-mask.ts', async (importOriginal) => {
+	const original = await importOriginal<typeof import('./fill-mask.ts')>();
 	return {
 		...original,
-		measureWhiteBorder: vi.fn().mockResolvedValue(0),
-		maskWhiteBackgroundFile: vi.fn().mockResolvedValue(undefined),
+		measureBorderFill: vi.fn().mockResolvedValue(0),
+		maskFillFile: vi.fn().mockResolvedValue(undefined),
 	};
 });
 
-import { maskWhiteBackgroundFile, measureWhiteBorder } from './white-mask.ts';
-const mockMeasure = vi.mocked(measureWhiteBorder);
-const mockMask = vi.mocked(maskWhiteBackgroundFile);
+import { maskFillFile, measureBorderFill } from './fill-mask.ts';
+const mockMeasure = vi.mocked(measureBorderFill);
+const mockMask = vi.mocked(maskFillFile);
 
 function mockResult(stderr = '') {
 	return {
@@ -124,16 +124,16 @@ function tileSetup(name: string): string {
 	return output;
 }
 
-test('runMosaicTile - refuses an input with a white border by default', async () => {
+test('runMosaicTile - refuses an input with a border fill by default', async () => {
 	const output = tileSetup('white');
 	mockMeasure.mockResolvedValueOnce(0.3);
 	await expect(runMosaicTile('/input.tif', output, { maxZoom: 17 })).rejects.toThrow(
-		/30\.0% of "\/input\.tif" is opaque white along its edge/,
+		/30\.0% of "\/input\.tif" is opaque white or black fill along its edge/,
 	);
 	expect(mockRunCommand).not.toHaveBeenCalledWith('versatiles', expect.anything(), expect.anything());
 });
 
-test('runMosaicTile - accepts a little white and passes nodata to the check', async () => {
+test('runMosaicTile - accepts a little fill and passes nodata to the check', async () => {
 	const output = tileSetup('little-white');
 	mockMeasure.mockResolvedValueOnce(0.005);
 	await runMosaicTile('/input.tif', output, { maxZoom: 17, nodata: '255,255,255' });
@@ -144,7 +144,7 @@ test('runMosaicTile - accepts a little white and passes nodata to the check', as
 test('runMosaicTile - tiles the masked copy with whiteBorder: mask', async () => {
 	const output = tileSetup('mask');
 	mockMeasure.mockClear();
-	await runMosaicTile('/input.tif', output, { maxZoom: 17, whiteBorder: 'mask' });
+	await runMosaicTile('/input.tif', output, { maxZoom: 17, border: 'mask' });
 	const masked = mockMask.mock.lastCall![1];
 	expect(mockMask).toHaveBeenLastCalledWith('/input.tif', masked, expect.objectContaining({ edgeOnly: true }));
 	expect(mockRunCommand).toHaveBeenCalledWith('versatiles', expect.arrayContaining([masked]), { quiet: true });
@@ -154,7 +154,7 @@ test('runMosaicTile - tiles the masked copy with whiteBorder: mask', async () =>
 test('runMosaicTile - skips the check with whiteBorder: ignore', async () => {
 	const output = tileSetup('ignore');
 	mockMeasure.mockClear();
-	await runMosaicTile('/input.tif', output, { maxZoom: 17, whiteBorder: 'ignore' });
+	await runMosaicTile('/input.tif', output, { maxZoom: 17, border: 'ignore' });
 	expect(mockMeasure).not.toHaveBeenCalled();
 	expect(existsSync(output)).toBe(true);
 });

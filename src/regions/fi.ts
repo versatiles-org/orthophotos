@@ -151,8 +151,8 @@ export default defineTileRegion<FiItem, { srcPath: string }>({
 	},
 	convert: async ({ srcPath }, { dest, maxZoom }) => {
 		// Edge tiles can still contain partial black where the WMTS coverage ends
-		// inside the block; treat black as nodata so the result is properly masked.
-		await runMosaicTile(srcPath, dest, { maxZoom, nodata: '0,0,0' });
+		// inside the block; `border: 'mask'` makes that fill transparent.
+		await runMosaicTile(srcPath, dest, { maxZoom, border: 'mask' });
 	},
 	// Finland ≈ 338k km². At MAX_ZOOM=17 with 8192-px blocks (~5 km wide in 3857
 	// units) we expect a few thousand land blocks after polygon and empty-tile

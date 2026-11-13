@@ -94,7 +94,7 @@ export default defineTileRegion<MtItem, MtDownload>({
 			srs: 'EPSG:4326',
 			ullr: [data.xmin, data.ymax, data.xmax, data.ymin],
 		});
-		await runMosaicTile(tifPath, ctx.dest, { maxZoom: ctx.maxZoom, nodata: '0,0,0', crs: '4326' });
+		await runMosaicTile(tifPath, ctx.dest, { maxZoom: ctx.maxZoom, border: 'mask', crs: '4326' });
 	},
 	minFiles: 70,
 });

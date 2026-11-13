@@ -7,20 +7,20 @@ import { basename, dirname, join } from 'node:path';
 import { runCommand } from './command.ts';
 import { QUALITY } from './constants.ts';
 import { safeRm } from './fs.ts';
-import { WHITE_BORDER_OPTIONS, maskWhiteBackgroundFile, measureWhiteBorder } from './white-mask.ts';
+import { BORDER_FILL_OPTIONS, maskFillFile, measureBorderFill } from './fill-mask.ts';
 
-/** Share of the input that may be white background at its edge before `runMosaicTile` refuses it. */
-const WHITE_BORDER_LIMIT = 0.01;
+/** Share of the input that may be fill along its edge before `runMosaicTile` refuses it. */
+const BORDER_FILL_LIMIT = 0.01;
 
 /**
- * What `runMosaicTile` does about an opaque white area along the edge of the input, which
- * would show as a white frame over the layers below:
+ * What `runMosaicTile` does about an opaque white or black fill along the edge of the input,
+ * which would show as a frame over the layers below (see `fill-mask.ts`):
  * - `'error'` (default): measure it on a small sample and throw if it covers more than 1%.
- * - `'mask'`: make it transparent before tiling (`maskWhiteBackgroundFile`). For inputs of up
- *   to about 200 million pixels, such as single source tiles.
- * - `'ignore'`: for sources where white at the edge is imagery, such as snow and ice.
+ * - `'mask'`: make it transparent before tiling (`maskFillFile`). Unlike `nodata`, this leaves
+ *   snow, white roofs and shadows inside the imagery alone and also removes the lossy fringe.
+ * - `'ignore'`: for sources where white or black at the edge is imagery, such as snow and ice.
  */
-export type WhiteBorder = 'error' | 'mask' | 'ignore';
+export type BorderFill = 'error' | 'mask' | 'ignore';
 
 /**
  * Verifies that command output contains the expected success marker.
@@ -34,7 +34,7 @@ function assertOutputContains(result: { stderr: Uint8Array }, marker: string, co
 
 /**
  * Runs `versatiles mosaic tile` to tile a single raster image into a .versatiles container.
- * Checks the input for an opaque white border first, see `WhiteBorder`.
+ * Checks the input for an opaque fill along its edge first, see `BorderFill`.
  */
 export async function runMosaicTile(
 	input: string,
@@ -51,30 +51,30 @@ export async function runMosaicTile(
 		crs?: string;
 		cacheDirectory?: string;
 		gdalConcurrency?: number;
-		whiteBorder?: WhiteBorder;
+		border?: BorderFill;
 	},
 ): Promise<void> {
-	const whiteBorder = options.whiteBorder ?? 'error';
-	const maskedInput = join(dirname(output), `.white.${basename(output)}.tif`);
+	const border = options.border ?? 'error';
+	const maskedInput = join(dirname(output), `.masked.${basename(output)}.tif`);
 	try {
-		if (whiteBorder === 'mask') {
-			await maskWhiteBackgroundFile(input, maskedInput, { ...WHITE_BORDER_OPTIONS, nodata: options.nodata });
-		} else if (whiteBorder === 'error') {
-			await assertNoWhiteBorder(input, join(dirname(output), `.white.${basename(output)}`), options.nodata);
+		if (border === 'mask') {
+			await maskFillFile(input, maskedInput, { ...BORDER_FILL_OPTIONS, nodata: options.nodata });
+		} else if (border === 'error') {
+			await assertNoBorderFill(input, join(dirname(output), `.sample.${basename(output)}`), options.nodata);
 		}
-		await tile(whiteBorder === 'mask' ? maskedInput : input, output, options);
+		await tile(border === 'mask' ? maskedInput : input, output, options);
 	} finally {
-		if (whiteBorder === 'mask') safeRm(maskedInput);
+		if (border === 'mask') safeRm(maskedInput);
 	}
 }
 
-/** Throws if more than `WHITE_BORDER_LIMIT` of `input` is opaque white along its edge. */
-async function assertNoWhiteBorder(input: string, tempBase: string, nodata?: string): Promise<void> {
-	const share = await measureWhiteBorder(input, tempBase, { nodata });
-	if (share !== undefined && share > WHITE_BORDER_LIMIT) {
+/** Throws if more than `BORDER_FILL_LIMIT` of `input` is opaque fill along its edge. */
+async function assertNoBorderFill(input: string, tempBase: string, nodata?: string): Promise<void> {
+	const share = await measureBorderFill(input, tempBase, { nodata });
+	if (share !== undefined && share > BORDER_FILL_LIMIT) {
 		throw new Error(
-			`runMosaicTile: ${(share * 100).toFixed(1)}% of "${input}" is opaque white along its edge. ` +
-				`Pass whiteBorder: 'mask' to make it transparent, or 'ignore' if it is imagery (snow, ice).`,
+			`runMosaicTile: ${(share * 100).toFixed(1)}% of "${input}" is opaque white or black fill along its edge. ` +
+				`Pass border: 'mask' to make it transparent, or 'ignore' if it is imagery (snow, ice).`,
 		);
 	}
 }

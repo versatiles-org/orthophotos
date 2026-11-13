@@ -54,7 +54,7 @@ export default defineTileRegion({
 		resolution: 10,
 		checked: '2026-11-12',
 		releaseDate: '2026-03-28',
-		// Clips the near-white JPEG 2000 rim the white nodata leaves along the national border.
+		// Clips the imagery at the national border; the white fill around it is removed by `border: 'mask'`.
 		mask: true,
 		// 10 cm source pixels: zoom 19 (about 0.10 m on the ground at 49.7° N) shows their full detail.
 		maxZoom: 19,
@@ -82,7 +82,7 @@ export default defineTileRegion({
 		// GDAL's JPEG 2000 decoder is more robust than versatiles's; a tiled TIFF is fast to read.
 		await convertToTiledTiff(jp2Path, tifPath, { compress: 'lzw', predictor: false });
 		safeRm(jp2Path);
-		await runMosaicTile(tifPath, ctx.dest, { maxZoom: ctx.maxZoom, nodata: '255,255,255' });
+		await runMosaicTile(tifPath, ctx.dest, { maxZoom: ctx.maxZoom, border: 'mask' });
 	},
 	// 100 municipalities in November 2026.
 	minFiles: 95,

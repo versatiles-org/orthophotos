@@ -9,7 +9,7 @@ import {
 	extractWmsBlock,
 	generateWmsXml,
 	isValidRaster,
-	maskWhiteBackgroundFile,
+	maskFillFile,
 	parseWmsCapabilities,
 	runMosaicTile,
 	type WmsBbox,
@@ -127,7 +127,7 @@ export default defineTileRegion<AlItem, AlDownload>({
 		const rawPath = ctx.tempFile(join(ctx.tempDir, `${item.id}_2018_raw.tif`));
 		const overlayPath = ctx.tempFile(join(ctx.tempDir, `${item.id}_2018.tif`));
 		if (!(await fetchBlock(item, item.wmsXmlPath2018, rawPath))) return { id: item.id, srcPath: tifPath };
-		await maskWhiteBackgroundFile(rawPath, overlayPath);
+		await maskFillFile(rawPath, overlayPath, { fills: ['white'] });
 		return { id: item.id, srcPath: tifPath, overlayPath };
 	},
 	convert: async ({ id, srcPath, overlayPath }, ctx) => {

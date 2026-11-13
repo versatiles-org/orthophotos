@@ -1,45 +1,67 @@
 /**
- * Finds and removes an opaque white background: sources that fill the area without imagery
- * with white instead of leaving it transparent, such as some WMS layers (Albania 2018) and
- * the coastal tiles of BD ORTHO, which are white over the sea (La Réunion).
+ * Finds and removes an opaque fill: sources that fill the area without imagery with white or
+ * black instead of leaving it transparent, such as some WMS layers (Albania 2018), the coastal
+ * tiles of BD ORTHO, which are white over the sea (La Réunion), or tiles that are black outside
+ * the country (Romania).
+ *
+ * Unlike a `nodata` colour, which makes every pixel of that colour transparent (snow, white roofs,
+ * deep shadows), only fill areas count: flat areas connected to the edge of the raster.
  */
 
 import { copyFileSync, readFileSync, writeFileSync } from 'node:fs';
+import { extname } from 'node:path';
 import { runCommand } from './command.ts';
 import { safeRm } from './fs.ts';
 
-export interface WhiteMaskOptions {
-	/** A pixel whose R, G and B are all at least this counts as near-white. Default: 240. */
-	threshold?: number;
-	/** Pixels of imagery to remove along the background, for blended edge pixels. Default: 2. */
+/** A fill colour: pure white (255, 255, 255) or pure black (0, 0, 0). */
+export type Fill = 'white' | 'black';
+
+export interface FillMaskOptions {
+	/** Fill colours to look for. Default: both. */
+	fills?: Fill[];
+	/** How far R, G and B may be from the fill colour for a pixel to join a fill area (lossy fringe). Default: 15. */
+	tolerance?: number;
+	/** Pixels of imagery to remove along the fill, for blended edge pixels. Default: 2. */
 	erode?: number;
 	/**
-	 * Only white areas that touch the edge of the raster or a transparent pixel count as
-	 * background, so a white roof inside the imagery stays. Default: false, every pure white
-	 * pixel starts a background area.
+	 * Only fill areas that touch the edge of the raster or a transparent pixel count, so a white
+	 * roof or a shadow inside the imagery stays. Default: false, every pure pixel starts an area.
 	 */
 	edgeOnly?: boolean;
-	/** White areas smaller than this share of the raster (0–1) stay. Default: 0. */
+	/** Areas smaller than this share of the raster (0–1) stay. Default: 0. */
 	minArea?: number;
+	/**
+	 * Areas in which fewer than this share of the pixels have exactly the fill colour stay. A fill
+	 * is flat, while snow or a dark forest has texture even where it touches the edge. Default: 0.
+	 */
+	minPurity?: number;
 	/** Colours that count as transparent, in the syntax of `runMosaicTile`'s `nodata` (`'255,255,255;0,0,0'`). */
 	nodata?: string;
 }
 
-/** Settings of the edge check and of `whiteBorder: 'mask'` in `runMosaicTile`. */
-export const WHITE_BORDER_OPTIONS: WhiteMaskOptions = { edgeOnly: true, minArea: 0.001 };
+/** Settings of the border check and of `border: 'mask'` in `runMosaicTile`. */
+export const BORDER_FILL_OPTIONS: FillMaskOptions = {
+	fills: ['white', 'black'],
+	edgeOnly: true,
+	minArea: 0.001,
+	minPurity: 0.5,
+};
 
-/** `maskWhiteBackgroundFile` masks larger rasters in blocks; masking needs about 12 bytes per pixel. */
+/** `maskFillFile` masks larger rasters in blocks; masking needs about 12 bytes per pixel. */
 const MAX_PIXELS_IN_MEMORY = 64 * 1024 * 1024;
 
 /** Side length of a block, and the overlap with its neighbours, in pixels. */
 const BLOCK_SIZE = 4096;
 const BLOCK_MARGIN = 16;
 
-/** Pixels of the reduced copy on which the block-wise mask decides which white areas count. */
+/** Pixels of the reduced copy on which the block-wise mask decides which fill areas count. */
 const COARSE_PIXELS = 16 * 1024 * 1024;
 
-/** Side length of the sample that `measureWhiteBorder` reads. */
+/** Side length of the sample that `measureBorderFill` reads. */
 const SAMPLE_SIZE = 256;
+
+/** Inputs that `maskFillFile` decodes to a tiled GeoTIFF before reading them block by block. */
+const DECODE_FIRST = new Set(['.jp2', '.j2k', '.png', '.jpg', '.jpeg']);
 
 /** Parses `'255,255,255;0,0,0'` into RGB triples. A single value stands for grey. */
 export function parseNodata(nodata: string): [number, number, number][] {
@@ -69,29 +91,45 @@ export function applyNodata(rgba: Uint8Array, width: number, height: number, nod
 	}
 }
 
-/** Whether pixel `i` is opaque pure white (255, 255, 255). */
-function pureWhite(r: Uint8Array, g: Uint8Array, b: Uint8Array, a: Uint8Array, i: number): boolean {
-	return a[i] > 0 && r[i] === 255 && g[i] === 255 && b[i] === 255;
+/** Tests for one fill colour on band-sequential RGBA bytes. */
+interface FillTests {
+	/** Opaque and exactly the fill colour. */
+	pure: (i: number) => boolean;
+	/** Opaque and within the tolerance of the fill colour. */
+	near: (i: number) => boolean;
+}
+
+function fillTests(rgba: Uint8Array, width: number, height: number, fill: Fill, tolerance: number): FillTests {
+	const [r, g, b, a] = bands(rgba, width, height);
+	if (fill === 'white') {
+		const min = 255 - tolerance;
+		return {
+			pure: (i) => a[i] > 0 && r[i] === 255 && g[i] === 255 && b[i] === 255,
+			near: (i) => a[i] > 0 && r[i] >= min && g[i] >= min && b[i] >= min,
+		};
+	}
+	return {
+		pure: (i) => a[i] > 0 && r[i] === 0 && g[i] === 0 && b[i] === 0,
+		near: (i) => a[i] > 0 && r[i] <= tolerance && g[i] <= tolerance && b[i] <= tolerance,
+	};
 }
 
 /**
- * Flood fills from every pixel that `isSeed` accepts through the opaque near-white pixels
- * (R, G and B at least `threshold`). Areas of fewer than `minPixels` pixels don't count.
- * Returns 1 per background pixel.
+ * Flood fills from every pixel that `isSeed` accepts through the pixels `near` accepts. Areas
+ * of fewer than `minPixels` pixels, or with a share of pure pixels below `minPurity`, don't count.
+ * Marks each counted pixel with 1 in `result`.
  */
-function floodWhite(
-	rgba: Uint8Array,
+function flood(
 	width: number,
 	height: number,
-	threshold: number,
-	minPixels: number,
+	tests: FillTests,
 	isSeed: (i: number) => boolean,
-): Uint8Array {
-	const [r, g, b, a] = bands(rgba, width, height);
+	minPixels: number,
+	minPurity: number,
+	result: Uint8Array,
+): void {
 	const n = width * height;
-	const nearWhite = (i: number): boolean => a[i] > 0 && r[i] >= threshold && g[i] >= threshold && b[i] >= threshold;
-
-	// 0 = not visited, 1 = background, 2 = white area too small to count.
+	// 0 = not visited, 1 = fill, 2 = area that doesn't count.
 	const state = new Uint8Array(n);
 	const queue = new Int32Array(n);
 	let tail = 0;
@@ -100,71 +138,65 @@ function floodWhite(
 		// Flood fill one area; its pixels end up in queue[start..tail].
 		const start = tail;
 		let head = tail;
+		let pure = 0;
 		state[seed] = 1;
 		queue[tail++] = seed;
 		const visit = (j: number): void => {
-			if (!state[j] && nearWhite(j)) {
+			if (!state[j] && tests.near(j)) {
 				state[j] = 1;
 				queue[tail++] = j;
 			}
 		};
 		while (head < tail) {
 			const i = queue[head++];
+			if (tests.pure(i)) pure++;
 			const x = i % width;
 			if (x > 0) visit(i - 1);
 			if (x < width - 1) visit(i + 1);
 			if (i >= width) visit(i - width);
 			if (i < n - width) visit(i + width);
 		}
-		if (tail - start < minPixels) {
+		const size = tail - start;
+		if (size < minPixels || pure < minPurity * size) {
 			for (let k = start; k < tail; k++) state[queue[k]] = 2;
 		}
 	}
-
-	const background = new Uint8Array(n);
-	for (let i = 0; i < n; i++) background[i] = state[i] === 1 ? 1 : 0;
-	return background;
+	for (let i = 0; i < n; i++) if (state[i] === 1) result[i] = 1;
 }
 
 /**
- * Finds the white background of band-sequential RGBA bytes: areas of pure white pixels
- * (255, 255, 255) plus the near-white pixels connected to them. Returns 1 per background pixel.
- * Doesn't change `rgba`; `nodata` is ignored here, see `applyNodata`.
+ * Finds the fill of band-sequential RGBA bytes: areas of pure fill pixels plus the pixels within
+ * the tolerance connected to them, for each fill colour. Returns 1 per fill pixel. Doesn't
+ * change `rgba`; `nodata` is ignored here, see `applyNodata`.
  */
-export function findWhiteBackground(
-	rgba: Uint8Array,
-	width: number,
-	height: number,
-	options?: WhiteMaskOptions,
-): Uint8Array {
-	const [r, g, b, a] = bands(rgba, width, height);
+export function findFill(rgba: Uint8Array, width: number, height: number, options?: FillMaskOptions): Uint8Array {
+	const a = bands(rgba, width, height)[3];
 	const n = width * height;
 	const isEdge = (i: number): boolean => {
 		const x = i % width;
 		if (x === 0 || x === width - 1 || i < width || i >= n - width) return true;
 		return a[i - 1] === 0 || a[i + 1] === 0 || a[i - width] === 0 || a[i + width] === 0;
 	};
-	return floodWhite(
-		rgba,
-		width,
-		height,
-		options?.threshold ?? 240,
-		(options?.minArea ?? 0) * n,
-		(i) => pureWhite(r, g, b, a, i) && (!options?.edgeOnly || isEdge(i)),
-	);
+	const result = new Uint8Array(n);
+	for (const fill of options?.fills ?? ['white', 'black']) {
+		const tests = fillTests(rgba, width, height, fill, options?.tolerance ?? 15);
+		const isSeed = (i: number): boolean => tests.pure(i) && (!options?.edgeOnly || isEdge(i));
+		flood(width, height, tests, isSeed, (options?.minArea ?? 0) * n, options?.minPurity ?? 0, result);
+	}
+	return result;
 }
 
 /**
- * Sets the alpha of the `background` pixels to 0, in place, then shrinks the imagery by `erode`
- * pixels along everything transparent, which removes the pixels blended between imagery and white.
+ * Sets the alpha of the `fill` pixels to 0, in place, then shrinks the imagery by `erode`
+ * pixels along everything transparent, which removes the pixels blended between imagery and fill.
  */
-function clearBackground(rgba: Uint8Array, width: number, height: number, background: Uint8Array, erode: number): void {
+function clearFill(rgba: Uint8Array, width: number, height: number, fill: Uint8Array, erode: number): void {
 	const a = bands(rgba, width, height)[3];
 	const n = width * height;
 
-	// Transparent from here on: the background and whatever was transparent already.
+	// Transparent from here on: the fill and whatever was transparent already.
 	const clear = new Uint8Array(n);
-	for (let i = 0; i < n; i++) clear[i] = background[i] || a[i] === 0 ? 1 : 0;
+	for (let i = 0; i < n; i++) clear[i] = fill[i] || a[i] === 0 ? 1 : 0;
 
 	// Shrink the imagery: each step clears the pixels next to a cleared one.
 	for (let step = 0; step < erode; step++) {
@@ -188,13 +220,12 @@ function clearBackground(rgba: Uint8Array, width: number, height: number, backgr
 }
 
 /**
- * Sets the alpha of the white background to 0, in place (see `findWhiteBackground`), and trims
- * `erode` pixels of imagery along everything transparent.
+ * Sets the alpha of the fill to 0, in place (see `findFill`), and trims `erode` pixels of
+ * imagery along everything transparent.
  */
-export function maskWhiteBackground(rgba: Uint8Array, width: number, height: number, options?: WhiteMaskOptions): void {
+export function maskFill(rgba: Uint8Array, width: number, height: number, options?: FillMaskOptions): void {
 	if (options?.nodata) applyNodata(rgba, width, height, options.nodata);
-	const background = findWhiteBackground(rgba, width, height, options);
-	clearBackground(rgba, width, height, background, options?.erode ?? 2);
+	clearFill(rgba, width, height, findFill(rgba, width, height, options), options?.erode ?? 2);
 }
 
 interface RasterInfo {
@@ -260,11 +291,11 @@ function enviFiles(raw: string): string[] {
 }
 
 /**
- * Share (0–1) of a raster that is white background touching its edge or a transparent pixel,
- * measured on a 256 × 256 sample (nearest neighbour, so pure white stays pure). `undefined` for
- * rasters that aren't 8-bit RGB. `tempBase` is a path prefix for the sample files.
+ * Share (0–1) of a raster that is fill along its edge (`BORDER_FILL_OPTIONS`), measured on a
+ * 256 × 256 sample (nearest neighbour, so pure colours stay pure). `undefined` for rasters that
+ * aren't 8-bit RGB. `tempBase` is a path prefix for the sample files.
  */
-export async function measureWhiteBorder(
+export async function measureBorderFill(
 	input: string,
 	tempBase: string,
 	options?: { nodata?: string },
@@ -275,14 +306,14 @@ export async function measureWhiteBorder(
 	try {
 		const { rgba, width, height } = await readRgba(input, raw, ['-outsize', SAMPLE_SIZE, SAMPLE_SIZE, '-r', 'nearest']);
 		if (options?.nodata) applyNodata(rgba, width, height, options.nodata);
-		const background = findWhiteBackground(rgba, width, height, WHITE_BORDER_OPTIONS);
-		return background.reduce((sum, v) => sum + v, 0) / (width * height);
+		const fill = findFill(rgba, width, height, BORDER_FILL_OPTIONS);
+		return fill.reduce((sum, v) => sum + v, 0) / (width * height);
 	} finally {
 		for (const path of enviFiles(raw)) safeRm(path);
 	}
 }
 
-export interface WhiteMaskFileOptions extends WhiteMaskOptions {
+export interface FillMaskFileOptions extends FillMaskOptions {
 	/** Rasters with more pixels are masked in blocks. Default: 64 million (about 800 MB of memory). */
 	maxPixelsInMemory?: number;
 	/** Side length of a block in pixels. Default: 4096. */
@@ -292,22 +323,19 @@ export interface WhiteMaskFileOptions extends WhiteMaskOptions {
 const OUTPUT_CO = ['-co', 'TILED=YES', '-co', 'COMPRESS=DEFLATE', '-co', 'PREDICTOR=2', '-co', 'ALPHA=YES'];
 
 /**
- * Applies `maskWhiteBackground` to an RGB or RGBA raster and writes the result as a tiled
- * RGBA GeoTIFF. The raster goes through GDAL's ENVI format (raw bytes plus a header with the
- * georeference), so nothing is compressed lossily on the way.
+ * Applies `maskFill` to an RGB or RGBA raster and writes the result as a tiled RGBA GeoTIFF.
+ * The raster goes through GDAL's ENVI format (raw bytes plus a header with the georeference),
+ * so nothing is compressed lossily on the way.
  *
  * Masking needs about 12 bytes of memory per pixel, so a raster larger than `maxPixelsInMemory`
- * (such as a 25,000 × 25,000 px BD ORTHO tile) is masked in blocks. Which white areas count is
- * decided first on the whole raster at a reduced resolution of about 16 million pixels, so a
- * white roof that a block boundary cuts stays. Each block is then masked at full resolution,
- * starting from the pure white pixels inside those areas, with a margin so the trim along the
- * background continues across block boundaries.
+ * (such as a 25,000 × 25,000 px BD ORTHO tile) is masked in blocks. JPEG 2000, PNG and JPEG are
+ * decoded to a tiled GeoTIFF first, so the blocks don't decode the whole file each. Which fill
+ * areas count is decided first on the whole raster at a reduced resolution of about 16 million
+ * pixels, so a white roof that a block boundary cuts stays. Each block is then masked at full
+ * resolution, starting from the pure pixels inside those areas, with a margin so the trim along
+ * the fill continues across block boundaries.
  */
-export async function maskWhiteBackgroundFile(
-	input: string,
-	output: string,
-	options?: WhiteMaskFileOptions,
-): Promise<void> {
+export async function maskFillFile(input: string, output: string, options?: FillMaskFileOptions): Promise<void> {
 	const info = await rasterInfo(input);
 	const temp: string[] = [];
 	try {
@@ -316,31 +344,38 @@ export async function maskWhiteBackgroundFile(
 			const masked = `${output}.masked.raw`;
 			temp.push(...enviFiles(raw), ...enviFiles(masked));
 			const { rgba, width, height } = await readRgba(input, raw);
-			maskWhiteBackground(rgba, width, height, options);
+			maskFill(rgba, width, height, options);
 			writeRgba(rgba, raw, masked);
 			await runCommand('gdal_translate', ['-q', ...OUTPUT_CO, '-colorinterp_4', 'alpha', masked, output], {
 				quiet: true,
 			});
-		} else {
-			await maskInBlocks(input, output, info, options ?? {}, temp);
+			return;
 		}
+		let source = input;
+		if (DECODE_FIRST.has(extname(input).toLowerCase())) {
+			source = `${output}.decoded.tif`;
+			temp.push(source);
+			const co = ['-co', 'TILED=YES', '-co', 'COMPRESS=LZW', '-co', 'BIGTIFF=IF_SAFER'];
+			await runCommand('gdal_translate', ['-q', ...co, input, source], { quiet: true });
+		}
+		await maskInBlocks(source, output, info, options ?? {}, temp);
 	} finally {
 		for (const path of temp) safeRm(path);
 	}
 }
 
-/** The block-wise part of `maskWhiteBackgroundFile`. Adds every file it writes to `temp`. */
+/** The block-wise part of `maskFillFile`. Adds every file it writes to `temp`. */
 async function maskInBlocks(
 	input: string,
 	output: string,
 	{ width, height }: RasterInfo,
-	options: WhiteMaskFileOptions,
+	options: FillMaskFileOptions,
 	temp: string[],
 ): Promise<void> {
 	const blockSize = options.blockSize ?? BLOCK_SIZE;
-	const threshold = options.threshold ?? 240;
+	const tolerance = options.tolerance ?? 15;
 
-	// Which white areas count, decided on the whole raster at reduced resolution.
+	// Which fill areas count, decided per colour on the whole raster at reduced resolution.
 	const factor = Math.ceil(Math.sqrt((width * height) / COARSE_PIXELS));
 	const coarseWidth = Math.ceil(width / factor);
 	const coarseHeight = Math.ceil(height / factor);
@@ -348,11 +383,14 @@ async function maskInBlocks(
 	temp.push(...enviFiles(coarseRaw));
 	const coarse = await readRgba(input, coarseRaw, ['-outsize', coarseWidth, coarseHeight, '-r', 'nearest']);
 	if (options.nodata) applyNodata(coarse.rgba, coarseWidth, coarseHeight, options.nodata);
-	const coarseBackground = findWhiteBackground(coarse.rgba, coarseWidth, coarseHeight, options);
-	const inCoarseBackground = (x: number, y: number): boolean => {
+	const fills = options.fills ?? ['white', 'black'];
+	const coarseFills = fills.map((fill) =>
+		findFill(coarse.rgba, coarseWidth, coarseHeight, { ...options, fills: [fill] }),
+	);
+	const coarseIndex = (x: number, y: number): number => {
 		const cx = Math.min(coarseWidth - 1, Math.floor((x * coarseWidth) / width));
 		const cy = Math.min(coarseHeight - 1, Math.floor((y * coarseHeight) / height));
-		return coarseBackground[cy * coarseWidth + cx] === 1;
+		return cy * coarseWidth + cx;
 	};
 
 	const blockRaw = `${output}.block.raw`;
@@ -365,19 +403,16 @@ async function maskInBlocks(
 			const y0 = Math.max(0, by - BLOCK_MARGIN);
 			const x1 = Math.min(width, bx + blockSize + BLOCK_MARGIN);
 			const y1 = Math.min(height, by + blockSize + BLOCK_MARGIN);
-			const block = await readRgba(input, blockRaw, ['-srcwin', x0, y0, x1 - x0, y1 - y0]);
-			const { rgba, width: bw, height: bh } = block;
+			const { rgba, width: bw, height: bh } = await readRgba(input, blockRaw, ['-srcwin', x0, y0, x1 - x0, y1 - y0]);
 			if (options.nodata) applyNodata(rgba, bw, bh, options.nodata);
-			const [r, g, b, a] = bands(rgba, bw, bh);
-			const background = floodWhite(
-				rgba,
-				bw,
-				bh,
-				threshold,
-				0,
-				(i) => pureWhite(r, g, b, a, i) && inCoarseBackground(x0 + (i % bw), y0 + Math.floor(i / bw)),
-			);
-			clearBackground(rgba, bw, bh, background, options.erode ?? 2);
+			const fill = new Uint8Array(bw * bh);
+			fills.forEach((colour, f) => {
+				const tests = fillTests(rgba, bw, bh, colour, tolerance);
+				const inCoarseFill = (i: number): boolean =>
+					coarseFills[f][coarseIndex(x0 + (i % bw), y0 + Math.floor(i / bw))] === 1;
+				flood(bw, bh, tests, (i) => tests.pure(i) && inCoarseFill(i), 0, 0, fill);
+			});
+			clearFill(rgba, bw, bh, fill, options.erode ?? 2);
 			writeRgba(rgba, blockRaw, maskedRaw);
 
 			// Write the block without its margin.

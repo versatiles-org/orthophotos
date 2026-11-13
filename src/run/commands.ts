@@ -5,7 +5,8 @@
  * — they're consumed by region scrapers via `src/lib/region-api.ts`.
  */
 
-import { runCommand } from '../lib/index.ts';
+import { statSync } from 'node:fs';
+import { createProgress, runCommand } from '../lib/index.ts';
 import { getConfig } from '../lib/index.ts';
 
 /** Required CLI tools */
@@ -142,6 +143,44 @@ export async function remoteFileExists(remotePath: string): Promise<boolean> {
 	}
 }
 
+/**
+ * Size in bytes of a remote file, from `ls -l` (the Storage Box has no `stat`), or `undefined`
+ * if it can't be listed, e.g. because scp hasn't created it yet.
+ */
+export async function remoteFileSize(remotePath: string): Promise<number | undefined> {
+	const sshConfig = getConfig().ssh;
+	if (!sshConfig) {
+		throw new Error('SSH configuration is missing');
+	}
+	const { host, port, keyFile } = sshConfig;
+	const sshArgs: string[] = ['-o', 'ConnectTimeout=10'];
+	if (port) sshArgs.push('-p', port);
+	if (keyFile) sshArgs.push('-i', keyFile);
+	const escaped = remotePath.replace(/'/g, `'\\''`);
+	try {
+		const { stdout } = await runCommand('ssh', [...sshArgs, host, `ls -l '${escaped}'`], {
+			stdout: 'piped',
+			stderr: 'piped',
+			quietOnError: true,
+		});
+		// -rw-r--r-- 1 user group 398731465 Aug 20  2025 /path
+		const size = Number(new TextDecoder().decode(stdout).trim().split(/\s+/)[4]);
+		return Number.isFinite(size) ? size : undefined;
+	} catch {
+		return undefined;
+	}
+}
+
+/** How often the upload progress asks the remote for the size of the file so far. */
+const UPLOAD_POLL_MS = 5000;
+
+const MIB = 1024 * 1024;
+
+/**
+ * Uploads a file with scp and shows a progress bar in MiB. scp shows its own progress meter only
+ * when its output is a terminal, which it isn't under `runCommand`, so the bar follows the size of
+ * the remote file instead.
+ */
 export async function runScpUpload(localPath: string, remotePath: string): Promise<void> {
 	const sshConfig = getConfig().ssh;
 	if (!sshConfig) {
@@ -151,5 +190,39 @@ export async function runScpUpload(localPath: string, remotePath: string): Promi
 	const scpArgs = [];
 	if (port) scpArgs.push('-P', port);
 	if (keyFile) scpArgs.push('-i', keyFile);
-	await runCommand('scp', [...scpArgs, localPath, `${host}:${remotePath}`]);
+
+	const totalMiB = Math.ceil(statSync(localPath).size / MIB);
+	const progress = createProgress(totalMiB, { labels: ['MiB uploaded'], logInterval: 1024 });
+	let reportedMiB = 0;
+	let finished = false;
+	function report(mib: number): void {
+		const next = Math.min(mib, totalMiB);
+		if (finished || next <= reportedMiB) return;
+		progress.tick('MiB uploaded', next - reportedMiB);
+		reportedMiB = next;
+	}
+
+	let polling = false;
+	const timer = setInterval(() => {
+		if (polling) return;
+		polling = true;
+		remoteFileSize(remotePath)
+			.then((size) => {
+				if (size !== undefined) report(Math.floor(size / MIB));
+			})
+			// A failed check only skips one update of the bar; scp reports real failures.
+			.catch(() => {})
+			.finally(() => {
+				polling = false;
+			});
+	}, UPLOAD_POLL_MS);
+
+	try {
+		await runCommand('scp', [...scpArgs, localPath, `${host}:${remotePath}`]);
+		report(totalMiB);
+	} finally {
+		clearInterval(timer);
+		finished = true;
+		progress.done();
+	}
 }

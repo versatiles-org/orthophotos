@@ -1,5 +1,8 @@
-import { expect, test, vi } from 'vitest';
-import { checkRequiredCommands, runScpUpload, runSshCommand } from './commands.ts';
+import { expect, onTestFinished, test, vi } from 'vitest';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { checkRequiredCommands, remoteFileSize, runScpUpload, runSshCommand } from './commands.ts';
 import { getConfig } from '../lib/index.ts';
 
 // Mock runCommand from lib/command.ts
@@ -118,19 +121,74 @@ test('runScpUpload - throws when SSH config is missing', async () => {
 	}
 });
 
+/** A local file of `bytes` zero bytes, removed when the test finishes. */
+function localFile(bytes: number): string {
+	const dir = mkdtempSync(join(tmpdir(), 'scp-upload-'));
+	onTestFinished(() => rmSync(dir, { recursive: true, force: true }));
+	const path = join(dir, 'file');
+	writeFileSync(path, Buffer.alloc(bytes));
+	return path;
+}
+
 test('runScpUpload - calls scp with correct args', async () => {
 	mockRunCommand.mockResolvedValue({ success: true, code: 0, stdout: new Uint8Array(), stderr: new Uint8Array() });
 	const config = getConfig();
 	config.ssh = { host: 'myhost', port: '2222', keyFile: '/key', dir: '/data' };
+	const path = localFile(10);
 
-	await runScpUpload('/local/file', '/remote/file');
+	await runScpUpload(path, '/remote/file');
 
-	expect(mockRunCommand).toHaveBeenCalledWith('scp', [
-		'-P',
-		'2222',
-		'-i',
-		'/key',
-		'/local/file',
-		'myhost:/remote/file',
-	]);
+	expect(mockRunCommand).toHaveBeenCalledWith('scp', ['-P', '2222', '-i', '/key', path, 'myhost:/remote/file']);
+});
+
+test('runScpUpload - follows the size of the remote file while scp runs', async () => {
+	vi.useFakeTimers();
+	const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+	try {
+		const config = getConfig();
+		config.ssh = { host: 'myhost', dir: '/data' };
+		let finishScp = () => {};
+		mockRunCommand.mockImplementation(async (cmd: string) => {
+			if (cmd === 'scp') {
+				await new Promise<void>((resolve) => (finishScp = resolve));
+			} else {
+				const line = '-rw-r--r-- 1 user user 3145728 Nov 13 12:00 /remote/file\n';
+				return { success: true, code: 0, stdout: new TextEncoder().encode(line), stderr: new Uint8Array() };
+			}
+			return { success: true, code: 0, stdout: new Uint8Array(), stderr: new Uint8Array() };
+		});
+
+		const upload = runScpUpload(localFile(4 * 1024 * 1024), '/remote/file');
+		await vi.advanceTimersByTimeAsync(5000);
+		expect(mockRunCommand).toHaveBeenCalledWith('ssh', ['-o', 'ConnectTimeout=10', 'myhost', "ls -l '/remote/file'"], {
+			stdout: 'piped',
+			stderr: 'piped',
+			quietOnError: true,
+		});
+
+		finishScp();
+		await upload;
+		expect(log).toHaveBeenCalledWith('  Done: 4 MiB uploaded');
+	} finally {
+		log.mockRestore();
+		vi.useRealTimers();
+	}
+});
+
+test('remoteFileSize - reads the size from ls -l', async () => {
+	getConfig().ssh = { host: 'myhost', dir: '/data' };
+	const line = '-rw-r--r-- 1 u1 u1 398731465 Aug 20  2025 /home/file.versatiles\n';
+	mockRunCommand.mockResolvedValue({
+		success: true,
+		code: 0,
+		stdout: new TextEncoder().encode(line),
+		stderr: new Uint8Array(),
+	});
+	expect(await remoteFileSize('/home/file.versatiles')).toBe(398731465);
+});
+
+test('remoteFileSize - is undefined when the file is not there yet', async () => {
+	getConfig().ssh = { host: 'myhost', dir: '/data' };
+	mockRunCommand.mockRejectedValue(new Error('Command failed: ssh\nExit code: 2'));
+	expect(await remoteFileSize('/home/missing')).toBeUndefined();
 });

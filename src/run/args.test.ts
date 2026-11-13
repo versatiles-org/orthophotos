@@ -21,6 +21,16 @@ test('validateRegionName - accepts glob patterns with *', () => {
 	validateRegionName('de/b*');
 });
 
+test('validateRegionName - accepts satellite layers, whose names can contain digits', () => {
+	validateRegionName('satellite/sentinel2');
+});
+
+test('validateRegionName - rejects other characters', () => {
+	expect(() => validateRegionName('DE')).toThrow('Invalid region name');
+	expect(() => validateRegionName('de berlin')).toThrow('Invalid region name');
+	expect(() => validateRegionName('../de')).toThrow('Invalid region name');
+});
+
 // expandRegionPattern tests
 test('expandRegionPattern - returns single name unchanged for non-glob', () => {
 	expect(expandRegionPattern('de', ['de', 'fr', 'de/bayern'])).toEqual(['de']);

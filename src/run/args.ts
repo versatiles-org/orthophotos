@@ -12,14 +12,15 @@ export interface ParsedArgs {
 
 /**
  * Validates that a region name matches the expected format.
- * Format: "cc", "cc/ss", or a glob pattern containing `*` (e.g. "fr/*", "de/*").
- * `*` matches any sequence of characters except `/` (one path segment).
+ * Format: "cc", "cc/ss", a satellite layer like "satellite/sentinel2", or a glob pattern
+ * containing `*` (e.g. "fr/*", "de/*"). `*` matches any sequence of characters except `/`
+ * (one path segment).
  */
 export function validateRegionName(name: string): void {
-	const pattern = /^[a-z\/_*]+$/;
+	const pattern = /^[a-z0-9\/_*]+$/;
 	if (!pattern.test(name)) {
 		throw new Error(
-			`Invalid region name "${name}". Must be "cc", "cc/ss", or a glob like "fr/*" (e.g., "de", "de/berlin", "fr/*")`,
+			`Invalid region name "${name}". Must be "cc", "cc/ss", "satellite/<name>" or a glob like "fr/*" (e.g., "de", "de/berlin", "satellite/sentinel2", "fr/*")`,
 		);
 	}
 }
@@ -162,7 +163,8 @@ export function getHelpText(): string {
 	const cmd = getCommand();
 	return `Usage: ${cmd} <name> <task>
 
-<name>  Region identifier: cc or cc/name (e.g., de or de/berlin)
+<name>  Region identifier: cc or cc/name (e.g., de or de/berlin),
+        or a satellite layer (e.g., satellite/sentinel2)
 <task>  One or more tasks: a single step (e.g., 2 or merge),
         a comma list (e.g., 1,2,3), and/or ranges (e.g., 1-3)
 

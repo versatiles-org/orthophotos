@@ -2,7 +2,7 @@ import { expect, test } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { BLUEMARBLE_LEVELS, generateVPL } from './vpl.ts';
+import { BLUEMARBLE_LAND_LEVELS, BLUEMARBLE_OCEAN_LEVELS, generateVPL } from './vpl.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TEST_DIR = resolve(__dirname, '../../test-data/vpl');
@@ -17,7 +17,6 @@ test('generateVPL - masks the satellite layer with the coastline', () => {
 	for (const line of masked) {
 		expect(line).toContain(`raster_mask geojson="${COASTLINE}"`);
 	}
-	expect(vpl).not.toMatch(/bluemarble\.versatiles"[^\n]*raster_mask/);
 });
 
 test('generateVPL - creates valid VPL with sftp orthophoto layers', () => {
@@ -41,11 +40,20 @@ test('generateVPL - includes satellite layers via sftp', () => {
 	expect(vpl).toContain('bluemarble/bluemarble.versatiles');
 });
 
-test('generateVPL - applies the levels to bluemarble', () => {
+test('generateVPL - tones bluemarble separately on land and at sea', () => {
 	generateVPL(TEST_DIR, 'gamma.vpl', { coastline: COASTLINE });
 	const vpl = readFileSync(resolve(TEST_DIR, 'gamma.vpl'), 'utf-8');
 
-	expect(vpl).toContain(`bluemarble.versatiles" | raster_levels ${BLUEMARBLE_LEVELS}`);
+	const bluemarble = vpl.split('\n').filter((line) => line.includes('bluemarble.versatiles'));
+	expect(bluemarble).toHaveLength(2);
+	const [land, ocean] = bluemarble;
+	// Land above the ocean, so it shows where the satellite layer has no data, like Antarctica.
+	expect(land).toContain(`| raster_mask geojson="${COASTLINE}" blur=2000 blur_function=cosine`);
+	expect(land).toContain(`| raster_levels ${BLUEMARBLE_LAND_LEVELS}`);
+	expect(ocean).toContain(`bluemarble.versatiles" | raster_levels ${BLUEMARBLE_OCEAN_LEVELS}`);
+	expect(ocean).not.toContain('raster_mask');
+	// Both below the satellite layer.
+	expect(vpl.indexOf('s2gm_overview.versatiles')).toBeLessThan(vpl.indexOf('bluemarble.versatiles'));
 });
 
 test('generateVPL - includes meta_update with attribution', () => {

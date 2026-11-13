@@ -38,26 +38,32 @@ Sentinel-2 looks good on land and in a narrow strip of coastal water. Further ou
 
 - **Land:** OpenStreetMap's land polygons from osmdata.openstreetmap.de (ODbL, so credit "© OpenStreetMap contributors"), in the version simplified for low zooms. `ensureCoastline()` downloads and converts them once to `<dir_data>/coastline/land-polygons.geojson`, and `npm run preview`, `publish:world` and `publish:world:local` call it. Delete the file to get current ones. Lakes count as land, so the satellite layer covers them.
 - **Fade per zoom (#87):** `COASTLINE_FADE` sets a distance per zoom range, used as both buffer and blur of `raster_mask`. The fade starts at the coast and ends twice the distance offshore: 1 km up to zoom 7, growing to 4 km from zoom 11. Up to about zoom 9 the mask follows the coast directly, which also hides that the polygons are simplified. At higher zooms the edge lies in open water, where Sentinel-2 and Blue Marble show the same sea. `raster_mask` measures in Web Mercator metres, in which a pixel of a zoom level has the same size everywhere, so each step has the same width in pixels anywhere in the world.
-- **Cost:** each zoom range is its own masked layer. Five copies of the 42 MB mask take about 1.4 GB of memory and 7 s when the pipeline starts.
+- **Cost:** each zoom range is its own masked layer, and Blue Marble's land layer (see below) is one more. Five copies of the 42 MB mask took about 1.4 GB of memory and 7 s when the pipeline starts, so six take about 1.7 GB.
 
 The prototype for this was built around Lisbon, comparing it with masks from the Sentinel-2 coverage and from `coastline-fade-mask`'s land buffered by 10 km. Both left a wide band of grey or dark sea along the coast.
 
 ## Blue Marble's levels
 
-Blue Marble only shows at sea, so its levels (`BLUEMARBLE_LEVELS` in `src/server/vpl.ts`) are tuned for the ocean: it should have the same character as the satellite land, not the colour of Sentinel-2's grey sea. Measured on the whole globe at zoom 3:
+Blue Marble shows at sea and where the satellite layer has no data: Antarctica (Sentinel-2 ends at 56.7° S) and the far north. The two need different levels (`src/server/vpl.ts`), so Blue Marble is stacked twice:
 
-|                                                              | Mean luma | Luma std | HSV saturation |
-| ------------------------------------------------------------ | --------- | -------- | -------------- |
-| Satellite land (S2GM)                                        | 115       | 50       | 0.28           |
-| Blue Marble ocean, raw                                       | 23        | 18       | 0.86           |
-| Blue Marble ocean, previous levels                           | 62        | 16       | 0.42           |
-| Blue Marble ocean, `saturation=0.65 brightness=65 gamma=1.1` | 80        | 18       | 0.28           |
+- **Land:** masked to the land polygons with a 2 km blur, `BLUEMARBLE_LAND_LEVELS` = `gamma=0.8 contrast=0.8`, the levels of the previous single layer. The ocean's levels blow the ice out to plain white.
+- **Ocean:** below it, unmasked, `BLUEMARBLE_OCEAN_LEVELS` = `saturation=0.5 contrast=1.4 brightness=70`.
 
-- **Saturation** matches the land. It needs versatiles with the `saturation` option of `raster_levels` (versatiles-rs#328, after v5.12.0).
-- **Contrast** isn't matched: the ocean's variation is bathymetry, not texture, and stretching it to the land's breaks the image.
-- **Brightness** is a choice: the ocean stays darker than the land. Means of 60 and 100 looked grey or pale. The previous `brightness=0.2` is in 0–255 units, so it had practically no effect.
+Measured on the whole globe at zoom 3:
 
-Re-measure once the Sentinel-2 layer replaces S2GM. Its colour stretch was tuned to S2GM, so the values should hold.
+|                                                                | Mean luma | Luma std | HSV saturation |
+| -------------------------------------------------------------- | --------- | -------- | -------------- |
+| Satellite land (S2GM)                                          | 115       | 50       | 0.28           |
+| Blue Marble ocean, raw                                         | 23        | 18       | 0.86           |
+| Blue Marble ocean, previous levels                             | 62        | 16       | 0.42           |
+| Blue Marble ocean, `saturation=0.65 brightness=65 gamma=1.1`   | 80        | 18       | 0.28           |
+| Blue Marble ocean, `saturation=0.5 contrast=1.4 brightness=70` | 52        | 26       | 0.42           |
+
+- **Matching the land** in saturation (the fourth row) made the ocean too bright and flat. Matching its contrast breaks the image: the ocean's variation is bathymetry, not texture.
+- **The chosen levels** were picked by eye from a few variants on the globe: the ocean stays clearly darker than the land, with more contrast in the bathymetry and less saturation than the raw image. `saturation` needs versatiles with versatiles-rs#328 (after v5.12.0).
+- **`brightness`** is in 0–255 units. The previous `brightness=0.2` had practically no effect.
+
+Whether the ocean should show bathymetry at all, or a flat colour or a mix, is open in #93. Re-measure once the Sentinel-2 layer replaces S2GM.
 
 ## Still to do
 

@@ -11,11 +11,20 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = resolve(__dirname, '../../data');
 
 /**
- * `raster_levels` for Blue Marble, which shows only at sea. Fitted on the whole globe at zoom 3:
- * its ocean gets the mean HSV saturation of the satellite land (0.28 instead of 0.86) and a mean
- * luma of 80, darker than the land (115). Needs versatiles with `saturation` (versatiles-rs#328).
+ * `raster_levels` for Blue Marble's ocean: less saturated and brighter than the raw image, with
+ * more contrast, but still clearly darker than the land. See "Blue Marble's levels" in
+ * docs/satellite.md. Needs versatiles with `saturation` (versatiles-rs#328).
  */
-export const BLUEMARBLE_LEVELS = 'saturation=0.65 brightness=65 gamma=1.1';
+export const BLUEMARBLE_OCEAN_LEVELS = 'saturation=0.5 contrast=1.4 brightness=70';
+
+/**
+ * `raster_levels` for Blue Marble on land, which shows where the satellite layer has no data:
+ * Antarctica and the far north. The ocean's levels would blow the ice out to plain white.
+ */
+export const BLUEMARBLE_LAND_LEVELS = 'gamma=0.8 contrast=0.8';
+
+/** Blur of the land mask of Blue Marble, in Web Mercator metres. */
+const BLUEMARBLE_LAND_BLUR = 2000;
 
 export interface VPLOptions {
 	/** If true, shows all orthophoto layers with level_min = 0 for debugging. */
@@ -113,10 +122,17 @@ export function generateVPL(outputDir: string, filename: string, options: VPLOpt
 		? 'satellite/bluemarble/bluemarble.versatiles'
 		: '/home/satellite/bluemarble/bluemarble.versatiles';
 	// The satellite layer shows on land and in a strip of coastal water; Blue Marble shows the sea.
-	const satelliteLayers = getCoastlineLayers(sourceUrl(s2gmPath), resolve(coastline));
+	const coastlinePath = resolve(coastline);
+	const satelliteLayers = getCoastlineLayers(sourceUrl(s2gmPath), coastlinePath);
 	layers.push(...satelliteLayers);
-	// Blue Marble's ocean, toned to the saturation of the satellite land, see "Blue Marble's levels" in docs/satellite.md.
-	layers.push(`from_container filename="${sourceUrl(bluemarblePath)}" | raster_levels ${BLUEMARBLE_LEVELS}`);
+	// Blue Marble with separate levels for land and sea, see "Blue Marble's levels" in docs/satellite.md.
+	const bluemarble = `from_container filename="${sourceUrl(bluemarblePath)}"`;
+	const landMask = `raster_mask geojson="${coastlinePath}" blur=${BLUEMARBLE_LAND_BLUR} blur_function=cosine`;
+	const bluemarbleLayers = [
+		`${bluemarble} | ${landMask} | raster_levels ${BLUEMARBLE_LAND_LEVELS}`,
+		`${bluemarble} | raster_levels ${BLUEMARBLE_OCEAN_LEVELS}`,
+	];
+	layers.push(...bluemarbleLayers);
 
 	const vpl = `from_stacked_raster auto_overscale=true [
   ${layers.join(',\n  ')}
@@ -128,5 +144,7 @@ export function generateVPL(outputDir: string, filename: string, options: VPLOpt
 `;
 
 	writeFileSync(resolve(outputDir, filename), vpl);
-	console.log(`Wrote VPL with ${layers.length - satelliteLayers.length - 1} orthophoto layers to ${filename}`);
+	console.log(
+		`Wrote VPL with ${layers.length - satelliteLayers.length - bluemarbleLayers.length} orthophoto layers to ${filename}`,
+	);
 }

@@ -8,21 +8,46 @@ import { defineTileRegion, downloadFile, extractZipAndBuildVrt, runMosaicTile, w
  * ("unbelaubt", 2025 and 2026), but bare trees would stand out next to the summer imagery of
  * the neighbouring states, so we wait for the next leaf-on year (decided November 2026).
  */
-const CKAN_API_URL =
-	'https://suche.transparenz.hamburg.de/api/3/action/package_show?id=luftbilder-hamburg-dop-zeitreihe-belaubt2';
+const DATASET_NAME = 'luftbilder-hamburg-dop-zeitreihe-belaubt';
 
-interface CkanResponse {
-	result: {
-		resources: {
-			url: string;
-			name: string;
-			format: string;
-		}[];
-	};
+/**
+ * Hamburg's transparency portal publishes each revision of the dataset as a new CKAN package,
+ * named `<DATASET_NAME><n>`, and the old ones keep links that no longer work (in November 2026,
+ * revision 2 still pointed at a folder that had moved). So search for all revisions and take
+ * the newest.
+ */
+const CKAN_SEARCH_URL =
+	'https://suche.transparenz.hamburg.de/api/3/action/package_search?' +
+	new URLSearchParams({ q: `name:${DATASET_NAME}*`, rows: '1000' }).toString();
+
+interface CkanPackage {
+	name: string;
+	resources: {
+		url: string;
+		name: string;
+		format: string;
+	}[];
 }
 
-export function parseResources(data: CkanResponse): { id: string; url: string }[] {
-	return data.result.resources
+interface CkanSearchResponse {
+	result: { results: CkanPackage[] };
+}
+
+/** The newest revision of the dataset: the package with the highest number after `DATASET_NAME`. */
+export function findNewestRevision(data: CkanSearchResponse): CkanPackage {
+	let newest: { revision: number; pkg: CkanPackage } | undefined;
+	for (const pkg of data.result.results) {
+		const match = pkg.name.match(new RegExp(`^${DATASET_NAME}(\\d*)$`));
+		if (!match) continue;
+		const revision = match[1] === '' ? 0 : parseInt(match[1], 10);
+		if (!newest || revision > newest.revision) newest = { revision, pkg };
+	}
+	if (!newest) throw new Error(`No CKAN package named ${DATASET_NAME}… found`);
+	return newest.pkg;
+}
+
+export function parseResources(pkg: Pick<CkanPackage, 'resources'>): { id: string; url: string }[] {
+	return pkg.resources
 		.filter((r) => r.format === 'GEOTIFF' && r.url.endsWith('.zip'))
 		.map((r) => ({
 			id: basename(r.url, '.zip'),
@@ -58,13 +83,14 @@ export default defineTileRegion({
 		maxZoom: 18,
 	},
 	init: async ({ tempDir }) => {
-		const apiPath = join(tempDir, 'ckan.json');
+		const apiPath = join(tempDir, 'ckan-search.json');
 		if (!existsSync(apiPath)) {
 			console.log('  Fetching dataset metadata from CKAN API...');
-			await withRetry(() => downloadFile(CKAN_API_URL, apiPath), { maxAttempts: 3 });
+			await withRetry(() => downloadFile(CKAN_SEARCH_URL, apiPath), { maxAttempts: 3 });
 		}
-		const content = await readFile(apiPath, 'utf-8');
-		return parseResources(JSON.parse(content));
+		const pkg = findNewestRevision(JSON.parse(await readFile(apiPath, 'utf-8')));
+		console.log(`  Newest revision: ${pkg.name}`);
+		return parseResources(pkg);
 	},
 	download: async ({ url, id }, ctx) => {
 		const zipPath = ctx.tempFile(join(ctx.tempDir, `${id}.zip`));

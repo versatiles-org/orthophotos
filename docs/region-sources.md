@@ -16,7 +16,7 @@ Everything about a source lives in its region file, so the next check starts fro
 | Comment at the source URL | How the source publishes updates (a year in the URL, a hand-made list, a cached feed) and every decision against an alternative, with the reason and the month. Examples: the 3rd cycle in `sk.ts`, the leaf-off imagery in `de/hamburg.ts`, the city flights in `pl.ts`.                                                                                                                      |
 | GitHub issue              | A source that is broken, blocked or can't be used yet, with what was checked and when. Title it with the region code (`hu: …`).                                                                                                                                                                                                                                                                |
 
-The status page shows date, resolution and checked date per region (`npm run build:status`).
+The status page shows date, resolution and checked date per region (`npm run build:status`), and KB per tile and per km² of the published file (`npm run build:stats`).
 
 ## Checking a source for updates
 

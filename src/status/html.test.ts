@@ -147,4 +147,17 @@ describe('generateStatusPage', () => {
 		const rows = extractRowData(html);
 		expect(rows[0].releaseDate).toBe('');
 	});
+
+	test('computes KB per tile and per km² from the stats', () => {
+		const metadata = new Map<string, RegionMetadata>([
+			['de/berlin', makeMetadata({})],
+			['hu', makeMetadata({})],
+		]);
+		const stats = new Map([['de/berlin', { size: 2_062_941_743, tiles: 245_395, maxZoom: 18, areaKm2: 1576 }]]);
+		const rows = extractRowData(generateStatusPage(metadata, new Map(), stats));
+		expect(rows[0].kbPerTile).toBe(8.4);
+		expect(rows[0].kbPerKm2).toBe(1309);
+		expect(rows[1].kbPerTile).toBeNull();
+		expect(rows[1].kbPerKm2).toBeNull();
+	});
 });

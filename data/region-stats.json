@@ -1,0 +1,47 @@
+{
+	"generated": "2026-11-13",
+	"regions": {
+		"de/baden_wuerttemberg": {
+			"size": 49822378784,
+			"tiles": 5388485,
+			"maxZoom": 18,
+			"areaKm2": 40105
+		},
+		"de/berlin": {
+			"size": 2062941743,
+			"tiles": 245395,
+			"maxZoom": 18,
+			"areaKm2": 1572
+		},
+		"de/bremen": {
+			"size": 2681292184,
+			"tiles": 452037,
+			"maxZoom": 19,
+			"areaKm2": 653
+		},
+		"de/hamburg": {
+			"size": 1689301924,
+			"tiles": 197477,
+			"maxZoom": 18,
+			"areaKm2": 1157
+		},
+		"de/thueringen": {
+			"size": 12231100428,
+			"tiles": 857458,
+			"maxZoom": 17,
+			"areaKm2": 22687
+		},
+		"fr/la_reunion": {
+			"size": 1437157553,
+			"tiles": 71144,
+			"maxZoom": 17,
+			"areaKm2": 4197
+		},
+		"hu": {
+			"size": 6527703338,
+			"tiles": 3319002,
+			"maxZoom": 17,
+			"areaKm2": 103993
+		}
+	}
+}

@@ -1,6 +1,7 @@
 import type { Feature, FeatureCollection, MultiPolygon, Polygon } from 'geojson';
 import type { RegionMetadata, RegionStatus } from '../lib/index.ts';
 import type { KnownRegion } from './geojson.ts';
+import type { RegionStats } from './stats.ts';
 
 const STATUS_LABELS: Record<RegionStatus, string> = {
 	released: 'Released',
@@ -30,6 +31,10 @@ interface RowData {
 	creatorName: string;
 	creatorUrl: string;
 	notes: string[];
+	/** File size per tile in KB, `null` without stats. */
+	kbPerTile: number | null;
+	/** File size per km² of the top zoom's tiles in KB, `null` without stats. */
+	kbPerKm2: number | null;
 }
 
 interface MapFeatureProperties {
@@ -43,6 +48,7 @@ interface MapFeatureProperties {
 export function generateStatusPage(
 	allMetadata: Map<string, RegionMetadata>,
 	knownRegions: Map<string, KnownRegion>,
+	stats: Map<string, RegionStats> = new Map(),
 ): string {
 	const counts: Record<RegionStatus, number> = { released: 0, scraping: 0, planned: 0, blocked: 0 };
 	const rows: RowData[] = [];
@@ -54,6 +60,7 @@ export function generateStatusPage(
 		const name = region?.properties.fullname ?? id;
 		const status = STATUS_LABELS[meta.status];
 		const statusColor = STATUS_COLORS[meta.status];
+		const stat = stats.get(id);
 		rows.push({
 			id,
 			name,
@@ -68,6 +75,8 @@ export function generateStatusPage(
 			creatorName: meta.creator?.name ?? '',
 			creatorUrl: meta.creator?.url ?? '',
 			notes: meta.notes,
+			kbPerTile: stat ? Math.round(stat.size / stat.tiles / 100) / 10 : null,
+			kbPerKm2: stat ? Math.round(stat.size / stat.areaKm2 / 1000) : null,
 		});
 		if (region?.geometry) {
 			// MapLibre's `feature-state` requires integer feature IDs — non-numeric strings

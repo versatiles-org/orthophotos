@@ -9,3 +9,11 @@ export { loadKnownRegions, reducePrecision, type KnownRegion, type ValidRegion }
 export { generateStatusPage } from './html.ts';
 export { generateMapStyle } from './style.ts';
 export { scanRegions, type Region } from './regions.ts';
+export {
+	aggregateStats,
+	loadRegionStats,
+	parseProbePyramid,
+	summarizeStats,
+	type RegionStats,
+	type RegionStatsFile,
+} from './stats.ts';

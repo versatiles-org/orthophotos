@@ -1,8 +1,15 @@
 import { resolve, dirname } from 'node:path';
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { generateMapStyle, generateStatusPage, loadKnownRegions, scanRegions } from './status/index.ts';
-import { getAggregatedRegionMetadata } from './regions/index.ts';
+import {
+	aggregateStats,
+	generateMapStyle,
+	generateStatusPage,
+	loadKnownRegions,
+	loadRegionStats,
+	scanRegions,
+} from './status/index.ts';
+import { getAggregatedRegionMetadata, getAllRegionMetadata } from './regions/index.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -23,7 +30,9 @@ const sources = regions.map((region) => ({
 writeFileSync(resolve(__dirname, '../web/sources.json'), JSON.stringify(sources, null, 2));
 
 const knownRegionMap = new Map(knownRegions.map((r) => [r.properties.id, r]));
-const html = generateStatusPage(allMetadata, knownRegionMap);
+// Built with SSH by `npm run build:stats` and committed, because CI has no SSH access.
+const stats = aggregateStats(loadRegionStats(resolve(__dirname, '../data/region-stats.json')), getAllRegionMetadata());
+const html = generateStatusPage(allMetadata, knownRegionMap, stats);
 writeFileSync(resolve(__dirname, '../web/index.html'), html);
 console.log(`Wrote status page with ${allMetadata.size} regions to web/index.html`);
 

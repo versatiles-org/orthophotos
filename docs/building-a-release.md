@@ -55,5 +55,5 @@ Before a large region runs for hours or days, tile a few neighbouring source ima
 - [ ] **Remote check.** `npm run check:remote` checks the metadata against the files on the storage box, including that each file's date matches its `releaseDate`.
 - [ ] **Preview.** `npm run preview` serves everything as it will be published. Look at the rebuilt regions and their borders.
 - [ ] **Publish.** `npm run publish:world` builds the combined `satellite.versatiles` on the remote. `npm run publish:hashes` adds the missing `.md5` and `.sha256` files.
-- [ ] **Status page.** `npm run build:status`.
+- [ ] **Status page.** `npm run build:stats` reads size and tile counts of the region files on the remote into `data/region-stats.json` (commit it; CI has no SSH access), then `npm run build:status`. A KB/tile or KB/km² far from regions of the same resolution points at a broken source or over-compressed tiles.
 - [ ] **Clean up.** Delete the renamed old files on the storage box once the release is checked, and close the issues the release resolves.

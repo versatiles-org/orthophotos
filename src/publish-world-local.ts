@@ -10,7 +10,7 @@ import { mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { getConfig, runCommand, safeRm } from './lib/index.ts';
 import { runScpUpload, runSshCommand } from './run/index.ts';
-import { generateVPL } from './server/index.ts';
+import { ensureCoastline, generateVPL } from './server/index.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const outputDir = resolve(__dirname, '../.publish');
@@ -69,7 +69,7 @@ await runCommand('rsync', [
 ]);
 
 // Generate VPL with local file paths
-generateVPL(outputDir, vplFilename, { localDir });
+generateVPL(outputDir, vplFilename, { localDir, coastline: await ensureCoastline() });
 
 // Convert locally
 const vplPath = resolve(outputDir, vplFilename);

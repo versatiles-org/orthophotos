@@ -4,5 +4,6 @@
  * rather than reaching into individual files.
  */
 
+export { ensureCoastline } from './coastline.ts';
 export { downloadFrontend } from './frontend.ts';
 export { generateVPL, type VPLOptions } from './vpl.ts';

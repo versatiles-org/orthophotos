@@ -113,6 +113,8 @@ The `versatiles` CLI is developed in the sibling repo `versatiles-rs`. If a regi
 
 Regions can also set `maskBuffer` to adjust the mask buffer distance in meters (negative values shrink the mask).
 
+The satellite layer is clipped to OSM's land polygons and faded out a few kilometres offshore, with a distance per zoom range (`src/server/coastline.ts`, see "Coastline" in `docs/satellite.md`). Call `ensureCoastline()` before generating a VPL that will be converted.
+
 ### Command Execution
 
 `runCommand()` in `src/lib/command.ts` supports `quiet` and `quietOnError` options:
@@ -145,6 +147,6 @@ Before adopting a new source, confirm GDAL can open a sample with a vanilla inst
 
 ### External CLI Dependencies
 
-Required tools: `7z`, `curl`, `gdal_translate`, `gdalbuildvrt`, `ssh`, `unzip`, `versatiles`
+Required tools: `7z`, `curl`, `gdal_translate`, `gdalbuildvrt`, `ssh`, `unzip`, `versatiles`; for preview and publishing also `ogr2ogr` (part of GDAL)
 
 Install via `./install-dependencies.sh` (supports macOS via Homebrew and Linux via apt).

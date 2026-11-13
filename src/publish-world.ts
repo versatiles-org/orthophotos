@@ -9,7 +9,7 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ensureRemoteHashes, getConfig, runCommand } from './lib/index.ts';
 import { runSshCommand } from './run/index.ts';
-import { generateVPL } from './server/index.ts';
+import { ensureCoastline, generateVPL } from './server/index.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const outputDir = resolve(__dirname, '../.publish');
@@ -20,7 +20,7 @@ if (!config.ssh) {
 	throw new Error('SSH configuration is required for publishing. Check config.env.');
 }
 
-generateVPL(outputDir, vplFilename);
+generateVPL(outputDir, vplFilename, { coastline: await ensureCoastline() });
 
 const vplPath = resolve(outputDir, vplFilename);
 const { host, port, keyFile } = config.ssh;

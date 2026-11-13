@@ -32,9 +32,19 @@ Per tile, task 1 reads the red, green and blue band, converts them losslessly to
 
 A test tile (Berlin, `33UUU`) took 45 s to read and convert and 12 s to tile, and gave a 65 MB container. The whole layer is a long run for the build server.
 
+## Coastline
+
+Sentinel-2 looks good on land and in a narrow strip of coastal water. Further out at sea the mosaics turn into a grey haze with visible swath edges, and the tiles reach up to 300 km offshore, ending in a staircase of squares. Blue Marble's ocean looks better there. So the VPL clips the satellite layer to the land, grown a few kilometres into the sea, and fades it out (`src/server/coastline.ts`):
+
+- **Land:** OpenStreetMap's land polygons from osmdata.openstreetmap.de (ODbL, so credit "© OpenStreetMap contributors"), in the version simplified for low zooms. `ensureCoastline()` downloads and converts them once to `<dir_data>/coastline/land-polygons.geojson`, and `npm run preview`, `publish:world` and `publish:world:local` call it. Delete the file to get current ones. Lakes count as land, so the satellite layer covers them.
+- **Fade per zoom (#87):** `COASTLINE_FADE` sets a distance per zoom range, used as both buffer and blur of `raster_mask`. The fade starts at the coast and ends twice the distance offshore: 1 km up to zoom 7, growing to 4 km from zoom 11. Up to about zoom 9 the mask follows the coast directly, which also hides that the polygons are simplified. At higher zooms the edge lies in open water, where Sentinel-2 and Blue Marble show the same sea. `raster_mask` measures in Web Mercator metres, in which a pixel of a zoom level has the same size everywhere, so each step has the same width in pixels anywhere in the world.
+- **Cost:** each zoom range is its own masked layer. Five copies of the 42 MB mask take about 1.4 GB of memory and 7 s when the pipeline starts.
+
+The prototype for this was built around Lisbon, comparing it with masks from the Sentinel-2 coverage and from `coastline-fade-mask`'s land buffered by 10 km. Both left a wide band of grey or dark sea along the coast.
+
 ## Still to do
 
 - **Blue Marble:** its build exists only as scripts on the storage box (`/home/satellite/bluemarble/`); move it here.
-- **Fade at low zooms (#87):** a transition to Blue Marble with a constant width in pixels per zoom, replacing the fixed 10 km of `coastline-fade-mask`.
-- **VPL:** point `src/server/vpl.ts` at the new satellite file once it's built and checked.
+- **Blue Marble's levels:** tone its ocean to the saturation of the land (HSV saturation 0.28 instead of 0.86), measured globally at zoom 3. That needs a `saturation` option in `raster_levels` (versatiles-rs#328). A first fit for a mean ocean luma of 80 is `saturation=0.65 brightness=65 gamma=1.1`. Today's `brightness=0.2` is in 0–255 units, so it has practically no effect.
+- **VPL:** point `src/server/vpl.ts` at the new satellite file once it's built and checked. The coastline mask applies to whichever satellite file it points at, today still S2GM.
 - **Clean up:** archive `versatiles-satellite`, move its open issue (snow becoming nodata, versatiles-satellite#2) here, and close #30.

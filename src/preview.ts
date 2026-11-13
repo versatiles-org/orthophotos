@@ -8,14 +8,14 @@
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getConfig, runCommand } from './lib/index.ts';
-import { downloadFrontend, generateVPL } from './server/index.ts';
+import { downloadFrontend, ensureCoastline, generateVPL } from './server/index.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const previewDir = resolve(__dirname, '../.preview');
 const vplFilename = 'satellite.vpl';
 
 await downloadFrontend(previewDir);
-generateVPL(previewDir, vplFilename, true);
+generateVPL(previewDir, vplFilename, { debug: true, coastline: await ensureCoastline() });
 
 const config = getConfig();
 const vplPath = resolve(previewDir, vplFilename);

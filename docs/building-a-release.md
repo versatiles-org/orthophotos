@@ -28,6 +28,7 @@ The pipeline resumes wherever it finds earlier results, so anything left over fr
 - [ ] **Remote files.** `./run.sh` skips fetch and merge for every region whose `<ssh_dir>/<id>.versatiles` already exists. Rename the old files or folder on the storage box, for example `de` to `de_old`, instead of deleting them. That keeps them as a fallback until the new release is checked.
 - [ ] **Local region data.** Make sure `<dir_data>/<id>/` doesn't exist for any region you rebuild. It holds `items.ndjson`, the cached list of source files, which would hide new source files. It also holds `tiles/`, whose per-image containers would be reused with their old zoom and quality. Task 3 of the previous build normally deletes it, but check.
 - [ ] **Shared caches.** The French index is cached in `<dir_temp>/fr/index/` for all `fr/*` regions, and cached pages are never fetched again. Delete it before a French rebuild, or the build won't see new editions. Look for similar caches in `<dir_temp>/` for other regions.
+- [ ] **Coastline.** The land polygons for the coastline mask of the satellite layer are downloaded once to `<dir_data>/coastline/land-polygons.geojson`. Delete the file to get current ones from OSM; the next preview or publish downloads them again. See "Coastline" in [satellite.md](satellite.md).
 
 ## 4. Test on a sample
 

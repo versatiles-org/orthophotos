@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { getConfig } from '../lib/index.ts';
 import { getAllRegionMetadata } from '../regions/index.ts';
 import { loadKnownRegions } from '../status/index.ts';
+import { getCoastlineLayers, getCoastlinePath } from './coastline.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = resolve(__dirname, '../../data');
@@ -14,6 +15,8 @@ export interface VPLOptions {
 	debug?: boolean;
 	/** When set, VPL references local files instead of SFTP URLs. Orthophoto sources at {localDir}/regions/, satellite at {localDir}/satellite/. */
 	localDir?: string;
+	/** Land polygons for the coastline mask of the satellite layer. Defaults to `getCoastlinePath()`; call `ensureCoastline()` before converting the VPL. */
+	coastline?: string;
 }
 
 /**
@@ -27,7 +30,7 @@ export interface VPLOptions {
 export function generateVPL(outputDir: string, filename: string, options: VPLOptions | boolean = {}): void {
 	// Support legacy boolean parameter for debug
 	if (typeof options === 'boolean') options = { debug: options };
-	const { debug = false, localDir } = options;
+	const { debug = false, localDir, coastline = getCoastlinePath() } = options;
 
 	const ssh = getConfig().ssh;
 
@@ -102,7 +105,9 @@ export function generateVPL(outputDir: string, filename: string, options: VPLOpt
 	const bluemarblePath = localDir
 		? 'satellite/bluemarble/bluemarble.versatiles'
 		: '/home/satellite/bluemarble/bluemarble.versatiles';
-	layers.push(`from_container filename="${sourceUrl(s2gmPath)}"`);
+	// The satellite layer shows on land and in a strip of coastal water; Blue Marble shows the sea.
+	const satelliteLayers = getCoastlineLayers(sourceUrl(s2gmPath), resolve(coastline));
+	layers.push(...satelliteLayers);
 	layers.push(
 		`from_container filename="${sourceUrl(bluemarblePath)}" | raster_levels gamma=0.8 brightness=0.2 contrast=0.8`,
 	);
@@ -117,5 +122,5 @@ export function generateVPL(outputDir: string, filename: string, options: VPLOpt
 `;
 
 	writeFileSync(resolve(outputDir, filename), vpl);
-	console.log(`Wrote VPL with ${layers.length - 2} orthophoto layers to ${filename}`);
+	console.log(`Wrote VPL with ${layers.length - satelliteLayers.length - 1} orthophoto layers to ${filename}`);
 }

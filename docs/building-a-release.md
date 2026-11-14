@@ -14,6 +14,7 @@ A checklist for rebuilding orthophoto regions and publishing them. Work through 
 
 - [ ] **The release contains the fixes this build needs.** Read the versatiles-rs changelog since the last build, especially for `mosaic tile` and `mosaic assemble`. The machine that publishes needs a release with `saturation` in `raster_levels` (versatiles-rs#328, after v5.12.0), which the VPL uses for Blue Marble.
 - [ ] **The checkout is current** and `npm run check` passes.
+- [ ] **The quality map.** `<dir_data>/settlement_proximity.png` must exist on the build machine: every `mosaic tile` and `mosaic assemble` reads it to choose the quality (see "Using it" in [quality-zones.md](quality-zones.md)), and they fail without it. Build it with `npm run build:quality-zones`, which takes hours for the planet, or copy it from an earlier build. Rebuild it when the OSM data has changed a lot.
 
 ## 2. Data sources
 

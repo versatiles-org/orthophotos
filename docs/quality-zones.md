@@ -40,7 +40,7 @@ Distances are in pixels, that is in zoom-14 tiles, so they're the same number of
 
 ## Contract
 
-This is what a consumer, such as a future `raster_format` extension in `versatiles-rs`, can rely on.
+This is what a consumer, such as `--quality-map` in `versatiles-rs`, can rely on.
 
 **File.** An 8-bit grayscale PNG, 16384 × 16384 pixels, without nodata. It carries no georeference: it always covers the full Web Mercator square (EPSG:3857, ±20037508.34 m in both axes), with pixel `(x, y)` being zoom-14 tile `(x, y)` in XYZ order, so row 0 is the northern edge.
 
@@ -48,4 +48,23 @@ This is what a consumer, such as a future `raster_format` extension in `versatil
 
 **Reading it for a tile.** A tile above zoom 14 lies inside one pixel: zoom `z` tile `(x, y)` reads pixel `(x >> (z − 14), y >> (z − 14))`. A tile below zoom 14 covers `2^(14 − z)` × `2^(14 − z)` pixels, and the sensible value for it is their maximum, so a tile that contains any town gets the town's quality.
 
-**From value to quality.** The file doesn't define it; that's the consumer's choice. A natural rule is to interpolate, per zoom level, between a quality for 0 and a quality for 255, using the `quality` syntax of `raster_format quality=` in `versatiles-rs` (`parse_quality` in `versatiles_pipeline/src/operations/raster/raster_format.rs`). For example, `70,16:30,17:10` far away and `70,16:50,17:30` in settlements.
+**From value to quality.** The file doesn't define it; that's the consumer's choice. See "Using it" for this pipeline's.
+
+## Using it
+
+`versatiles mosaic tile` and `mosaic assemble` take the map as `--quality-map` (versatiles 5.12.0 and later). In place of a number, a zoom in `--quality` can then take a range, interpolated linearly between the map's 0 and 255: `16:30-50` is 30 far from settlements and 50 in them. A tile above zoom 14 reads its own pixel, and a tile below zoom 14 takes the highest quality of the pixels under it, as the contract describes. The parser is `versatiles_pipeline/src/helpers/quality.rs` in `versatiles-rs`.
+
+`QUALITY` in `src/lib/constants.ts` is `70,16:30-50,17:10-30,18:20,19:10`. The upper ends are the qualities used before the map existed, so settlements look as they did. The map is used only at 16 and 17: 18 and 19 are already compressed hard and are only reached by city sources. `runMosaicTile` and `runMosaicAssemble` always pass `<dir_data>/settlement_proximity.png` (`src/lib/quality-map.ts`), and fail before running `versatiles` if it is missing. `assemble` needs it too, because it re-encodes the tiles where inputs overlap.
+
+Loading the map adds about 0.4 s and at most about 0.4 GB to each `versatiles` run.
+
+### What it saves
+
+A test with two 3 × 3 km crops of BD ORTHO Mayotte (20 cm), tiled to zoom 17, compared the opaque tiles at both ends of the ranges. Tiles with transparency are always encoded losslessly, so they aren't affected.
+
+| Crop                  | z16, 50 → 30          | z17, 30 → 10          |
+| --------------------- | --------------------- | --------------------- |
+| Town and wooded hills | 42.1 → 30.1 KB (−29%) | 23.7 → 13.5 KB (−43%) |
+| Closed forest         | 32.8 → 22.7 KB (−31%) | 18.8 → 10.4 KB (−45%) |
+
+Zoom 17 holds about four fifths of the tiles, so an area far from settlement shrinks by about 40%. At quality 10 tree crowns look visibly softer than at 30 but stay readable. A file already tiled keeps its quality until it is tiled again.

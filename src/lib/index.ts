@@ -32,6 +32,7 @@ export {
 } from './framework.ts';
 export { extractZipFile, safeRm } from './fs.ts';
 export { pipeline, skip, type Skip } from './pipeline.ts';
+export { getQualityMapPath, QUALITY_MAP_FILE, requireQualityMap } from './quality-map.ts';
 export { defineTileRegion, type TileContext, type TileInitContext, type TileItem } from './process_tiles.ts';
 export { createProgress, type Progress, type ProgressOptions } from './progress.ts';
 export { fetchWithInterval, type FetchWithIntervalOptions } from './rate-limit.ts';

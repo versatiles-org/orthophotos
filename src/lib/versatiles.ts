@@ -8,6 +8,15 @@ import { runCommand } from './command.ts';
 import { QUALITY } from './constants.ts';
 import { safeRm } from './fs.ts';
 import { BORDER_FILL_OPTIONS, maskFillFile, measureBorderFill } from './fill-mask.ts';
+import { requireQualityMap } from './quality-map.ts';
+
+/**
+ * `--quality` and `--quality-map` for both commands. `assemble` re-encodes the tiles where inputs
+ * overlap, so it needs the same map, or the seams get a different quality than their neighbours.
+ */
+function qualityArgs(): string[] {
+	return ['--quality', QUALITY, '--quality-map', requireQualityMap()];
+}
 
 /** Share of the input that may be fill along its edge before `runMosaicTile` refuses it. */
 const BORDER_FILL_LIMIT = 0.01;
@@ -87,7 +96,7 @@ async function tile(
 		'maxZoom' | 'bands' | 'nodata' | 'crs' | 'cacheDirectory' | 'gdalConcurrency'
 	>,
 ): Promise<void> {
-	const args = ['mosaic', 'tile', '--quality', QUALITY, '--max-zoom', String(options.maxZoom)];
+	const args = ['mosaic', 'tile', ...qualityArgs(), '--max-zoom', String(options.maxZoom)];
 	if (options.bands) {
 		args.push('--bands', options.bands);
 	}
@@ -133,7 +142,7 @@ export async function runMosaicAssemble(
 		throw new Error(`runMosaicAssemble: filelist path contains unsafe characters: ${JSON.stringify(filelistPath)}`);
 	}
 	// No --max-zoom: include every zoom level present in the inputs.
-	const args = ['mosaic', 'assemble', '--max-buffer-size', '50%', '--quality', QUALITY];
+	const args = ['mosaic', 'assemble', '--max-buffer-size', '50%', ...qualityArgs()];
 	if (options?.lossless) {
 		args.push('--lossless');
 	}

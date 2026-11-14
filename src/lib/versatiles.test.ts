@@ -33,6 +33,10 @@ import { maskFillFile, measureBorderFill } from './fill-mask.ts';
 const mockMeasure = vi.mocked(measureBorderFill);
 const mockMask = vi.mocked(maskFillFile);
 
+// The map lives in `dir_data`; its own tests are in quality-map.test.ts.
+vi.mock('./quality-map.ts', () => ({ requireQualityMap: vi.fn().mockReturnValue('/data/settlement_proximity.png') }));
+const MAP = '/data/settlement_proximity.png';
+
 function mockResult(stderr = '') {
 	return {
 		success: true,
@@ -63,6 +67,8 @@ test('runMosaicTile - calls versatiles with correct args', async () => {
 	const args: string[] = mockRunCommand.mock.calls[0][1];
 	// The region's zoom is always passed, so versatiles never picks one from the source resolution.
 	expect(args[args.indexOf('--max-zoom') + 1]).toBe('18');
+	expect(args[args.indexOf('--quality') + 1]).toBe(QUALITY);
+	expect(args[args.indexOf('--quality-map') + 1]).toBe(MAP);
 	expect(existsSync(output)).toBe(true);
 });
 
@@ -166,7 +172,18 @@ test('runMosaicAssemble - calls versatiles with correct args', async () => {
 
 	expect(mockRunCommand).toHaveBeenCalledWith(
 		'versatiles',
-		['mosaic', 'assemble', '--max-buffer-size', '50%', '--quality', QUALITY, '@/filelist.txt', '/output.versatiles'],
+		[
+			'mosaic',
+			'assemble',
+			'--max-buffer-size',
+			'50%',
+			'--quality',
+			QUALITY,
+			'--quality-map',
+			MAP,
+			'@/filelist.txt',
+			'/output.versatiles',
+		],
 		{ quiet: true, quietOnError: true },
 	);
 });
@@ -185,6 +202,8 @@ test('runMosaicAssemble - passes lossless option', async () => {
 			'50%',
 			'--quality',
 			QUALITY,
+			'--quality-map',
+			MAP,
 			'--lossless',
 			'@/filelist.txt',
 			'/output.versatiles',

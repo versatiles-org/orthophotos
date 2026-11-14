@@ -10,7 +10,7 @@
  */
 
 import { join, resolve } from 'node:path';
-import { getConfig } from './lib/index.ts';
+import { getConfig, getQualityMapPath } from './lib/index.ts';
 import { buildQualityZones, isUrl } from './quality-zones/index.ts';
 
 const [input, output] = process.argv.slice(2);
@@ -22,6 +22,6 @@ if (!input) {
 const config = getConfig();
 await buildQualityZones(
 	isUrl(input) ? input : resolve(input),
-	resolve(output ?? join(config.dirData, 'settlement_proximity.png')),
+	resolve(output ?? getQualityMapPath()),
 	join(config.dirTemp, 'quality_zones'),
 );

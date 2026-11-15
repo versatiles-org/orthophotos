@@ -9,7 +9,7 @@
  * The assembly point that wires both together is `index.ts`.
  */
 
-import { existsSync, mkdirSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import {
@@ -34,6 +34,7 @@ import {
 import {
 	type BdorthoDetailPart,
 	computeDateRange,
+	dbfRecordCount,
 	type IndexEntry,
 	parseDetailFeed,
 	parseIndexPage,
@@ -187,6 +188,29 @@ function cleanItemArtifacts(tempDir: string, item: { id: string; title: string }
 	}
 }
 
+/** File in `extractDir` with the number of JP2s the archive contained. */
+const JP2_COUNT_FILE = '.jp2-count';
+
+function countJp2s(extractDir: string): number {
+	return readdirSync(extractDir).filter((f) => f.endsWith('.jp2')).length;
+}
+
+/** JP2s listed in the delivery's sheet index (`dalles.dbf`), or `undefined` without an index. */
+function indexedJp2s(extractDir: string): number | undefined {
+	const index = join(extractDir, 'dalles.dbf');
+	return existsSync(index) ? dbfRecordCount(readFileSync(index)) : undefined;
+}
+
+/**
+ * How many JP2s are missing from an `extractDir` kept from an earlier run: compared with the count
+ * recorded at extraction, or for folders extracted before that count existed, with the sheet index.
+ */
+function missingJp2s(extractDir: string): number {
+	const countFile = join(extractDir, JP2_COUNT_FILE);
+	const expected = existsSync(countFile) ? Number(readFileSync(countFile, 'utf-8')) : indexedJp2s(extractDir);
+	return expected === undefined ? 0 : Math.max(0, expected - countJp2s(extractDir));
+}
+
 /** Returns the detail-feed URL with a generous `?limit=` so all parts come back in one page. */
 function detailUrlWithLimit(detailUrl: string): string {
 	const u = new URL(detailUrl);
@@ -258,10 +282,17 @@ export function defineFrSubRegion(opts: FrSubRegionOptions): RegionPipeline {
 		download: async (item, { tempDir }) => {
 			const extractDir = join(tempDir, item.id);
 			if (existsSync(extractDir)) {
-				// Extraction already done in a previous run. Sweep any archive parts
-				// that survived an interrupted cleanup so they don't linger forever.
-				cleanItemArtifacts(tempDir, item);
-				return { extractDir };
+				const missing = missingJp2s(extractDir);
+				if (missing === 0) {
+					// Extraction already done in a previous run. Sweep any archive parts
+					// that survived an interrupted cleanup so they don't linger forever.
+					cleanItemArtifacts(tempDir, item);
+					return { extractDir };
+				}
+				// The JP2s stay until their department is done, but runs before November 2026
+				// deleted each one after masking it, and a failure then left the folder incomplete.
+				console.log(`  ${item.id}: ${missing} JP2s are missing from the extracted folder; downloading again.`);
+				safeRm(extractDir);
 			}
 
 			const detailPath = join(tempDir, `${item.id}_detail.json`);
@@ -312,6 +343,12 @@ export function defineFrSubRegion(opts: FrSubRegionOptions): RegionPipeline {
 			await runCommand('7z', ['e', `-o${tmpExtractDir}`, '-bb0', '-bso0', '-bsp0', '-aoa', mainPath], {
 				quiet: true,
 			});
+			const jp2Count = countJp2s(tmpExtractDir);
+			const indexed = indexedJp2s(tmpExtractDir);
+			if (indexed !== undefined && indexed !== jp2Count) {
+				console.warn(`  Warning: ${item.id} has ${jp2Count} JP2s, but its sheet index lists ${indexed}.`);
+			}
+			writeFileSync(join(tmpExtractDir, JP2_COUNT_FILE), String(jp2Count));
 			renameSync(tmpExtractDir, extractDir);
 
 			cleanItemArtifacts(tempDir, item);
@@ -336,15 +373,13 @@ export function defineFrSubRegion(opts: FrSubRegionOptions): RegionPipeline {
 					.map({ memoryGB: 5 }, async (jp2Path) => {
 						const baseName = basename(jp2Path, '.jp2');
 						const tifPath = join(tilesDir, `${baseName}.tif`);
-						try {
-							// Decode the JP2 with GDAL, which is more robust than versatiles's decoder, and make
-							// the white fill over the sea in coastal tiles transparent (La Réunion, November
-							// 2026). Masking here rather than with `border: 'mask'` in the tile step keeps it in
-							// the parallel stage.
-							await maskFillFile(jp2Path, tifPath, BORDER_FILL_OPTIONS);
-						} finally {
-							safeRm(jp2Path);
-						}
+						// Decode the JP2 with GDAL, which is more robust than versatiles's decoder, and make
+						// the white fill over the sea in coastal tiles transparent (La Réunion, November
+						// 2026). Masking here rather than with `border: 'mask'` in the tile step keeps it in
+						// the parallel stage. The JP2 stays until the whole department is done: a rerun
+						// after a failure reuses `extractDir` and must find every JP2 there (Isère,
+						// November 2026, lost half its JP2s this way).
+						await maskFillFile(jp2Path, tifPath, BORDER_FILL_OPTIONS);
 						return { tifPath, tilePath: join(tilesDir, `${baseName}.versatiles`) };
 					})
 					.forEach({ memoryGB: 20 }, async ({ tifPath, tilePath }) => {

@@ -148,3 +148,12 @@ export function parseDetailFeed(body: BdorthoDetailFeed): BdorthoDetailPart[] {
 	}
 	return out.sort((a, b) => a.url.localeCompare(b.url));
 }
+
+/**
+ * Number of records in a dBASE file, from its header (bytes 4–7, little-endian). Every BD ORTHO
+ * delivery has a sheet index, `dalles.dbf`, with one record per JP2.
+ */
+export function dbfRecordCount(dbf: Uint8Array): number {
+	if (dbf.length < 32) throw new Error(`dbfRecordCount: ${dbf.length} bytes is too short for a dBASE header`);
+	return new DataView(dbf.buffer, dbf.byteOffset, dbf.byteLength).getUint32(4, true);
+}

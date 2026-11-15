@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest';
 import {
 	type BdorthoDetailFeed,
 	type BdorthoIndexPage,
+	dbfRecordCount,
 	parseDetailFeed,
 	parseIndexPage,
 	pickBestPerZone,
@@ -174,5 +175,17 @@ describe('parseDetailFeed', () => {
 			entry: [{ link: [{ href: 'https://x/x.7z', type: 'application/x-7z-compressed' }] }],
 		};
 		expect(parseDetailFeed(noLength)).toEqual([{ url: 'https://x/x.7z', length: 0 }]);
+	});
+});
+
+describe('dbfRecordCount', () => {
+	test('reads the record count from the header', () => {
+		const header = new Uint8Array(32);
+		new DataView(header.buffer).setUint32(4, 86, true);
+		expect(dbfRecordCount(header)).toBe(86);
+	});
+
+	test('refuses a file too short for a header', () => {
+		expect(() => dbfRecordCount(new Uint8Array(10))).toThrow('too short');
 	});
 });

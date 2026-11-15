@@ -330,6 +330,14 @@ const TIFF_CO = ['-co', 'TILED=YES', '-co', 'COMPRESS=ZSTD', '-co', 'ZSTD_LEVEL=
 const OUTPUT_CO = [...TIFF_CO, '-co', 'ALPHA=YES'];
 
 /**
+ * Opens the raw masked bytes with the ENVI driver only. Without it GDAL asks every driver, and the
+ * DOQ1 driver claims a raw file whose bytes 144–164 happen to read as ASCII numbers, which the
+ * pixel values 9–13, 32 and 48–57 at the start of the red band do (BD ORTHO Isère, November 2026:
+ * "DOQ Data Type (8) is not a supported configuration").
+ */
+const READ_ENVI = ['-if', 'ENVI'];
+
+/**
  * Applies `maskFill` to an RGB or RGBA raster and writes the result as a tiled RGBA GeoTIFF.
  * The raster goes through GDAL's ENVI format (raw bytes plus a header with the georeference),
  * so nothing is compressed lossily on the way.
@@ -379,9 +387,13 @@ export async function maskFillFileInThread(
 			const { rgba, width, height } = await readRgba(input, raw);
 			maskFill(rgba, width, height, options);
 			writeRgba(rgba, raw, masked);
-			await runCommand('gdal_translate', ['-q', ...OUTPUT_CO, '-colorinterp_4', 'alpha', masked, output], {
-				quiet: true,
-			});
+			await runCommand(
+				'gdal_translate',
+				['-q', ...READ_ENVI, ...OUTPUT_CO, '-colorinterp_4', 'alpha', masked, output],
+				{
+					quiet: true,
+				},
+			);
 			return;
 		}
 		let source = input;
@@ -452,7 +464,8 @@ async function maskInBlocks(
 			temp.push(blockTif);
 			const srcwin = [bx - x0, by - y0, Math.min(blockSize, width - bx), Math.min(blockSize, height - by)];
 			const co = [...TIFF_CO, '-colorinterp_4', 'alpha'];
-			await runCommand('gdal_translate', ['-q', '-srcwin', ...srcwin.map(String), ...co, maskedRaw, blockTif], {
+			const args = ['-q', ...READ_ENVI, '-srcwin', ...srcwin.map(String), ...co, maskedRaw, blockTif];
+			await runCommand('gdal_translate', args, {
 				quiet: true,
 			});
 			blockTifs.push(blockTif);

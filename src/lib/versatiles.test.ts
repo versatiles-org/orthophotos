@@ -2,7 +2,7 @@ import { expect, onTestFinished, test, vi } from 'vitest';
 import { mkdirSync, existsSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { QUALITY } from './constants.ts';
+import { QUALITY, QUALITY_MAP_ENABLED } from './constants.ts';
 import { runMosaicAssemble, runMosaicTile } from './versatiles.ts';
 
 // Mock runCommand from lib/command.ts
@@ -36,6 +36,8 @@ const mockMask = vi.mocked(maskFillFile);
 // The map lives in `dir_data`; its own tests are in quality-map.test.ts.
 vi.mock('./quality-map.ts', () => ({ requireQualityMap: vi.fn().mockReturnValue('/data/settlement_proximity.png') }));
 const MAP = '/data/settlement_proximity.png';
+/** The quality arguments both commands get: with the map only while `QUALITY_MAP_ENABLED`. */
+const QUALITY_ARGS = ['--quality', QUALITY, ...(QUALITY_MAP_ENABLED ? ['--quality-map', MAP] : [])];
 
 function mockResult(stderr = '') {
 	return {
@@ -67,8 +69,7 @@ test('runMosaicTile - calls versatiles with correct args', async () => {
 	const args: string[] = mockRunCommand.mock.calls[0][1];
 	// The region's zoom is always passed, so versatiles never picks one from the source resolution.
 	expect(args[args.indexOf('--max-zoom') + 1]).toBe('18');
-	expect(args[args.indexOf('--quality') + 1]).toBe(QUALITY);
-	expect(args[args.indexOf('--quality-map') + 1]).toBe(MAP);
+	expect(args.slice(args.indexOf('--quality'), args.indexOf('--max-zoom'))).toEqual(QUALITY_ARGS);
 	expect(existsSync(output)).toBe(true);
 });
 
@@ -172,18 +173,7 @@ test('runMosaicAssemble - calls versatiles with correct args', async () => {
 
 	expect(mockRunCommand).toHaveBeenCalledWith(
 		'versatiles',
-		[
-			'mosaic',
-			'assemble',
-			'--max-buffer-size',
-			'50%',
-			'--quality',
-			QUALITY,
-			'--quality-map',
-			MAP,
-			'@/filelist.txt',
-			'/output.versatiles',
-		],
+		['mosaic', 'assemble', '--max-buffer-size', '50%', ...QUALITY_ARGS, '@/filelist.txt', '/output.versatiles'],
 		{ quiet: true, quietOnError: true },
 	);
 });
@@ -200,10 +190,7 @@ test('runMosaicAssemble - passes lossless option', async () => {
 			'assemble',
 			'--max-buffer-size',
 			'50%',
-			'--quality',
-			QUALITY,
-			'--quality-map',
-			MAP,
+			...QUALITY_ARGS,
 			'--lossless',
 			'@/filelist.txt',
 			'/output.versatiles',

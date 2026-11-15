@@ -21,7 +21,7 @@ export {
 	runCommandWithRetry,
 	type DownloadOptions,
 } from './command.ts';
-export { MAX_ZOOM, QUALITY } from './constants.ts';
+export { MAX_ZOOM, QUALITY, QUALITY_MAP_ENABLED } from './constants.ts';
 export { sleep } from './delay.ts';
 export {
 	getMaxZoom,

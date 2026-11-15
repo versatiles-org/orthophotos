@@ -15,7 +15,7 @@
 
 import { resolve } from 'node:path';
 import { mkdirSync } from 'node:fs';
-import { formatErrorChain, getConfig, requireQualityMap } from './lib/index.ts';
+import { formatErrorChain, getConfig, QUALITY_MAP_ENABLED, requireQualityMap } from './lib/index.ts';
 import {
 	checkRequiredCommands,
 	expandRegionPattern,
@@ -68,7 +68,7 @@ async function main(): Promise<void> {
 	await checkRequiredCommands();
 
 	// Fetch and merge encode tiles, which needs the quality map; fail before any download.
-	if (args.tasks.includes(1) || args.tasks.includes(2)) {
+	if (QUALITY_MAP_ENABLED && (args.tasks.includes(1) || args.tasks.includes(2))) {
 		console.log(`Checking quality map...\n  ${requireQualityMap()}`);
 	}
 

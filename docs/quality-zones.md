@@ -54,7 +54,9 @@ This is what a consumer, such as `--quality-map` in `versatiles-rs`, can rely on
 
 `versatiles mosaic tile` and `mosaic assemble` take the map as `--quality-map` (versatiles 5.12.0 and later). In place of a number, a zoom in `--quality` can then take a range, interpolated linearly between the map's 0 and 255: `16:30-50` is 30 far from settlements and 50 in them. A tile above zoom 14 reads its own pixel, and a tile below zoom 14 takes the highest quality of the pixels under it, as the contract describes. The parser is `versatiles_pipeline/src/helpers/quality.rs` in `versatiles-rs`.
 
-`QUALITY` in `src/lib/constants.ts` is `70,16:30-50,17:10-30,18:20,19:10`. The upper ends are the qualities used before the map existed, so settlements look as they did. The map is used only at 16 and 17: 18 and 19 are already compressed hard and are only reached by city sources. `runMosaicTile` and `runMosaicAssemble` always pass `<dir_data>/settlement_proximity.png` (`src/lib/quality-map.ts`), and fail before running `versatiles` if it is missing. `assemble` needs it too, because it re-encodes the tiles where inputs overlap.
+**The map is switched off for now** (`QUALITY_MAP_ENABLED = false` in `src/lib/constants.ts`), until it is built on the build machine and the seams between quality zones have been checked (#86). `QUALITY` is then `70,16:50,17:30,18:20,19:10` and no map is read.
+
+Switched on, `QUALITY` is `70,16:30-50,17:10-30,18:20,19:10`. The upper ends are the qualities used before the map existed, so settlements look as they did. The map is used only at 16 and 17: 18 and 19 are already compressed hard and are only reached by city sources. `runMosaicTile` and `runMosaicAssemble` then pass `<dir_data>/settlement_proximity.png` (`src/lib/quality-map.ts`), and `./run.sh` stops at startup if it is missing. `assemble` needs it too, because it re-encodes the tiles where inputs overlap.
 
 Loading the map adds about 0.4 s and at most about 0.4 GB to each `versatiles` run.
 

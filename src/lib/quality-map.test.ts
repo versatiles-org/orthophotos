@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, expect, test, vi } from 'vitest';
-import { QUALITY } from './constants.ts';
+import { QUALITY, QUALITY_MAP_ENABLED } from './constants.ts';
 
 const dataDir = mkdtempSync(join(tmpdir(), 'quality-map-'));
 afterAll(() => rmSync(dataDir, { recursive: true, force: true }));
@@ -24,6 +24,6 @@ test('an existing map is returned', () => {
 	expect(requireQualityMap()).toBe(getQualityMapPath());
 });
 
-test('QUALITY uses ranges only where the map chooses, from zoom 16 on', () => {
-	expect(QUALITY).toMatch(/^70,16:30-50,17:10-30,/);
+test('QUALITY has ranges only while the map is enabled', () => {
+	expect(QUALITY).toMatch(QUALITY_MAP_ENABLED ? /^70,16:30-50,17:10-30,/ : /^[\d,:]+$/);
 });

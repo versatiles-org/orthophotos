@@ -5,7 +5,7 @@
 import { renameSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { runCommand } from './command.ts';
-import { QUALITY } from './constants.ts';
+import { QUALITY, QUALITY_MAP_ENABLED } from './constants.ts';
 import { safeRm } from './fs.ts';
 import { BORDER_FILL_OPTIONS, maskFillFile, measureBorderFill } from './fill-mask.ts';
 import { requireQualityMap } from './quality-map.ts';
@@ -15,7 +15,7 @@ import { requireQualityMap } from './quality-map.ts';
  * overlap, so it needs the same map, or the seams get a different quality than their neighbours.
  */
 function qualityArgs(): string[] {
-	return ['--quality', QUALITY, '--quality-map', requireQualityMap()];
+	return ['--quality', QUALITY, ...(QUALITY_MAP_ENABLED ? ['--quality-map', requireQualityMap()] : [])];
 }
 
 /** Share of the input that may be fill along its edge before `runMosaicTile` refuses it. */

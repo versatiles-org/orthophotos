@@ -10,6 +10,7 @@
 
 import { copyFileSync, readFileSync, writeFileSync } from 'node:fs';
 import { extname } from 'node:path';
+import { Worker } from 'node:worker_threads';
 import { runCommand } from './command.ts';
 import { safeRm } from './fs.ts';
 
@@ -320,7 +321,13 @@ export interface FillMaskFileOptions extends FillMaskOptions {
 	blockSize?: number;
 }
 
-const OUTPUT_CO = ['-co', 'TILED=YES', '-co', 'COMPRESS=DEFLATE', '-co', 'PREDICTOR=2', '-co', 'ALPHA=YES'];
+/**
+ * Creation options of every GeoTIFF written here. The output is a temporary file that `mosaic tile`
+ * reads once, so it is compressed for speed: on a 15,000² px test raster, ZSTD level 1 took 3 s of
+ * CPU and DEFLATE with a predictor 44 s, for a file 1.5 times as large.
+ */
+const TIFF_CO = ['-co', 'TILED=YES', '-co', 'COMPRESS=ZSTD', '-co', 'ZSTD_LEVEL=1', '-co', 'BIGTIFF=IF_SAFER'];
+const OUTPUT_CO = [...TIFF_CO, '-co', 'ALPHA=YES'];
 
 /**
  * Applies `maskFill` to an RGB or RGBA raster and writes the result as a tiled RGBA GeoTIFF.
@@ -334,8 +341,34 @@ const OUTPUT_CO = ['-co', 'TILED=YES', '-co', 'COMPRESS=DEFLATE', '-co', 'PREDIC
  * pixels, so a white roof that a block boundary cuts stays. Each block is then masked at full
  * resolution, starting from the pure pixels inside those areas, with a margin so the trim along
  * the fill continues across block boundaries.
+ *
+ * Runs in a worker thread of its own: the masking is JavaScript, and on the main thread all
+ * rasters masked in parallel would share one core while their GDAL processes wait for it.
  */
-export async function maskFillFile(input: string, output: string, options?: FillMaskFileOptions): Promise<void> {
+export function maskFillFile(input: string, output: string, options?: FillMaskFileOptions): Promise<void> {
+	return new Promise((resolvePromise, reject) => {
+		const worker = new Worker(new URL('./fill-mask.worker.ts', import.meta.url), {
+			workerData: { input, output, options },
+		});
+		let failed = false;
+		worker.once('error', (err) => {
+			failed = true;
+			reject(new Error(`maskFillFile failed for "${input}"`, { cause: err }));
+		});
+		worker.once('exit', (code) => {
+			if (failed) return;
+			if (code === 0) resolvePromise();
+			else reject(new Error(`maskFillFile: the worker for "${input}" exited with code ${code}`));
+		});
+	});
+}
+
+/** `maskFillFile` on the current thread; `fill-mask.worker.ts` calls it. */
+export async function maskFillFileInThread(
+	input: string,
+	output: string,
+	options?: FillMaskFileOptions,
+): Promise<void> {
 	const info = await rasterInfo(input);
 	const temp: string[] = [];
 	try {
@@ -355,8 +388,7 @@ export async function maskFillFile(input: string, output: string, options?: Fill
 		if (DECODE_FIRST.has(extname(input).toLowerCase())) {
 			source = `${output}.decoded.tif`;
 			temp.push(source);
-			const co = ['-co', 'TILED=YES', '-co', 'COMPRESS=LZW', '-co', 'BIGTIFF=IF_SAFER'];
-			await runCommand('gdal_translate', ['-q', ...co, input, source], { quiet: true });
+			await runCommand('gdal_translate', ['-q', ...TIFF_CO, input, source], { quiet: true });
 		}
 		await maskInBlocks(source, output, info, options ?? {}, temp);
 	} finally {
@@ -419,7 +451,7 @@ async function maskInBlocks(
 			const blockTif = `${output}.block${blockTifs.length}.tif`;
 			temp.push(blockTif);
 			const srcwin = [bx - x0, by - y0, Math.min(blockSize, width - bx), Math.min(blockSize, height - by)];
-			const co = ['-co', 'TILED=YES', '-co', 'COMPRESS=LZW', '-colorinterp_4', 'alpha'];
+			const co = [...TIFF_CO, '-colorinterp_4', 'alpha'];
 			await runCommand('gdal_translate', ['-q', '-srcwin', ...srcwin.map(String), ...co, maskedRaw, blockTif], {
 				quiet: true,
 			});

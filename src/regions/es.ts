@@ -47,18 +47,37 @@ export function parseListingPage(html: string): PnoaFile[] {
 			return m?.[1];
 		};
 		const name = cell('Nombre');
-		const date = cell('Fecha')?.match(/^(\d{2})\/(\d{4})$/);
+		// One month, several for sheets flown over more than one ("07/2021, 08/2021"), or only a
+		// year (once, "2014"), which counts as month 00.
+		const date = cell('Fecha') ?? '';
+		const months = [...date.matchAll(/(\d{2})\/(\d{4})/g)].map((m) => `${m[2]}${m[1]}`).sort();
+		if (months.length === 0 && /^\d{4}$/.test(date)) months.push(`${date}00`);
 		const size = cell('Tama');
 		const sec = row.match(/detalleArchivo\?sec=(\d+)/)?.[1];
-		if (!name || !date || !size || !sec) throw new Error(`Unexpected row in the CNIG listing: ${row.slice(0, 300)}`);
+		if (!name || months.length === 0 || !size || !sec) {
+			throw new Error(`Unexpected row in the CNIG listing: ${row.slice(0, 300)}`);
+		}
 		files.push({
-			id: `${date[2]}${date[1]}_${name.replace(/\.tiff?$/i, '')}`,
+			id: `${months.at(-1)}_${name.replace(/\.tiff?$/i, '')}`,
 			name,
 			sec,
 			sizeMb: Number(size),
 		});
 	}
 	return files;
+}
+
+/**
+ * Per file name, the newest file. The listing has some sheets twice under the same name, an older
+ * and a newer flight (536 of 5,249 files in November 2026), and a folder holds only one of them.
+ */
+export function newestPerName(files: PnoaFile[]): PnoaFile[] {
+	const byName = new Map<string, PnoaFile>();
+	for (const file of files) {
+		const kept = byName.get(file.name);
+		if (!kept || file.id > kept.id) byName.set(file.name, file);
+	}
+	return [...byName.values()];
 }
 
 /** Lists the whole series, one page at a time with a pause, as the CNIG server is shared. */
@@ -114,13 +133,21 @@ export default defineTileRegion({
 			name: 'Instituto Geográfico Nacional / Sistema Cartográfico Nacional',
 			url: 'https://centrodedescargas.cnig.es/CentroDescargas/ortofoto-pnoa-maxima-actualidad',
 		},
+		date: '2021-2025',
+		// 25 cm on most sheets, 15 cm on 819 and 20 cm on 88 of 5,249 (listing of November 2026).
+		resolution: 15,
+		// Zoom 18 is 0.22–0.26 m on the ground in Spain, the detail of the 25 cm sheets.
+		maxZoom: 18,
 		mask: true,
 		checked: '2026-11-16',
 	},
 	init: async () => {
 		pnoaDir();
 		console.log('  Listing PNOA Máxima Actualidad at CNIG...');
-		return listSeries();
+		const files = await listSeries();
+		const newest = newestPerName(files);
+		console.log(`  ${files.length} files listed, ${newest.length} after keeping the newest per name`);
+		return newest;
 	},
 	download: async ({ name, sizeMb }, ctx) => {
 		// The file belongs to the hand-downloaded folder: never register it with ctx.tempFile.
@@ -129,9 +156,9 @@ export default defineTileRegion({
 			ctx.errors.add(`${name}: missing in es_pnoa_dir`);
 			return 'invalid';
 		}
-		// The listing rounds to 10 kB, and "MB" may mean 10^6 or 2^20 bytes: allow 1% below 10^6.
+		// The listing rounds to 10 kB, and "MB" may mean 10^6 or 2^20 bytes: allow 1% around both.
 		const bytes = statSync(path).size;
-		if (bytes < sizeMb * 1e6 * 0.99) {
+		if (bytes < sizeMb * 1e6 * 0.99 || bytes > sizeMb * 2 ** 20 * 1.01) {
 			ctx.errors.add(`${name}: ${bytes} bytes, but the listing says ${sizeMb} MB; download it again`);
 			return 'invalid';
 		}
@@ -146,5 +173,6 @@ export default defineTileRegion({
 		await runMosaicTile(path, dest, { maxZoom, border: 'mask' });
 	},
 	priority: flightMonthPriority,
-	minFiles: 15000,
+	// 4,713 files after keeping the newest per name, in November 2026.
+	minFiles: 4600,
 });

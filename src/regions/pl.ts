@@ -22,6 +22,13 @@ const MIN_YEAR = 2020;
  */
 const MIN_PIXEL_SIZE = 0.2;
 
+/**
+ * Coarser images are left out too: in 2023 the index has 50 RGB sheets at 0.5 m in PL-2000:S6.
+ * Their sheet names don't match the PL-1992 grid, so they would be drawn over older 25 cm images
+ * instead of being replaced by them.
+ */
+const MAX_PIXEL_SIZE = 0.3;
+
 export interface IndexEntry {
 	/** Map sheet, e.g. `N-33-58-A-c-1-3`. */
 	sheet: string;
@@ -67,7 +74,13 @@ export function parseIndexPage(xml: string): IndexEntry[] {
 export function selectSheets(entries: IndexEntry[]): { id: string; url: string }[] {
 	const bySheet = new Map<string, IndexEntry[]>();
 	for (const entry of entries) {
-		if (entry.color !== 'RGB' || !(entry.pixelSize >= MIN_PIXEL_SIZE) || !entry.url || !entry.date) continue;
+		if (
+			entry.color !== 'RGB' ||
+			!(entry.pixelSize >= MIN_PIXEL_SIZE && entry.pixelSize <= MAX_PIXEL_SIZE) ||
+			!entry.url ||
+			!entry.date
+		)
+			continue;
 		const list = bySheet.get(entry.sheet) ?? [];
 		list.push(entry);
 		bySheet.set(entry.sheet, list);
@@ -98,9 +111,11 @@ export default defineTileRegion({
 			'A WFS index per year lists every map sheet with a direct GeoTIFF link; we use the national 25 cm coverage.',
 		],
 		entries: ['result'],
+		// No CC licence: by law (art. 40a and 40c PGiK) orthophotos are free and come with no
+		// conditions of use; the Atom feed states "Brak warunków dostępu i użytkowania".
 		license: {
-			name: 'CC0',
-			url: 'https://creativecommons.org/publicdomain/zero/1.0/',
+			name: 'No limitations',
+			url: 'https://www.geoportal.gov.pl/en/data/orthophotomap-orto/',
 			requiresAttribution: false,
 		},
 		creator: {
@@ -155,7 +170,8 @@ export default defineTileRegion({
 		return { tifPath };
 	},
 	convert: async ({ tifPath }, { dest, maxZoom }) => {
-		await runMosaicTile(tifPath, dest, { maxZoom });
+		// Sheets only partly covered (czy_ark_wypelniony NIE, about 1,500) are filled with opaque black.
+		await runMosaicTile(tifPath, dest, { maxZoom, border: 'mask' });
 	},
 	// Newer flights are drawn over older ones on sheets that only partly cover their area.
 	priority: flightDatePriority,

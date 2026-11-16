@@ -65,10 +65,11 @@ describe('selectSheets', () => {
 		expect(items.map((i) => i.id)).toEqual(['20250614_1_2025_A', '20240501_1_2024_A', '20230501_1_2023_A']);
 	});
 
-	test('ignores CIR and the detailed city flights', () => {
+	test('ignores CIR, the detailed city flights and coarser images', () => {
 		const items = selectSheets([
 			entry('A', '2025-06-14', { color: 'CIR' }),
 			entry('B', '2025-06-14', { pixelSize: 0.05 }),
+			entry('D', '2025-06-14', { pixelSize: 0.5 }),
 			entry('C', '2025-06-14'),
 		]);
 		expect(items.map((i) => i.id)).toEqual(['20250614_1_2025_C']);

@@ -140,13 +140,14 @@ export interface DownloadOptions {
  */
 export async function downloadFile(url: string, dest: string, options?: DownloadOptions): Promise<void> {
 	const tmp = `${dest}.tmp`;
-	const args = ['-sLo', tmp, '--fail'];
+	// -S keeps curl's error text, such as "The requested URL returned error: 503", for the error message.
+	const args = ['-sSLo', tmp, '--fail'];
 	if (options?.continue) args.push('-C', '-');
 	if (options?.headers) {
 		for (const [k, v] of Object.entries(options.headers)) args.push('-H', `${k}: ${v}`);
 	}
 	args.push(url);
-	await runCommand('curl', args);
+	await runCommand('curl', args, { quiet: true });
 	if (options?.minSize) {
 		const size = statSync(tmp).size;
 		if (size < options.minSize) {

@@ -59,7 +59,13 @@ export default defineTileRegion({
 		const zipPath = ctx.tempFile(join(ctx.tempDir, `${id}.zip`));
 		const extractDir = ctx.tempFile(join(ctx.tempDir, id));
 
-		await withRetry(() => downloadFile(url, zipPath), { maxAttempts: 3 });
+		// The server refuses single ZIPs for a while now and then (curl exit 22 in November 2026,
+		// fine again minutes later), so wait it out: 8 attempts over about 6 minutes.
+		await withRetry(() => downloadFile(url, zipPath), {
+			maxAttempts: 8,
+			initialDelayMs: 5000,
+			maxDelayMs: 120000,
+		});
 		await extractZipFile(zipPath, extractDir);
 
 		// Find the .jpg file. GDAL reads the position from the .jgw world file, but no CRS comes with it.

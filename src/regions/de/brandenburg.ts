@@ -62,7 +62,7 @@ export default defineTileRegion({
 		await withRetry(() => downloadFile(url, zipPath), { maxAttempts: 3 });
 		await extractZipFile(zipPath, extractDir);
 
-		// Find the .jpg file (GDAL reads .jgw sidecar automatically for georeferencing)
+		// Find the .jpg file. GDAL reads the position from the .jgw world file, but no CRS comes with it.
 		const files = await readdir(extractDir, { recursive: true });
 		const jpgFile = files.find((f) => typeof f === 'string' && f.endsWith('.jpg'));
 		if (!jpgFile) return 'empty';
@@ -70,7 +70,8 @@ export default defineTileRegion({
 		return { jpgPath: join(extractDir, String(jpgFile)) };
 	},
 	convert: async ({ jpgPath }, { dest, maxZoom }) => {
-		await runMosaicTile(jpgPath, dest, { maxZoom });
+		// ETRS89 / UTM zone 33N, without the zone prefix in the easting (417000 for sheet 33417-5781).
+		await runMosaicTile(jpgPath, dest, { maxZoom, crs: '25833' });
 	},
 	minFiles: 32000,
 });

@@ -58,7 +58,8 @@ export default defineTileRegion({
 		return { src, tfwPath };
 	},
 	convert: async ({ src }, { dest, maxZoom }) => {
-		await runMosaicTile(src, dest, { maxZoom });
+		// The TIFFs carry no CRS, only a .tfw world file; they are in LKS-92 / Latvia TM.
+		await runMosaicTile(src, dest, { maxZoom, crs: '3059' });
 	},
-	minFiles: 123456,
+	minFiles: 10700,
 });

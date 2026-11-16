@@ -83,5 +83,5 @@ export default defineTileRegion({
 	convert: async ({ srcPath }, { dest, maxZoom }) => {
 		await runMosaicTile(srcPath, dest, { maxZoom });
 	},
-	minFiles: 123456,
+	minFiles: 63000,
 });

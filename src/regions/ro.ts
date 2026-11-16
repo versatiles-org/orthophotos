@@ -84,5 +84,5 @@ export default defineTileRegion({
 		}
 		await runMosaicTile(vrtPath, ctx.dest, { maxZoom: ctx.maxZoom, border: 'mask' });
 	},
-	minFiles: 123456,
+	minFiles: 15,
 });

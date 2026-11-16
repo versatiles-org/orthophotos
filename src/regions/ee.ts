@@ -30,7 +30,7 @@ export function pickLatestFilename(html: string): string | null {
  */
 async function getLatestFilename(nr: number): Promise<string | null> {
 	const url = `${API_URL}&kaardiruut=${nr}&andmetyyp=ortofoto_eesti_rgb`;
-	const result = await runCommand('curl', ['-sfL', '--max-time', '15', url], { quiet: true });
+	const result = await runCommand('curl', ['-sSfL', '--max-time', '15', url], { quiet: true });
 	return pickLatestFilename(new TextDecoder().decode(result.stdout));
 }
 

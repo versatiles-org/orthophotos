@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
-import { defineTileRegion, isValidRaster, runCommand, runMosaicTile, withRetry } from '../../lib/index.ts';
+import { defineTileRegion, downloadFile, isValidRaster, runMosaicTile, withRetry } from '../../lib/index.ts';
 
 const INDEX_URL = 'https://geobasis-rlp.de/data/dop20rgb/current/jp2/';
 
@@ -47,7 +47,7 @@ export default defineTileRegion({
 		const indexPath = join(ctx.tempDir, 'index.html');
 		if (!existsSync(indexPath)) {
 			console.log('  Fetching index...');
-			await withRetry(() => runCommand('curl', ['-sko', indexPath, INDEX_URL]), { maxAttempts: 3 });
+			await withRetry(() => downloadFile(INDEX_URL, indexPath, { insecure: true }), { maxAttempts: 3 });
 		}
 		const html = await readFile(indexPath, 'utf-8');
 		const filenames = parseFilenames(html);
@@ -56,7 +56,7 @@ export default defineTileRegion({
 	download: async ({ url, id }, ctx) => {
 		const src = ctx.tempFile(join(ctx.tempDir, `${id}.jp2`));
 		// `-k` (insecure) is required because the server's TLS certificate is not trusted by curl.
-		await withRetry(() => runCommand('curl', ['-sko', src, url]), { maxAttempts: 3 });
+		await withRetry(() => downloadFile(url, src, { insecure: true }), { maxAttempts: 3 });
 		if (!(await isValidRaster(src))) {
 			ctx.errors.add(`${id}.jp2 (${url})`);
 			return 'invalid';

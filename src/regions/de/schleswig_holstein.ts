@@ -1,7 +1,7 @@
-import { existsSync, renameSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, statSync, writeFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { defineTileRegion, isValidRaster, runCommand, runMosaicTile, withRetry } from '../../lib/index.ts';
+import { defineTileRegion, downloadFile, isValidRaster, runMosaicTile, withRetry } from '../../lib/index.ts';
 
 const GEOJSON_URL =
 	'https://geodaten.schleswig-holstein.de/gaialight-sh/_apps/dladownload/single.php?file=DOP20_SH__Massendownload.geojson&id=4';
@@ -13,19 +13,6 @@ interface TileProperties {
 
 interface GeoJsonResponse {
 	features: { properties: TileProperties }[];
-}
-
-/**
- * Downloads a file using curl with --insecure flag (needed for geodaten.schleswig-holstein.de).
- *
- * Uses `--fail` so HTTP 4xx/5xx responses propagate as errors rather than silently
- * writing the error body to disk — otherwise a 1-byte error response would be
- * indistinguishable from the server's known "1-byte tile" quirk.
- */
-async function downloadInsecure(url: string, dest: string): Promise<void> {
-	const tmp = `${dest}.tmp`;
-	await runCommand('curl', ['-skfo', tmp, url]);
-	renameSync(tmp, dest);
 }
 
 export function parseGeoJson(data: GeoJsonResponse): { id: string; url: string }[] {
@@ -67,7 +54,7 @@ export default defineTileRegion({
 		const geojsonPath = join(ctx.tempDir, 'tiles.geojson');
 		if (!existsSync(geojsonPath)) {
 			console.log('  Fetching tile index...');
-			await withRetry(() => downloadInsecure(GEOJSON_URL, geojsonPath), { maxAttempts: 3 });
+			await withRetry(() => downloadFile(GEOJSON_URL, geojsonPath, { insecure: true }), { maxAttempts: 3 });
 		}
 		const content = await readFile(geojsonPath, 'utf-8');
 		return parseGeoJson(JSON.parse(content));
@@ -75,7 +62,7 @@ export default defineTileRegion({
 	download: async ({ url, id }, ctx) => {
 		const tifPath = ctx.tempFile(join(ctx.tempDir, `${id}.tif`));
 
-		await withRetry(() => downloadInsecure(url, tifPath), { maxAttempts: 3 });
+		await withRetry(() => downloadFile(url, tifPath, { insecure: true }), { maxAttempts: 3 });
 		// Known data-source quirk: a small subset of tiles in the index return a
 		// 1-byte HTTP 200 body (the index lists tiles that don't actually exist).
 		// `--fail` already rules out HTTP errors, so reaching this branch means

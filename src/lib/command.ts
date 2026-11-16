@@ -132,6 +132,8 @@ export interface DownloadOptions {
 	continue?: boolean;
 	/** Extra HTTP request headers (e.g. `{ Accept: 'application/json' }`). */
 	headers?: Record<string, string>;
+	/** Accept a TLS certificate curl doesn't trust (`-k`), for servers with a broken chain. Default: false */
+	insecure?: boolean;
 }
 
 /**
@@ -143,6 +145,7 @@ export async function downloadFile(url: string, dest: string, options?: Download
 	// -S keeps curl's error text, such as "The requested URL returned error: 503", for the error message.
 	const args = ['-sSLo', tmp, '--fail'];
 	if (options?.continue) args.push('-C', '-');
+	if (options?.insecure) args.push('-k');
 	if (options?.headers) {
 		for (const [k, v] of Object.entries(options.headers)) args.push('-H', `${k}: ${v}`);
 	}

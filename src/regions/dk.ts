@@ -34,7 +34,7 @@ function ensureNetrc(tempDir: string): string {
 /** Lists remote filenames in a directory via `curl --list-only`. */
 async function ftpList(netrc: string, remoteDir: string): Promise<string[]> {
 	const url = `ftps://${FTP_HOST}${remoteDir.endsWith('/') ? remoteDir : remoteDir + '/'}`;
-	const result = await runCommand('curl', ['-s', '--ssl-reqd', '--netrc-file', netrc, '--list-only', '--fail', url], {
+	const result = await runCommand('curl', ['-sS', '--ssl-reqd', '--netrc-file', netrc, '--list-only', '--fail', url], {
 		quiet: true,
 	});
 	return new TextDecoder()
@@ -48,7 +48,7 @@ async function ftpList(netrc: string, remoteDir: string): Promise<string[]> {
 async function ftpDownload(netrc: string, remotePath: string, dest: string): Promise<void> {
 	const tmp = `${dest}.tmp`;
 	const url = `ftps://${FTP_HOST}${remotePath}`;
-	await runCommand('curl', ['-sL', '--ssl-reqd', '--netrc-file', netrc, '--fail', '-o', tmp, url]);
+	await runCommand('curl', ['-sSL', '--ssl-reqd', '--netrc-file', netrc, '--fail', '-o', tmp, url], { quiet: true });
 	renameSync(tmp, dest);
 }
 

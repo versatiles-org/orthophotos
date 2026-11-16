@@ -104,7 +104,7 @@ function s3Env(): Record<string, string> {
 /** Fetches one STAC search page to `path`: a POST with `body`, or a GET of `href` without one. */
 async function fetchStacPage(href: string, body: unknown, path: string): Promise<void> {
 	const tmp = `${path}.tmp`;
-	const args = ['-s', '--fail', '--max-time', '300', '-o', tmp];
+	const args = ['-sS', '--fail', '--max-time', '300', '-o', tmp];
 	if (body !== undefined) args.push('-X', 'POST', '-H', 'Content-Type: application/json', '-d', JSON.stringify(body));
 	args.push(href);
 	await runCommand('curl', args, { quiet: true });

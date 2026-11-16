@@ -1,14 +1,7 @@
 import { writeFileSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import {
-	defineTileRegion,
-	downloadFile,
-	extractZipFile,
-	runCommand,
-	runMosaicTile,
-	withRetry,
-} from '../../lib/index.ts';
+import { defineTileRegion, downloadFile, extractZipFile, runMosaicTile, withRetry } from '../../lib/index.ts';
 
 export function generateCoords(): { x: number; y: number; id: string }[] {
 	const coords: { x: number; y: number; id: string }[] = [];
@@ -72,7 +65,7 @@ export default defineTileRegion({
 		const best = matching.reduce((a, b) => (a.properties.bildflugnr > b.properties.bildflugnr ? a : b));
 
 		const downloadUrl = `https://geoportal.geoportal-th.de/gaialight-th/_apps/dladownload/download.php?type=op&id=${best.properties.gid}`;
-		await withRetry(() => runCommand('curl', ['-sko', zipPath, downloadUrl]), {
+		await withRetry(() => downloadFile(downloadUrl, zipPath, { insecure: true }), {
 			maxAttempts: 3,
 		});
 

@@ -1,53 +1,108 @@
-import { existsSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import {
-	computeWmsBlocks,
 	defineTileRegion,
-	extractWmsBlock,
-	generateWmsXml,
+	getConfig,
 	isValidRaster,
+	PATIENT_RETRY,
 	runMosaicTile,
-	type WmsBbox,
-	type WmsBlockItem,
+	sleep,
 	withRetry,
 } from '../lib/index.ts';
 
-// PNOA Máxima Actualidad — the always-current orthophoto layer published by IGN
-// as part of the Spanish Sistema Cartográfico Nacional. INSPIRE-compliant WMS
-// at MaxWidth/Height=4096; the layer also returns Sentinel-2 fallback below
-// roughly zoom 12 (well below our MAX_ZOOM=17, so we always receive PNOA).
-const WMS_URL = 'https://www.ign.es/wms-inspire/pnoa-ma';
-const LAYER = 'OI.OrthoimageCoverage';
+/**
+ * PNOA Máxima Actualidad, the always-current national orthophoto of IGN and CNIG, as COGs on the
+ * MTN25 sheet grid.
+ *
+ * CNIG doesn't allow scripted downloads: since September 2026 each download needs a reCAPTCHA
+ * token, and the download form flags automated browsers. So the COGs are downloaded by hand with
+ * CNIG's own tool (the cart and its Open Web Start downloader) into the folder `es_pnoa_dir` from
+ * `config.env`, outside `dir_temp` so that the delete task never removes them. This region only
+ * reads that folder. The file list comes from the open listing of the series, so a file missing
+ * in the folder, or one cut short, fails the run instead of leaving a hole.
+ */
 
-// Spain's territorial extent in EPSG:3857 — mainland + Balearics + Canary
-// Islands + Ceuta + Melilla. Derived from the layer's EPSG:4080 bbox of
-// (-19,27,5,44) reprojected and padded outward. `mask: true` clips the final
-// result to the NUTS-Spain polygon so any Sentinel-2 fallback pixels along the
-// margin (areas outside PNOA coverage) get trimmed away.
-const BBOX: WmsBbox = {
-	xmin: -2120000,
-	ymin: 3120000,
-	xmax: 600000,
-	ymax: 5475000,
-};
+const LISTING_URL = 'https://centrodedescargas.cnig.es/CentroDescargas/archivosSerie';
+/** Series 02211 is PNOA Máxima Actualidad, here its COG files. */
+const LISTING_PARAMS = { codAgr: 'FOTOR', codSerie: '02211', codTipoArchivo: 'COG', orderBy: '' };
+const USER_AGENT = 'versatiles-orthophotos (https://github.com/versatiles-org/orthophotos)';
 
-interface EsItem extends WmsBlockItem {
-	wmsXmlPath: string;
-	blockPx: number;
+export interface PnoaFile {
+	/** Flight month and file name, e.g. `202309_PNOA-MA-OF-ETRS89-HU29-H25-0001-2`; newer IDs are drawn on top. */
+	id: string;
+	/** File name in the folder, e.g. `PNOA-MA-OF-ETRS89-HU29-H25-0001-2.TIF`. */
+	name: string;
+	/** CNIG's file number (`sec`). */
+	sec: string;
+	/** Size in MB as listed. */
+	sizeMb: number;
 }
 
-export default defineTileRegion<EsItem, { srcPath: string }>({
+/** The files of one page of the `archivosSerie` listing (20 rows), or none past the last page. */
+export function parseListingPage(html: string): PnoaFile[] {
+	const files: PnoaFile[] = [];
+	for (const [, row] of html.matchAll(/<tr class="fontSize08em row100">([\s\S]*?)<\/tr>/g)) {
+		const cell = (th: string): string | undefined => {
+			const m = row.match(new RegExp(`data-th="${th}[^"]*"[\\s\\S]*?<div class="col-m-8[^"]*">\\s*([^<]*?)\\s*</div>`));
+			return m?.[1];
+		};
+		const name = cell('Nombre');
+		const date = cell('Fecha')?.match(/^(\d{2})\/(\d{4})$/);
+		const size = cell('Tama');
+		const sec = row.match(/detalleArchivo\?sec=(\d+)/)?.[1];
+		if (!name || !date || !size || !sec) throw new Error(`Unexpected row in the CNIG listing: ${row.slice(0, 300)}`);
+		files.push({
+			id: `${date[2]}${date[1]}_${name.replace(/\.tiff?$/i, '')}`,
+			name,
+			sec,
+			sizeMb: Number(size),
+		});
+	}
+	return files;
+}
+
+/** Lists the whole series, one page at a time with a pause, as the CNIG server is shared. */
+async function listSeries(): Promise<PnoaFile[]> {
+	const files: PnoaFile[] = [];
+	for (let page = 1; ; page++) {
+		const body = new URLSearchParams({ numPagina: String(page), ...LISTING_PARAMS });
+		const html = await withRetry(async () => {
+			const res = await fetch(LISTING_URL, { method: 'POST', body, headers: { 'User-Agent': USER_AGENT } });
+			if (!res.ok) throw new Error(`CNIG listing page ${page} failed: ${res.status} ${res.statusText}`);
+			return res.text();
+		}, PATIENT_RETRY);
+		const rows = parseListingPage(html);
+		if (rows.length === 0) break;
+		files.push(...rows);
+		if (page % 100 === 0) console.log(`  ${files.length} files after ${page} pages...`);
+		await sleep(1000);
+	}
+	return files;
+}
+
+/** The folder with the hand-downloaded COGs, from `es_pnoa_dir` in `config.env`. */
+function pnoaDir(): string {
+	const dir = getConfig().esPnoaDir;
+	if (!dir) throw new Error('Set es_pnoa_dir in config.env to the folder with the PNOA COGs downloaded from CNIG');
+	if (!existsSync(dir)) throw new Error(`es_pnoa_dir "${dir}" does not exist`);
+	return dir;
+}
+
+/** Draws newer flights on top where sheets overlap. */
+export function flightMonthPriority(id: string): number {
+	return Number(id.slice(0, 6)) || 0;
+}
+
+export default defineTileRegion({
 	name: 'es',
 	meta: {
-		status: 'blocked',
+		status: 'scraping',
 		notes: [
-			'WMS view of PNOA Máxima Actualidad (always-current national orthophoto) by IGN — licensed CC BY 4.0 and reachable from a browser.',
-			'Source data: 25 cm in most regions, 50 cm elsewhere. Vintages span the rolling 3-year PNOA cycle.',
-			'Blocked by CloudFront WAF in front of www.ign.es: bulk scraping (even at downloadLimit=2 with GDAL_HTTP_MAX_RETRY=5) hits intermittent 502 Bad Gateway responses identified by `Generated by cloudfront (CloudFront) HTTP3 Server` — the WAF flags the traffic pattern rather than individual requests.',
-			'WMS only — the CNIG download portal requires registration for bulk downloads (>20 files), and there is no public REST/Atom feed for the rasters themselves.',
-			'At low zoom the layer falls back to Sentinel-2 (visible <~1:70 000 scale); at our MAX_ZOOM=17 we always get PNOA.',
-			'Melilla coverage is from Pléiades Neo © Airbus DS (2022) under the same redistribution terms.',
-			'Re-evaluate if IGN provides a documented bulk-fetch endpoint, lifts the WAF rule for orthophoto scraping, or publishes the rasters via Atom/HTTP without registration. The init/download/convert code below is kept intact so it can be exercised again the moment access is restored.',
+			'PNOA Máxima Actualidad (always-current national orthophoto) by IGN and CNIG, as COGs on the MTN25 sheet grid.',
+			'CNIG blocks scripted downloads (reCAPTCHA on every download since September 2026), so the COGs are downloaded by hand with the cart and its Open Web Start downloader.',
+			'The open listing of the series is used to check that every file is there and complete.',
+			'The WMS (www.ign.es/wms-inspire/pnoa-ma) is behind a CloudFront WAF that answers bulk requests with 502.',
+			'License requires attribution: "Obra derivada de PNOA CC-BY 4.0 scne.es".',
 		],
 		entries: ['result'],
 		license: {
@@ -57,46 +112,39 @@ export default defineTileRegion<EsItem, { srcPath: string }>({
 		},
 		creator: {
 			name: 'Instituto Geográfico Nacional / Sistema Cartográfico Nacional',
-			url: 'http://www.scne.es/',
+			url: 'https://centrodedescargas.cnig.es/CentroDescargas/ortofoto-pnoa-maxima-actualidad',
 		},
-		date: '2022-2025',
 		mask: true,
+		checked: '2026-11-16',
 	},
-	init: async (ctx) => {
-		const wmsXmlPath = join(ctx.tempDir, 'wms.xml');
-		if (!existsSync(wmsXmlPath)) {
-			await generateWmsXml(WMS_URL, LAYER, wmsXmlPath);
-		}
-
-		const { items, blockPx } = computeWmsBlocks(BBOX, ctx.maxZoom, 4096, 4096);
-		console.log(`  ${items.length} blocks at ${blockPx}x${blockPx}px`);
-
-		return items.map((item) => ({ ...item, wmsXmlPath, blockPx }));
+	init: async () => {
+		pnoaDir();
+		console.log('  Listing PNOA Máxima Actualidad at CNIG...');
+		return listSeries();
 	},
-	// IGN's WMS is sturdy but it's national infrastructure shared by all of Spain;
-	// 2 streams keeps us a polite peer.
-	downloadLimit: 2,
-	download: async (item, ctx) => {
-		const tifPath = ctx.tempFile(join(ctx.tempDir, `${item.id}.tif`));
-		await withRetry(
-			() =>
-				extractWmsBlock(
-					{ wmsXmlPath: item.wmsXmlPath, x0: item.x0, y0: item.y0, x1: item.x1, y1: item.y1, blockPx: item.blockPx },
-					tifPath,
-				),
-			{ maxAttempts: 3 },
-		);
-		if (!(await isValidRaster(tifPath))) {
-			ctx.errors.add(`${item.id}.tif`);
+	download: async ({ name, sizeMb }, ctx) => {
+		// The file belongs to the hand-downloaded folder: never register it with ctx.tempFile.
+		const path = join(pnoaDir(), name);
+		if (!existsSync(path)) {
+			ctx.errors.add(`${name}: missing in es_pnoa_dir`);
 			return 'invalid';
 		}
-		return { srcPath: tifPath };
+		// The listing rounds to 10 kB, and "MB" may mean 10^6 or 2^20 bytes: allow 1% below 10^6.
+		const bytes = statSync(path).size;
+		if (bytes < sizeMb * 1e6 * 0.99) {
+			ctx.errors.add(`${name}: ${bytes} bytes, but the listing says ${sizeMb} MB; download it again`);
+			return 'invalid';
+		}
+		if (!(await isValidRaster(path))) {
+			ctx.errors.add(`${name}: not a readable raster; download it again`);
+			return 'invalid';
+		}
+		return { path };
 	},
-	convert: async ({ srcPath }, { dest, maxZoom }) => {
-		await runMosaicTile(srcPath, dest, { maxZoom });
+	convert: async ({ path }, { dest, maxZoom }) => {
+		// Sheets along the coast and the border can have a fill around the imagery.
+		await runMosaicTile(path, dest, { maxZoom, border: 'mask' });
 	},
-	// Spain ≈ 506k km². At MAX_ZOOM=17 with 4096-px blocks (each ~1.9 km wide at
-	// Spain's latitude) we expect a few thousand blocks after marine/no-coverage
-	// trimming. Tighten this once the first full run gives a concrete count.
-	minFiles: 3000,
+	priority: flightMonthPriority,
+	minFiles: 15000,
 });

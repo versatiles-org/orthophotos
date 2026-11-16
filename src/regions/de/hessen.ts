@@ -78,5 +78,7 @@ export default defineTileRegion({
 	convert: async ({ tifPath }, { dest, maxZoom }) => {
 		await runMosaicTile(tifPath, dest, { maxZoom });
 	},
-	minFiles: 122000,
+	// The feed lists 65,336 tiles of 600 × 600 m (3000 px at 0.2 m) since November 2026. Before, it had
+	// over 122,000 smaller ones; the numbers in the tile titles, which are our IDs, changed with it.
+	minFiles: 64000,
 });

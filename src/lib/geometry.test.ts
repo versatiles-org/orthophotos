@@ -1,5 +1,12 @@
 import { describe, expect, test } from 'vitest';
-import { bboxIntersectsPolygon, lonTo3857, latTo3857, pointInPolygon, projectGeometry3857 } from './geometry.ts';
+import {
+	bboxIntersectsPolygon,
+	filterBlocksByPolygon,
+	lonTo3857,
+	latTo3857,
+	pointInPolygon,
+	projectGeometry3857,
+} from './geometry.ts';
 import type { MultiPolygon, Polygon } from 'geojson';
 
 const square: Polygon = {
@@ -139,5 +146,23 @@ describe('projectGeometry3857', () => {
 		const result = projectGeometry3857(twoIslands) as MultiPolygon;
 		expect(result.type).toBe('MultiPolygon');
 		expect(result.coordinates).toHaveLength(2);
+	});
+});
+
+describe('filterBlocksByPolygon', () => {
+	const block = (id: string, x0: number, y0: number) => ({ id, x0, y0, x1: x0 + 2, y1: y0 + 2 });
+	const items = [block('inside', 4, 4), block('edge', 9, 9), block('near', 11, 4), block('far', 20, 20)];
+
+	test('keeps the blocks that overlap the polygon, in their order', () => {
+		expect(filterBlocksByPolygon(items, square).map((b) => b.id)).toEqual(['inside', 'edge']);
+	});
+
+	test('also keeps the blocks within the margin', () => {
+		expect(filterBlocksByPolygon(items, square, 1.5).map((b) => b.id)).toEqual(['inside', 'edge', 'near']);
+	});
+
+	test('keeps the extra fields of the items', () => {
+		const tagged = items.map((b) => ({ ...b, tag: b.id.length }));
+		expect(filterBlocksByPolygon(tagged, square)[0]).toEqual({ ...tagged[0] });
 	});
 });

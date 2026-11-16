@@ -4,7 +4,7 @@
  */
 
 import type { MultiPolygon, Polygon, Position } from 'geojson';
-import type { WmsBbox } from './wms.ts';
+import type { WmsBbox, WmsBlockItem } from './wms.ts';
 
 const WORLD_EXTENT = 20037508.342789244;
 
@@ -101,4 +101,22 @@ export function bboxIntersectsPolygon(bbox: WmsBbox, geom: Polygon | MultiPolygo
 	}
 
 	return false;
+}
+
+/**
+ * The blocks of a `computeWmsBlocks` grid that overlap `geom` (EPSG:3857) once each block is
+ * grown by `margin` EPSG:3857 metres on every side. A margin keeps the blocks just outside a
+ * coarse outline such as NUTS 1:3M, where a source often still has imagery.
+ */
+export function filterBlocksByPolygon<T extends WmsBlockItem>(
+	items: T[],
+	geom: Polygon | MultiPolygon,
+	margin = 0,
+): T[] {
+	return items.filter((item) =>
+		bboxIntersectsPolygon(
+			{ xmin: item.x0 - margin, ymin: item.y0 - margin, xmax: item.x1 + margin, ymax: item.y1 + margin },
+			geom,
+		),
+	);
 }

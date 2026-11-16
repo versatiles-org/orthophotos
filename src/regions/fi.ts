@@ -3,10 +3,10 @@ import { writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-	bboxIntersectsPolygon,
 	computeWmsBlocks,
 	defineTileRegion,
 	extractWmsBlock,
+	filterBlocksByPolygon,
 	isRasterAllZero,
 	isValidRaster,
 	loadKnownRegions,
@@ -114,9 +114,7 @@ export default defineTileRegion<FiItem, { srcPath: string }>({
 		if (!finland) throw new Error('NUTS geometry for fi not found');
 		const finlandGeom = projectGeometry3857(finland.geometry);
 
-		const inside = items.filter((item) =>
-			bboxIntersectsPolygon({ xmin: item.x0, ymin: item.y0, xmax: item.x1, ymax: item.y1 }, finlandGeom),
-		);
+		const inside = filterBlocksByPolygon(items, finlandGeom);
 		console.log(
 			`  ${inside.length} blocks at ${blockPx}x${blockPx}px (skipped ${items.length - inside.length} outside fi polygon)`,
 		);

@@ -54,6 +54,7 @@ export {
 } from './validators.ts';
 export {
 	bboxIntersectsPolygon,
+	filterBlocksByPolygon,
 	lonLatTo3857,
 	lonTo3857,
 	latTo3857,

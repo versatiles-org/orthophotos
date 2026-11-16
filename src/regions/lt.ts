@@ -1,19 +1,32 @@
 import { existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
 	computeWmsBlocks,
 	defineTileRegion,
 	downloadFile,
 	extractWmsBlock,
+	filterBlocksByPolygon,
 	generateWmsXml,
 	isValidRaster,
+	loadKnownRegions,
 	parseWmsCapabilities,
+	projectGeometry3857,
 	runMosaicTile,
 	withRetry,
 } from '../lib/index.ts';
 
+const DATA_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../../data');
+
 const WMS_URL = 'http://www.geoportal.lt/arcgis/services/NZT/ORT10LT_Web_Mercator_102100/MapServer/WMSServer';
 const LAYER = '0';
+
+/**
+ * The layer's bbox reaches from 17.2° to 29.8° E, so most blocks of its grid lie far outside
+ * Lithuania. The WMS has imagery up to 10.7 km (EPSG:3857 metres) beyond the NUTS 1:3M outline,
+ * measured on a 500 m overview in November 2026, so blocks within 12 km of it are kept.
+ */
+const OUTLINE_MARGIN = 12000;
 
 export default defineTileRegion({
 	name: 'lt',
@@ -56,9 +69,15 @@ export default defineTileRegion({
 
 		const { bbox, maxWidth, maxHeight } = await parseWmsCapabilities(capsPath, LAYER);
 		const { items, blockPx } = computeWmsBlocks(bbox, ctx.maxZoom, maxWidth, maxHeight);
-		console.log(`  ${items.length} blocks at ${blockPx}x${blockPx}px`);
 
-		return items.map((item) => ({ ...item, wmsXmlPath, blockPx }));
+		const lithuania = loadKnownRegions(DATA_DIR).find((r) => r.properties.id === 'lt');
+		if (!lithuania) throw new Error('NUTS geometry for lt not found');
+		const inside = filterBlocksByPolygon(items, projectGeometry3857(lithuania.geometry), OUTLINE_MARGIN);
+		console.log(
+			`  ${inside.length} blocks at ${blockPx}x${blockPx}px (skipped ${items.length - inside.length} outside the lt outline)`,
+		);
+
+		return inside.map((item) => ({ ...item, wmsXmlPath, blockPx }));
 	},
 	download: async (item, ctx) => {
 		const tifPath = ctx.tempFile(join(ctx.tempDir, `${item.id}.tif`));
@@ -83,5 +102,5 @@ export default defineTileRegion({
 	convert: async ({ srcPath }, { dest, maxZoom }) => {
 		await runMosaicTile(srcPath, dest, { maxZoom });
 	},
-	minFiles: 63000,
+	minFiles: 10000,
 });

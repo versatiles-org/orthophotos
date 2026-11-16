@@ -1,11 +1,12 @@
 import { existsSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
+import { open, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
 	createXmlParser,
 	defineTileRegion,
 	downloadFile,
-	downloadRaster,
+	isValidRaster,
+	PATIENT_RETRY,
 	runMosaicTile,
 	withRetry,
 } from '../../lib/index.ts';
@@ -14,6 +15,26 @@ const ATOM_URL =
 	'https://www.geoportal.hessen.de/mapbender/php/mod_inspireDownloadFeed.php?id=0b30f537-3bd0-44d4-83b0-e3c1542ca265&type=DATASET&generateFrom=wmslayer&layerid=54936';
 
 const xmlParser = createXmlParser();
+
+/**
+ * The feed's GetMap links ask for errors drawn into the image (`se_inimage`): on an error the
+ * server answers 200 with a valid, almost fully transparent TIFF carrying only the error text,
+ * which would become a silent hole. Ask for the XML report instead, so an error is no raster.
+ */
+export function withXmlExceptions(url: string): string {
+	return url.replace(/EXCEPTIONS=application\/vnd\.ogc\.se_inimage/i, 'EXCEPTIONS=application/vnd.ogc.se_xml');
+}
+
+/** The first bytes of a file as one line of text, to quote a server's error report. */
+async function headText(path: string, bytes = 300): Promise<string> {
+	const file = await open(path);
+	try {
+		const { buffer, bytesRead } = await file.read(Buffer.alloc(bytes), 0, bytes, 0);
+		return buffer.subarray(0, bytesRead).toString('utf-8').replace(/\s+/g, ' ').trim();
+	} finally {
+		await file.close();
+	}
+}
 
 export function parseAtomEntries(xml: string): { url: string; id: string }[] {
 	const parsed = xmlParser.parse(xml);
@@ -71,8 +92,11 @@ export default defineTileRegion({
 	},
 	download: async ({ url, id }, ctx) => {
 		const tifPath = ctx.tempFile(join(ctx.tempDir, `${id}.tif`));
-		const result = await downloadRaster(url, tifPath, ctx.errors, `${id}.tif`);
-		if (result === 'invalid') return 'invalid';
+		// An error report instead of a raster is a refused request like an HTTP error: retry it.
+		await withRetry(async () => {
+			await downloadFile(withXmlExceptions(url), tifPath);
+			if (!(await isValidRaster(tifPath))) throw new Error(`No raster for ${id}: ${await headText(tifPath)}`);
+		}, PATIENT_RETRY);
 		return { tifPath };
 	},
 	convert: async ({ tifPath }, { dest, maxZoom }) => {

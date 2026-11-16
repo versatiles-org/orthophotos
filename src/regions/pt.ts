@@ -5,6 +5,7 @@ import {
 	defineTileRegion,
 	downloadFile,
 	isValidRaster,
+	PATIENT_RETRY,
 	runMosaicTile,
 	type WmsBbox,
 	type WmsBlockItem,
@@ -69,7 +70,12 @@ export default defineTileRegion({
 		const tifPath = ctx.tempFile(join(ctx.tempDir, `${item.id}.tif`));
 		const url = buildTileUrl(item);
 
-		await withRetry(() => downloadFile(url, pngPath, { minSize: 500 }), { maxAttempts: 3 });
+		// An answer that is no image (an error report) is a refused request: retry it rather than
+		// letting the size check below take it for an empty tile and skip it for good.
+		await withRetry(async () => {
+			await downloadFile(url, pngPath, { minSize: 500 });
+			if (!(await isValidRaster(pngPath))) throw new Error(`No image for ${item.id} from ${url}`);
+		}, PATIENT_RETRY);
 
 		// Empty tiles (outside Portugal) are ~2KB; real imagery is >10KB.
 		// Persist a `.skip` marker since the grid is fixed — re-running won't fill these.

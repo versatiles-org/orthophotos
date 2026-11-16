@@ -44,7 +44,7 @@ export {
 	type RemoteHashStats,
 } from './remote-hashes.ts';
 export { RemoteZip, type ZipEntry } from './remote-zip.ts';
-export { withRetry, type RetryOptions } from './retry.ts';
+export { PATIENT_RETRY, withRetry, type RetryOptions } from './retry.ts';
 export {
 	downloadRaster,
 	ErrorBucket,

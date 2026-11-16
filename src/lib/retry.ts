@@ -26,6 +26,13 @@ const DEFAULT_OPTIONS: Required<Omit<RetryOptions, 'shouldRetry'>> = {
 };
 
 /**
+ * For downloads from servers that refuse single requests now and then and answer again minutes
+ * later (de/hessen, de/brandenburg in November 2026): 8 attempts, waiting 5 s, 10 s, … up to 2 min
+ * between them, about 6.5 minutes in all.
+ */
+export const PATIENT_RETRY: RetryOptions = { maxAttempts: 8, initialDelayMs: 5000, maxDelayMs: 120000 };
+
+/**
  * Executes an async function with exponential backoff retry logic.
  * @param fn The async function to execute
  * @param options Retry configuration options

@@ -1,7 +1,14 @@
 import { existsSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
-import { defineTileRegion, downloadFile, extractZipFile, runMosaicTile, withRetry } from '../../lib/index.ts';
+import {
+	defineTileRegion,
+	downloadFile,
+	extractZipFile,
+	PATIENT_RETRY,
+	runMosaicTile,
+	withRetry,
+} from '../../lib/index.ts';
 
 const BASE_URL = 'https://data.geobasis-bb.de/geobasis/daten/dop/rgb_jpg/';
 
@@ -59,13 +66,7 @@ export default defineTileRegion({
 		const zipPath = ctx.tempFile(join(ctx.tempDir, `${id}.zip`));
 		const extractDir = ctx.tempFile(join(ctx.tempDir, id));
 
-		// The server refuses single ZIPs for a while now and then (curl exit 22 in November 2026,
-		// fine again minutes later), so wait it out: 8 attempts over about 6 minutes.
-		await withRetry(() => downloadFile(url, zipPath), {
-			maxAttempts: 8,
-			initialDelayMs: 5000,
-			maxDelayMs: 120000,
-		});
+		await withRetry(() => downloadFile(url, zipPath), PATIENT_RETRY);
 		await extractZipFile(zipPath, extractDir);
 
 		// Find the .jpg file. GDAL reads the position from the .jgw world file, but no CRS comes with it.

@@ -7,7 +7,7 @@ import { stat } from 'node:fs/promises';
 import { glob } from 'node:fs/promises';
 import { join } from 'node:path';
 import { downloadFile, type DownloadOptions, runCommand } from './command.ts';
-import { type RetryOptions, withRetry } from './retry.ts';
+import { PATIENT_RETRY, type RetryOptions, withRetry } from './retry.ts';
 
 /**
  * Check that a file is a valid GDAL-readable raster with georeferencing.
@@ -65,7 +65,7 @@ export class ErrorBucket {
 }
 
 export interface DownloadRasterOptions {
-	/** Retry settings forwarded to withRetry. Default: `{ maxAttempts: 3 }`. */
+	/** Retry settings forwarded to withRetry. Default: `PATIENT_RETRY`. */
 	retry?: RetryOptions;
 	/** Forwarded to downloadFile (headers, minSize, continue). */
 	download?: DownloadOptions;
@@ -85,7 +85,7 @@ export async function downloadRaster(
 	id: string,
 	options?: DownloadRasterOptions,
 ): Promise<{ ok: true; path: string } | 'invalid'> {
-	await withRetry(() => downloadFile(url, dest, options?.download), options?.retry ?? { maxAttempts: 3 });
+	await withRetry(() => downloadFile(url, dest, options?.download), options?.retry ?? PATIENT_RETRY);
 	if (!(await isValidRaster(dest))) {
 		try {
 			rmSync(dest, { force: true });

@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { MAX_ZOOM } from './constants.ts';
 import type { StepContext } from './framework.ts';
-import { defineTileRegion, orderTileIds } from './process_tiles.ts';
+import { defineTileRegion, MAX_FAILED_DOWNLOADS, orderTileIds } from './process_tiles.ts';
 
 /** Helper: run defineTileRegion config through the generated pipeline */
 async function runTileRegion<T extends { id: string; [k: string]: unknown }, D>(
@@ -269,6 +269,43 @@ describe('defineTileRegion', () => {
 				minFiles: 0,
 			}),
 		).rejects.toThrow('1 error(s) occurred');
+	});
+
+	it('goes on with the other items when a download fails, and fails at the end', async () => {
+		await expect(
+			runTileRegion(ctx, {
+				name: 'test/download-fails',
+				meta: baseMeta,
+				init: () => [{ id: 'a' }, { id: 'b' }, { id: 'c' }],
+				download: async (item) => {
+					if (item.id === 'b') throw new Error('Command failed: curl\nExit code: 22');
+					return { value: item.id };
+				},
+				convert: async (data, { dest }) => {
+					writeFileSync(dest, data.value);
+				},
+				minFiles: 0,
+			}),
+		).rejects.toThrow('1 error(s) occurred:\n  b: download failed: Command failed: curl | Exit code: 22');
+
+		const tilesDir = join(ctx.dataDir, 'tiles');
+		expect(existsSync(join(tilesDir, 'a.versatiles'))).toBe(true);
+		expect(existsSync(join(tilesDir, 'c.versatiles'))).toBe(true);
+	});
+
+	it(`stops when more than ${MAX_FAILED_DOWNLOADS} downloads fail`, async () => {
+		await expect(
+			runTileRegion(ctx, {
+				name: 'test/download-broken',
+				meta: baseMeta,
+				init: () => Array.from({ length: MAX_FAILED_DOWNLOADS + 5 }, (_, i) => ({ id: `t${i}` })),
+				download: async () => {
+					throw new Error('404');
+				},
+				convert: async () => {},
+				minFiles: 0,
+			}),
+		).rejects.toThrow(`More than ${MAX_FAILED_DOWNLOADS} downloads failed`);
 	});
 
 	describe('tempFile cleanup', () => {

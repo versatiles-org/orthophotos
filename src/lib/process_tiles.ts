@@ -43,7 +43,7 @@ export interface TileContext {
 	tilesDir: string;
 	/** Highest zoom level to tile at, from `getMaxZoom(meta)`. Pass it to `runMosaicTile`. */
 	maxZoom: number;
-	/** Collector for invalid download errors */
+	/** Collector for invalid downloads; failed downloads land here too */
 	errors: ErrorBucket;
 	/**
 	 * Register a path for automatic cleanup after this item finishes
@@ -128,7 +128,24 @@ export function defineTileRegion<T extends TileItem, D>(options: TileRegionOptio
 	};
 }
 
-const LABELS = ['converted', 'skipped', 'empty', 'invalid'] as const;
+const LABELS = ['converted', 'skipped', 'empty', 'invalid', 'failed'] as const;
+
+/**
+ * How many items may fail their download (after the download's own retries) before the region
+ * stops. Until then a failure is recorded and the other items go on, and the region fails at the
+ * end with the list, so a rerun fetches only those. More failures point to a broken source.
+ */
+export const MAX_FAILED_DOWNLOADS = 20;
+
+/** An error message on one line, for the list of failed items. */
+function oneLine(err: unknown): string {
+	const message = err instanceof Error ? err.message : String(err);
+	return message
+		.split('\n')
+		.map((line) => line.trim())
+		.filter(Boolean)
+		.join(' | ');
+}
 
 type ConvertEnvelope<D> = {
 	data: Exclude<D, 'empty' | 'invalid' | void>;
@@ -177,6 +194,7 @@ async function processTiles<T extends TileItem, D>(
 	const cvConcurrency = resolveConcurrency(options.convertLimit);
 
 	const { download, convert } = options;
+	let failedDownloads = 0;
 	await pipeline(ordered, { progress: { labels: [...LABELS], terminalProgress: true, title: options.name } })
 		.map(dlConcurrency, async (item: T) => {
 			if (isSkipped(item)) return skip('skipped');
@@ -198,7 +216,15 @@ async function processTiles<T extends TileItem, D>(
 				return { data: result, tileCtx, runCleanup } as ConvertEnvelope<D>;
 			} catch (err) {
 				runCleanup();
-				throw err;
+				failedDownloads++;
+				if (failedDownloads > MAX_FAILED_DOWNLOADS) {
+					throw new Error(`More than ${MAX_FAILED_DOWNLOADS} downloads failed, the last one for ${item.id}`, {
+						cause: err,
+					});
+				}
+				console.warn(`Download of ${item.id} failed, going on with the others: ${oneLine(err)}`);
+				errors.add(`${item.id}: download failed: ${oneLine(err)}`);
+				return skip('failed');
 			}
 		})
 		.forEach(cvConcurrency, async (envelope) => {

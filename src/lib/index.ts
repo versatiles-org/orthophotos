@@ -76,9 +76,11 @@ export {
 export {
 	compositeRastersWithAlpha,
 	convertToTiledTiff,
+	copyRemoteCog,
 	extractWmsBlock,
 	extractZipAndBuildVrt,
 	type CompositeRastersOptions,
+	type RemoteCogOptions,
 	type ExtractZipBuildVrtOptions,
 } from './gdal.ts';
 export { runMosaicAssemble, runMosaicTile, type BorderFill } from './versatiles.ts';

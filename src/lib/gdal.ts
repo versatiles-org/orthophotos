@@ -160,6 +160,31 @@ export async function compositeRastersWithAlpha(
 	await runCommand('gdalwarp', args, { quiet });
 }
 
+export interface RemoteCogOptions {
+	/** Bands to keep, 1-based, e.g. `[1, 2, 3]` to drop a near-infrared band. Default: all. */
+	bands?: number[];
+	/** Read this overview instead of full resolution: 0 is the first one, usually half the resolution. */
+	overview?: number;
+}
+
+/**
+ * Copies a cloud-optimized GeoTIFF from an HTTP URL to a local tiled GeoTIFF, reading only the
+ * bands and the overview it needs through range requests (`/vsicurl/`). GDAL retries failed
+ * ranges itself, and doesn't look for sidecar files next to the URL. The copy is ZSTD level 1,
+ * fast to write and read again by `versatiles mosaic tile`.
+ */
+export async function copyRemoteCog(url: string, output: string, options?: RemoteCogOptions): Promise<void> {
+	const args = ['-q'];
+	if (options?.overview !== undefined) args.push('-ovr', String(Math.trunc(options.overview)));
+	for (const band of options?.bands ?? []) args.push('-b', String(Math.trunc(band)));
+	args.push('-of', 'GTiff', '-co', 'TILED=YES', '-co', 'COMPRESS=ZSTD', '-co', 'ZSTD_LEVEL=1');
+	args.push('-co', 'BIGTIFF=IF_SAFER', `/vsicurl/${url}`, output);
+	await runCommand('gdal_translate', args, {
+		env: { GDAL_HTTP_MAX_RETRY: '5', GDAL_HTTP_RETRY_DELAY: '2', GDAL_DISABLE_READDIR_ON_OPEN: 'EMPTY_DIR' },
+		quiet: true,
+	});
+}
+
 export interface WmsBlockExtractOptions {
 	/** WMS XML config file path */
 	wmsXmlPath: string;

@@ -140,6 +140,15 @@ test('runMosaicTile - refuses an input with a border fill without border', async
 	expect(mockRunCommand).not.toHaveBeenCalledWith('versatiles', expect.anything(), expect.anything());
 });
 
+test('runMosaicTile - refuses an input the check cannot measure without border', async () => {
+	const output = tileSetup('unmeasurable');
+	mockMeasure.mockResolvedValueOnce(undefined);
+	await expect(runMosaicTile('/input.tif', output, { maxZoom: 17 })).rejects.toThrow(
+		/can't check "\/input\.tif" for fill along its edge, as it isn't 8-bit RGB or RGBA/,
+	);
+	expect(mockRunCommand).not.toHaveBeenCalledWith('versatiles', expect.anything(), expect.anything());
+});
+
 test('runMosaicTile - accepts a little fill and passes nodata to the check', async () => {
 	const output = tileSetup('little-white');
 	mockMeasure.mockResolvedValueOnce(0.005);

@@ -93,10 +93,19 @@ export async function runMosaicTile(
 	}
 }
 
-/** Throws if more than `BORDER_FILL_LIMIT` of `input` is opaque fill along its edge. */
+/**
+ * Throws if more than `BORDER_FILL_LIMIT` of `input` is opaque fill along its edge, or if `input`
+ * can't be measured, so that no source skips the check unnoticed.
+ */
 async function assertNoBorderFill(input: string, tempBase: string, nodata?: string): Promise<void> {
 	const share = await measureBorderFill(input, tempBase, { nodata });
-	if (share !== undefined && share > BORDER_FILL_LIMIT) {
+	if (share === undefined) {
+		throw new Error(
+			`runMosaicTile: can't check "${input}" for fill along its edge, as it isn't 8-bit RGB or RGBA. ` +
+				`Convert it to 8-bit RGB (a palette with expand: 'rgb'), or pass border if the source's fill is known.`,
+		);
+	}
+	if (share > BORDER_FILL_LIMIT) {
 		throw new Error(
 			`runMosaicTile: ${(share * 100).toFixed(1)}% of "${input}" is opaque white or black fill along its edge. ` +
 				`Find out how the source fills the area without imagery and pass border: 'mask-white', 'mask-black' ` +

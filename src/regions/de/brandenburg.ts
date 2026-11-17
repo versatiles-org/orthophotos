@@ -78,7 +78,8 @@ export default defineTileRegion({
 	},
 	convert: async ({ jpgPath }, { dest, maxZoom }) => {
 		// ETRS89 / UTM zone 33N, without the zone prefix in the easting (417000 for sheet 33417-5781).
-		await runMosaicTile(jpgPath, dest, { maxZoom, crs: '25833' });
+		// Sheets along the state border have white fill, some are white all over (dop_33439-5921).
+		await runMosaicTile(jpgPath, dest, { maxZoom, crs: '25833', border: 'mask' });
 	},
 	minFiles: 32000,
 });

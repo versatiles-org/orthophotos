@@ -70,7 +70,6 @@ Environment variables loaded from `config.env`, accessed via `getConfig()` from 
 - `dir_data` - Directory for large datasets and outputs (required)
 - `dir_temp` - Directory for temporary processing files (required)
 - `ssh_host`, `ssh_port`, `ssh_id`, `ssh_dir` - Remote storage SSH connection and base path (optional, required for merge + server)
-- `es_pnoa_dir` - Folder with the PNOA COGs downloaded by hand from CNIG (optional, required for `es`; CNIG allows no scripted downloads, see `src/regions/es.ts`)
 
 ### Region Statuses
 

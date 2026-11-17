@@ -8,8 +8,6 @@ export interface Config {
 	ssh?: SshConfig;
 	/** S3 credentials of the Copernicus Data Space Ecosystem, for the satellite pipeline. */
 	cdse?: CdseConfig;
-	/** Folder with the PNOA COGs downloaded by hand from CNIG, for the `es` region. */
-	esPnoaDir?: string;
 }
 
 export interface CdseConfig {
@@ -61,9 +59,6 @@ export function getConfig(): Config {
 	if (cdseAccessKey && cdseSecretKey) {
 		cachedConfig.cdse = { accessKey: cdseAccessKey, secretKey: cdseSecretKey };
 	}
-
-	const esPnoaDir = getOptionalEnv('es_pnoa_dir');
-	if (esPnoaDir) cachedConfig.esPnoaDir = esPnoaDir;
 
 	return cachedConfig;
 }

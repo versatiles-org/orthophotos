@@ -71,7 +71,7 @@ export default defineTileRegion<SkItem, { tifPath: string }>({
 		checked: '2026-11-12',
 		releaseDate: '2026-03-28',
 		// Clips the imagery at the national border. The black and lossy white fill outside Slovakia is
-		// removed by `border: 'mask'`, which also takes its near-white fringe (#59, #79).
+		// removed by `border: 'mask-both'`, which also takes its near-white fringe (#59, #79).
 		mask: true,
 	},
 	init: async (ctx) => {
@@ -139,7 +139,7 @@ export default defineTileRegion<SkItem, { tifPath: string }>({
 	},
 	convertLimit: { memoryGB: 20 },
 	convert: async ({ tifPath }, { dest, maxZoom }) => {
-		await runMosaicTile(tifPath, dest, { maxZoom, crs: '3046', border: 'mask' });
+		await runMosaicTile(tifPath, dest, { maxZoom, crs: '3046', border: 'mask-both' });
 	},
 	minFiles: 40,
 });

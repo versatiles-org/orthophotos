@@ -45,7 +45,7 @@ Before a large region runs for hours or days, tile a few neighbouring source ima
 - [ ] **Disk space.** A region needs the most local disk in task 2. At that point its `tiles/` folder and the assembled result both exist, until the assembly finishes. Estimate the peak as `(k + 1) × F + W`, plus 10–20 % headroom:
   - **F** is the size of the result: the previous release in `data/region-stats.json` or on the storage box. For a new region, multiply its area by the MB/km² of a region at the same zoom.
   - **k** comes from the sample in step 4. `mosaic tile` encodes every tile with any transparency losslessly. That covers every tile along a source image's edge, which is reprojected and so not aligned with the tile grid. `assemble` merges those tiles into opaque ones and encodes them lossy again. The smaller the source images are in tiles at the top zoom, the larger k gets: 9.6 for `de/brandenburg` (1 km sheets, zoom 18), 3.6 for `nl` (4 km sheets, zoom 17), measured with versatiles 5.12.0 in November 2026.
-  - **W** is the source data waiting for conversion: up to `downloadLimit + 2 × convertLimit` items (12 by default) at once. Count each item twice when it is an archive that gets extracted or with `border: 'mask'`. W only matters for regions with a few huge archives, such as `fr/*` and `de/bremen`.
+  - **W** is the source data waiting for conversion: up to `downloadLimit + 2 × convertLimit` items (12 by default) at once. Count each item twice when it is an archive that gets extracted or with a masking `border`. W only matters for regions with a few huge archives, such as `fr/*` and `de/bremen`.
 - [ ] **Run on the build server**, not on a laptop. Large regions take hours to days and need hundreds of GB.
 
       ```bash

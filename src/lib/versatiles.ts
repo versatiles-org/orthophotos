@@ -22,26 +22,30 @@ function qualityArgs(): string[] {
 const BORDER_FILL_LIMIT = 0.01;
 
 /**
- * What `runMosaicTile` does about an opaque white or black fill along the edge of the input,
- * which would show as a frame over the layers below (see `fill-mask.ts`):
- * - `'error'` (default): measure it on a small sample and throw if it covers more than 1%.
+ * How the source fills the area without imagery, as `border` of `runMosaicTile`. Set it only where
+ * the source's documentation or a look at a partial sheet shows it; without it, `runMosaicTile`
+ * measures the fill on a small sample and throws if opaque white or black along the edge covers
+ * more than 1%, so an unknown fill fails the fetch instead of showing as a frame over the layers
+ * below. With it, nothing is measured:
  * - `'mask-white'`, `'mask-black'`: make the fill of that colour transparent before tiling
- *   (`maskFillFile`), and refuse fill of the other colour as `'error'` does. Unlike `nodata`, this
- *   leaves snow, white roofs and shadows inside the imagery alone and also removes the lossy
- *   fringe. Naming the colour keeps flat clipped areas of the other colour at the edge, such as
- *   deep shadows in a source filled with white.
- * - `'mask'`: make both colours transparent, for sources that use both.
- * - `'ignore'`: for sources where white or black at the edge is imagery, such as snow and ice.
+ *   (`maskFillFile`). Unlike `nodata`, this leaves snow, white roofs and shadows inside the
+ *   imagery alone and also removes the lossy fringe; flat clipped areas of the other colour at the
+ *   edge stay too.
+ * - `'mask-both'`: make both colours transparent, for sources that use both.
+ * - `'mask-none'`: leave the input as it is, for sources where white or black at the edge is
+ *   imagery, such as snow and ice, or that are masked already.
+ * Transparency the source has (an alpha band, a nodata value, a mask band) is no fill: the check
+ * and the mask read GDAL's mask band, as `mosaic tile` does.
  */
-export type BorderFill = 'error' | 'mask-white' | 'mask-black' | 'mask' | 'ignore';
+export type BorderFill = 'mask-white' | 'mask-black' | 'mask-both' | 'mask-none';
 
-/** The fill colours each masking `BorderFill` makes transparent. */
-const MASK_FILLS: Partial<Record<BorderFill, Fill[]>> = {
+/** The fill colours each `BorderFill` makes transparent. */
+const MASK_FILLS: Record<BorderFill, Fill[]> = {
 	'mask-white': ['white'],
 	'mask-black': ['black'],
-	mask: ['white', 'black'],
+	'mask-both': ['white', 'black'],
+	'mask-none': [],
 };
-const ALL_FILLS: Fill[] = ['white', 'black'];
 
 /**
  * Verifies that command output contains the expected success marker.
@@ -55,7 +59,7 @@ function assertOutputContains(result: { stderr: Uint8Array }, marker: string, co
 
 /**
  * Runs `versatiles mosaic tile` to tile a single raster image into a .versatiles container.
- * Checks the input for an opaque fill along its edge first, see `BorderFill`.
+ * Without `border`, checks the input for an opaque fill along its edge first, see `BorderFill`.
  */
 export async function runMosaicTile(
 	input: string,
@@ -75,40 +79,28 @@ export async function runMosaicTile(
 		border?: BorderFill;
 	},
 ): Promise<void> {
-	const border = options.border ?? 'error';
-	const maskFills = MASK_FILLS[border];
+	const fills = options.border ? MASK_FILLS[options.border] : [];
 	const maskedInput = join(dirname(output), `.masked.${basename(output)}.tif`);
-	const sampleBase = join(dirname(output), `.sample.${basename(output)}`);
 	try {
-		if (maskFills) {
-			const unmasked = ALL_FILLS.filter((fill) => !maskFills.includes(fill));
-			if (unmasked.length > 0) await assertNoBorderFill(input, sampleBase, options.nodata, unmasked, border);
-			await maskFillFile(input, maskedInput, { ...BORDER_FILL_OPTIONS, fills: maskFills, nodata: options.nodata });
-		} else if (border === 'error') {
-			await assertNoBorderFill(input, sampleBase, options.nodata, ALL_FILLS, border);
+		if (!options.border) {
+			await assertNoBorderFill(input, join(dirname(output), `.sample.${basename(output)}`), options.nodata);
+		} else if (fills.length > 0) {
+			await maskFillFile(input, maskedInput, { ...BORDER_FILL_OPTIONS, fills, nodata: options.nodata });
 		}
-		await tile(maskFills ? maskedInput : input, output, options);
+		await tile(fills.length > 0 ? maskedInput : input, output, options);
 	} finally {
-		if (maskFills) safeRm(maskedInput);
+		if (fills.length > 0) safeRm(maskedInput);
 	}
 }
 
-/** Throws if more than `BORDER_FILL_LIMIT` of `input` is opaque fill of `fills` along its edge. */
-async function assertNoBorderFill(
-	input: string,
-	tempBase: string,
-	nodata: string | undefined,
-	fills: Fill[],
-	border: BorderFill,
-): Promise<void> {
-	const share = await measureBorderFill(input, tempBase, { nodata, fills });
+/** Throws if more than `BORDER_FILL_LIMIT` of `input` is opaque fill along its edge. */
+async function assertNoBorderFill(input: string, tempBase: string, nodata?: string): Promise<void> {
+	const share = await measureBorderFill(input, tempBase, { nodata });
 	if (share !== undefined && share > BORDER_FILL_LIMIT) {
-		const hint =
-			border === 'error'
-				? `Pass border: 'mask-white', 'mask-black' or 'mask' to make it transparent, or 'ignore' if it is imagery (snow, ice).`
-				: `border: '${border}' leaves it; pass border: 'mask' if the source fills with both colours.`;
 		throw new Error(
-			`runMosaicTile: ${(share * 100).toFixed(1)}% of "${input}" is opaque ${fills.join(' or ')} fill along its edge. ${hint}`,
+			`runMosaicTile: ${(share * 100).toFixed(1)}% of "${input}" is opaque white or black fill along its edge. ` +
+				`Find out how the source fills the area without imagery and pass border: 'mask-white', 'mask-black' ` +
+				`or 'mask-both' to make it transparent, or 'mask-none' if it is imagery (snow, ice).`,
 		);
 	}
 }

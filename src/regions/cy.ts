@@ -95,9 +95,9 @@ export default defineTileRegion<CyItem, { srcPath: string }>({
 	convert: async ({ srcPath }, { dest, maxZoom }) => {
 		// The ArcGIS WMS puts pure white under alpha 0. versatiles 5.12 weights its overviews by
 		// alpha, so that white no longer bleeds into the coast as a halo (checked November 2026).
-		// A white nodata would also cut holes into snow and white roofs; the mask only removes
-		// opaque fill along the edges.
-		await runMosaicTile(srcPath, dest, { maxZoom, border: 'mask' });
+		// A white nodata would also cut holes into snow and white roofs. The white is transparent
+		// already, so no border is set and the edge check looks for opaque fill.
+		await runMosaicTile(srcPath, dest, { maxZoom });
 	},
 	// Cyprus is small (~9,250 km²); even at MAX_ZOOM=17 with 8192-px blocks we expect
 	// only a few dozen blocks. Tighten this once the first run gives a real count.

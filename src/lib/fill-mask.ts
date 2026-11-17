@@ -40,7 +40,7 @@ export interface FillMaskOptions {
 	nodata?: string;
 }
 
-/** Settings of the border check and of `border: 'mask'` in `runMosaicTile`. */
+/** Settings of the border check and of the masking `border` values of `runMosaicTile`. */
 export const BORDER_FILL_OPTIONS: FillMaskOptions = {
 	fills: ['white', 'black'],
 	edgeOnly: true,
@@ -294,13 +294,12 @@ function enviFiles(raw: string): string[] {
 /**
  * Share (0–1) of a raster that is fill along its edge (`BORDER_FILL_OPTIONS`), measured on a
  * 256 × 256 sample (nearest neighbour, so pure colours stay pure). `undefined` for rasters that
- * aren't 8-bit RGB. `tempBase` is a path prefix for the sample files. `fills` limits it to one
- * fill colour.
+ * aren't 8-bit RGB. `tempBase` is a path prefix for the sample files.
  */
 export async function measureBorderFill(
 	input: string,
 	tempBase: string,
-	options?: { nodata?: string; fills?: Fill[] },
+	options?: { nodata?: string },
 ): Promise<number | undefined> {
 	const { count, byte } = await rasterInfo(input);
 	if (count < 3 || !byte) return undefined;
@@ -308,10 +307,7 @@ export async function measureBorderFill(
 	try {
 		const { rgba, width, height } = await readRgba(input, raw, ['-outsize', SAMPLE_SIZE, SAMPLE_SIZE, '-r', 'nearest']);
 		if (options?.nodata) applyNodata(rgba, width, height, options.nodata);
-		const fill = findFill(rgba, width, height, {
-			...BORDER_FILL_OPTIONS,
-			fills: options?.fills ?? BORDER_FILL_OPTIONS.fills,
-		});
+		const fill = findFill(rgba, width, height, BORDER_FILL_OPTIONS);
 		return fill.reduce((sum, v) => sum + v, 0) / (width * height);
 	} finally {
 		for (const path of enviFiles(raw)) safeRm(path);

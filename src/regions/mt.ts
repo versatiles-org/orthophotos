@@ -94,7 +94,8 @@ export default defineTileRegion<MtItem, MtDownload>({
 			srs: 'EPSG:4326',
 			ullr: [data.xmin, data.ymax, data.xmax, data.ymin],
 		});
-		await runMosaicTile(tifPath, ctx.dest, { maxZoom: ctx.maxZoom, border: 'mask', crs: '4326' });
+		// The WMS fills the area without imagery with black (a `nodata: '0,0,0'` until November 2026).
+		await runMosaicTile(tifPath, ctx.dest, { maxZoom: ctx.maxZoom, border: 'mask-black', crs: '4326' });
 	},
 	minFiles: 70,
 });

@@ -375,7 +375,7 @@ export function defineFrSubRegion(opts: FrSubRegionOptions): RegionPipeline {
 						const tifPath = join(tilesDir, `${baseName}.tif`);
 						// Decode the JP2 with GDAL, which is more robust than versatiles's decoder, and make
 						// the white fill over the sea in coastal tiles transparent (La Réunion, November
-						// 2026). Masking here rather than with `border: 'mask'` in the tile step keeps it in
+						// 2026). Masking here rather than with `border: 'mask-both'` in the tile step keeps it in
 						// the parallel stage. The JP2 stays until the whole department is done: a rerun
 						// after a failure reuses `extractDir` and must find every JP2 there (Isère,
 						// November 2026, lost half its JP2s this way).
@@ -385,7 +385,7 @@ export function defineFrSubRegion(opts: FrSubRegionOptions): RegionPipeline {
 					.forEach({ memoryGB: 20 }, async ({ tifPath, tilePath }) => {
 						try {
 							// Already masked above; skips measuring every tile again in this single-slot stage.
-							await runMosaicTile(tifPath, tilePath, { maxZoom, border: 'ignore' });
+							await runMosaicTile(tifPath, tilePath, { maxZoom, border: 'mask-none' });
 							versatilesFiles.push(tilePath);
 							return 'converted';
 						} finally {

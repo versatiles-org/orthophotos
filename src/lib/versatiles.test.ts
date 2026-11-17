@@ -131,7 +131,7 @@ function tileSetup(name: string): string {
 	return output;
 }
 
-test('runMosaicTile - refuses an input with a border fill by default', async () => {
+test('runMosaicTile - refuses an input with a border fill without border', async () => {
 	const output = tileSetup('white');
 	mockMeasure.mockResolvedValueOnce(0.3);
 	await expect(runMosaicTile('/input.tif', output, { maxZoom: 17 })).rejects.toThrow(
@@ -144,72 +144,32 @@ test('runMosaicTile - accepts a little fill and passes nodata to the check', asy
 	const output = tileSetup('little-white');
 	mockMeasure.mockResolvedValueOnce(0.005);
 	await runMosaicTile('/input.tif', output, { maxZoom: 17, nodata: '255,255,255' });
-	expect(mockMeasure).toHaveBeenLastCalledWith('/input.tif', expect.any(String), {
-		nodata: '255,255,255',
-		fills: ['white', 'black'],
-	});
+	expect(mockMeasure).toHaveBeenLastCalledWith('/input.tif', expect.any(String), { nodata: '255,255,255' });
 	expect(existsSync(output)).toBe(true);
 });
 
-test('runMosaicTile - tiles the masked copy with border: mask', async () => {
-	const output = tileSetup('mask');
+test.each([
+	['mask-white', ['white']],
+	['mask-black', ['black']],
+	['mask-both', ['white', 'black']],
+] as const)('runMosaicTile - tiles the masked copy without a check with border: %s', async (border, fills) => {
+	const output = tileSetup(border);
 	mockMeasure.mockClear();
-	await runMosaicTile('/input.tif', output, { maxZoom: 17, border: 'mask' });
+	await runMosaicTile('/input.tif', output, { maxZoom: 17, border });
 	const masked = mockMask.mock.lastCall![1];
-	expect(mockMask).toHaveBeenLastCalledWith(
-		'/input.tif',
-		masked,
-		expect.objectContaining({ edgeOnly: true, fills: ['white', 'black'] }),
-	);
+	expect(mockMask).toHaveBeenLastCalledWith('/input.tif', masked, expect.objectContaining({ edgeOnly: true, fills }));
 	expect(mockRunCommand).toHaveBeenCalledWith('versatiles', expect.arrayContaining([masked]), { quiet: true });
 	expect(mockMeasure).not.toHaveBeenCalled();
 });
 
-test('runMosaicTile - masks only white with border: mask-white, and checks for black', async () => {
-	const output = tileSetup('mask-white');
+test('runMosaicTile - neither checks nor masks with border: mask-none', async () => {
+	const output = tileSetup('mask-none');
 	mockMeasure.mockClear();
-	await runMosaicTile('/input.tif', output, { maxZoom: 17, border: 'mask-white' });
-	expect(mockMeasure).toHaveBeenLastCalledWith('/input.tif', expect.any(String), {
-		nodata: undefined,
-		fills: ['black'],
-	});
-	expect(mockMask).toHaveBeenLastCalledWith(
-		'/input.tif',
-		expect.any(String),
-		expect.objectContaining({ fills: ['white'] }),
-	);
-	expect(existsSync(output)).toBe(true);
-});
-
-test('runMosaicTile - refuses black fill with border: mask-white', async () => {
-	const output = tileSetup('mask-white-black');
 	mockMask.mockClear();
-	mockMeasure.mockResolvedValueOnce(0.2);
-	await expect(runMosaicTile('/input.tif', output, { maxZoom: 17, border: 'mask-white' })).rejects.toThrow(
-		/20\.0% of "\/input\.tif" is opaque black fill along its edge\. border: 'mask-white' leaves it/,
-	);
-	expect(mockMask).not.toHaveBeenCalled();
-});
-
-test('runMosaicTile - masks only black with border: mask-black', async () => {
-	const output = tileSetup('mask-black');
-	await runMosaicTile('/input.tif', output, { maxZoom: 17, border: 'mask-black' });
-	expect(mockMeasure).toHaveBeenLastCalledWith('/input.tif', expect.any(String), {
-		nodata: undefined,
-		fills: ['white'],
-	});
-	expect(mockMask).toHaveBeenLastCalledWith(
-		'/input.tif',
-		expect.any(String),
-		expect.objectContaining({ fills: ['black'] }),
-	);
-});
-
-test('runMosaicTile - skips the check with border: ignore', async () => {
-	const output = tileSetup('ignore');
-	mockMeasure.mockClear();
-	await runMosaicTile('/input.tif', output, { maxZoom: 17, border: 'ignore' });
+	await runMosaicTile('/input.tif', output, { maxZoom: 17, border: 'mask-none' });
 	expect(mockMeasure).not.toHaveBeenCalled();
+	expect(mockMask).not.toHaveBeenCalled();
+	expect(mockRunCommand).toHaveBeenCalledWith('versatiles', expect.arrayContaining(['/input.tif']), { quiet: true });
 	expect(existsSync(output)).toBe(true);
 });
 

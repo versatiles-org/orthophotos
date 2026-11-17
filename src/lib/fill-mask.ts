@@ -294,12 +294,13 @@ function enviFiles(raw: string): string[] {
 /**
  * Share (0–1) of a raster that is fill along its edge (`BORDER_FILL_OPTIONS`), measured on a
  * 256 × 256 sample (nearest neighbour, so pure colours stay pure). `undefined` for rasters that
- * aren't 8-bit RGB. `tempBase` is a path prefix for the sample files.
+ * aren't 8-bit RGB. `tempBase` is a path prefix for the sample files. `fills` limits it to one
+ * fill colour.
  */
 export async function measureBorderFill(
 	input: string,
 	tempBase: string,
-	options?: { nodata?: string },
+	options?: { nodata?: string; fills?: Fill[] },
 ): Promise<number | undefined> {
 	const { count, byte } = await rasterInfo(input);
 	if (count < 3 || !byte) return undefined;
@@ -307,7 +308,10 @@ export async function measureBorderFill(
 	try {
 		const { rgba, width, height } = await readRgba(input, raw, ['-outsize', SAMPLE_SIZE, SAMPLE_SIZE, '-r', 'nearest']);
 		if (options?.nodata) applyNodata(rgba, width, height, options.nodata);
-		const fill = findFill(rgba, width, height, BORDER_FILL_OPTIONS);
+		const fill = findFill(rgba, width, height, {
+			...BORDER_FILL_OPTIONS,
+			fills: options?.fills ?? BORDER_FILL_OPTIONS.fills,
+		});
 		return fill.reduce((sum, v) => sum + v, 0) / (width * height);
 	} finally {
 		for (const path of enviFiles(raw)) safeRm(path);

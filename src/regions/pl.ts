@@ -171,7 +171,7 @@ export default defineTileRegion({
 	},
 	convert: async ({ tifPath }, { dest, maxZoom }) => {
 		// Sheets only partly covered (czy_ark_wypelniony NIE, about 1,500) are filled with opaque black.
-		await runMosaicTile(tifPath, dest, { maxZoom, border: 'mask' });
+		await runMosaicTile(tifPath, dest, { maxZoom, border: 'mask-black' });
 	},
 	// Newer flights are drawn over older ones on sheets that only partly cover their area.
 	priority: flightDatePriority,

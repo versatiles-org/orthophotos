@@ -125,7 +125,7 @@ export function defineUsState(opts: UsStateOptions): RegionPipeline {
 		},
 		convert: async ({ tifPath }, { dest, maxZoom }) => {
 			// Quarter quads at the state border and the coast can have black fill.
-			await runMosaicTile(tifPath, dest, { maxZoom, border: 'mask' });
+			await runMosaicTile(tifPath, dest, { maxZoom, border: 'mask-black' });
 		},
 		minFiles: opts.minFiles,
 	});

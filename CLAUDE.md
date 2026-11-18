@@ -82,6 +82,8 @@ Defined in `src/lib/framework.ts` as `RegionStatus`:
 
 Only `'released'` regions are included in the VPL file for the server.
 
+The status page also shows `'outdated'` (released before, but not rebuilt yet for the coming release). It isn't set in code: `src/status/current.ts` derives it, and a `'scraping'` region's switch to `'released'`, from the listing of the storage box in `data/region-stats.json`.
+
 ### Adding or Changing a Region
 
 Before adding a region or changing a region's fetch code, read `docs/adding-a-region.md`: it covers the `defineTileRegion` pipeline and the required fetch patterns (retries, validation, skip files, borders, temp files). What to record about a source and how to check it for newer data is in `docs/region-sources.md`.

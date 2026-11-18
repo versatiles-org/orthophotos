@@ -54,6 +54,8 @@ Before a large region runs for hours or days, tile a few neighbouring source ima
 
       Task 1 fetches and tiles, task 2 assembles and uploads, task 3 deletes the local files.
 
+- [ ] **Progress on the status page.** Run `npm run build:stats` now and then, and commit `data/region-stats.json`. The status page compares that listing with the code: a released region without a file on the storage box shows as "Outdated" (not rebuilt yet), and a region with a file as "Released", even before its `releaseDate` is set. Regions that stand for several parts, like `fr`, list their parts with their status in the row details and on the map. The rules are in `src/status/current.ts`.
+
 ## 6. Check and publish
 
 - [ ] **File sizes.** Compare each new `.versatiles` with its predecessor in the renamed folder, and similar regions with each other. A region much bigger than expected for its area and zoom needs a look; a heat map of tile sizes usually shows why.
@@ -61,5 +63,5 @@ Before a large region runs for hours or days, tile a few neighbouring source ima
 - [ ] **Remote check.** `npm run check:remote` checks the metadata against the files on the storage box, including that each file's date matches its `releaseDate`.
 - [ ] **Preview.** `npm run preview` serves everything as it will be published. Look at the rebuilt regions and their borders.
 - [ ] **Publish.** `npm run publish:world` builds the combined `satellite.versatiles` on the remote. `npm run publish:hashes` adds the missing `.md5` and `.sha256` files.
-- [ ] **Status page.** `npm run build:stats` reads size and tile counts of the region files on the remote into `data/region-stats.json` (commit it; CI has no SSH access), then `npm run build:status`. A KB/tile or KB/km² far from regions of the same resolution points at a broken source or over-compressed tiles.
+- [ ] **Status page.** `npm run build:stats` reads size, tile counts and upload date of the region files on the remote into `data/region-stats.json` (commit it; CI has no SSH access), then `npm run build:status`. A KB/tile or KB/km² far from regions of the same resolution points at a broken source or over-compressed tiles.
 - [ ] **Clean up.** Delete the renamed old files on the storage box once the release is checked, and close the issues the release resolves.

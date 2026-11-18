@@ -1,4 +1,4 @@
-/* global maplibregl, rowData, regionFeatures */
+/* global maplibregl, rowData, regionFeatures, filesListedOn */
 
 // --- Helpers ---
 
@@ -16,13 +16,25 @@ function formatNote(note) {
 		.replace(/https?:\/\/[^\s<]+[^\s<.,;:)'"]/g, (url) => `<a href="${url}" target="_blank" rel="noopener">${url}</a>`);
 }
 
+function statusHtml(status, color) {
+	return `<span class="status" style="--status:${color}">${escapeHtml(status)}</span>`;
+}
+
+/** Where a region's file is, as of the last listing of the storage box; empty without a listing. */
+function fileText(file) {
+	if (!filesListedOn) return '';
+	if (!file) return 'Not on the storage box';
+	const size = `${(file.size / 1e9).toFixed(1)} GB`;
+	return file.date ? `Uploaded ${file.date}, ${size}` : size;
+}
+
 function link(text, url) {
 	if (!text) return '';
 	if (!url) return escapeHtml(text);
 	return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(text)}</a>`;
 }
 
-const STATUS_ORDER = ['Released', 'Scraping', 'Planned', 'Blocked'];
+const STATUS_ORDER = ['Released', 'Outdated', 'Scraping', 'Planned', 'Blocked'];
 
 // --- Columns ---
 
@@ -38,7 +50,8 @@ const COLUMNS = [
 		label: 'Status',
 		value: (r) => STATUS_ORDER.indexOf(r.status),
 		text: (r) => r.status,
-		html: (r) => `<span class="status" style="--status:${r.statusColor}">${escapeHtml(r.status)}</span>`,
+		html: (r) => statusHtml(r.status, r.statusColor),
+		title: 'Outdated: released before, but not rebuilt yet for the coming release',
 		options: STATUS_ORDER.filter((s) => rowData.some((r) => r.status === s)),
 	},
 	{ key: 'id', label: 'ID', value: (r) => r.id, html: (r) => `<code>${escapeHtml(r.id)}</code>` },
@@ -223,10 +236,12 @@ function detailHtml(row) {
 		: '<p class="muted">No notes.</p>';
 	const size =
 		row.kbPerTile == null ? '' : `${row.kbPerTile.toFixed(1)} KB/tile, ${row.kbPerKm2.toLocaleString('en-US')} KB/km²`;
+	const fileFact = row.parts.length ? '' : escapeHtml(fileText(row.file));
 	const facts = [
 		['License', link(row.licenseName, row.licenseUrl)],
 		['Creator', link(row.creatorName, row.creatorUrl)],
 		['Checked', escapeHtml(row.checked)],
+		['File', fileFact && `${fileFact} <span class="muted">(as of ${escapeHtml(filesListedOn)})</span>`],
 		['File size', size],
 	]
 		.filter(([, v]) => v)
@@ -237,7 +252,33 @@ function detailHtml(row) {
 		<h2>${escapeHtml(row.name)} <code>${escapeHtml(row.id)}</code> ${mapLink}</h2>
 		${notes}
 		${facts ? `<dl>${facts}</dl>` : ''}
+		${partsHtml(row.parts)}
 	</div></td>`;
+}
+
+/** The regions a row stands for, each with its status and file. */
+function partsHtml(parts) {
+	if (!parts.length) return '';
+	const done = parts.filter((p) => p.status === 'Released').length;
+	const heading = filesListedOn
+		? `${parts.length} parts, ${done} released <span class="muted">(files as of ${escapeHtml(filesListedOn)})</span>`
+		: `${parts.length} parts`;
+	const rows = parts
+		.map(
+			(p) => `<tr>
+				<td>${statusHtml(p.status, p.statusColor)}</td>
+				<td><code>${escapeHtml(p.id)}</code></td>
+				<td class="wrap">${escapeHtml(p.name)}</td>
+				<td>${escapeHtml(p.releaseDate)}</td>
+				<td>${escapeHtml(fileText(p.file))}</td>
+			</tr>`,
+		)
+		.join('');
+	return `<h3>${heading}</h3>
+		<table class="parts">
+			<thead><tr><th>Status</th><th>ID</th><th>Name</th><th>Released</th><th>${filesListedOn ? 'File' : ''}</th></tr></thead>
+			<tbody>${rows}</tbody>
+		</table>`;
 }
 
 function render() {
@@ -373,16 +414,22 @@ const map = new maplibregl.Map({
 	// The page itself doesn't scroll (see index.css), so the map can take the wheel and one-finger drags.
 });
 
-/** Region ID → the integer feature ID that MapLibre's feature state needs. */
-const featureIds = new Map(regionFeatures.features.map((f) => [f.properties.id, f.id]));
-let highlighted = null;
+/**
+ * Row ID → the integer feature IDs that MapLibre's feature state needs: one per row, or one per
+ * part for a row whose parts are drawn one by one.
+ */
+const featureIds = new Map();
+for (const f of regionFeatures.features) {
+	featureIds.set(f.properties.id, [...(featureIds.get(f.properties.id) ?? []), f.id]);
+}
+let highlighted = [];
 let mapReady = false;
 
 function highlight(id) {
 	if (!mapReady) return;
-	if (highlighted !== null) map.setFeatureState({ source: 'regions', id: highlighted }, { selected: false });
-	highlighted = featureIds.get(id) ?? null;
-	if (highlighted !== null) map.setFeatureState({ source: 'regions', id: highlighted }, { selected: true });
+	for (const fid of highlighted) map.setFeatureState({ source: 'regions', id: fid }, { selected: false });
+	highlighted = featureIds.get(id) ?? [];
+	for (const fid of highlighted) map.setFeatureState({ source: 'regions', id: fid }, { selected: true });
 }
 
 function zoomTo(id) {
@@ -464,11 +511,14 @@ map.on('load', () => {
 		const p = f.properties;
 		const noteLine =
 			p.notesCount > 0 ? `<div class="muted">${p.notesCount} note${p.notesCount === 1 ? '' : 's'}</div>` : '';
+		const row = rowData.find((r) => r.id === p.id);
+		const partLine = p.part ? `<div class="muted">Part of ${escapeHtml(row?.name ?? p.id)}</div>` : '';
 		popup
 			.setLngLat(e.lngLat)
 			.setHTML(
-				`<div><b>${escapeHtml(p.name)}</b> <span class="muted">${escapeHtml(p.id)}</span></div>` +
-					`<div class="status" style="--status:${p.statusColor}">${escapeHtml(p.status)}</div>` +
+				`<div><b>${escapeHtml(p.name)}</b> <span class="muted">${escapeHtml(p.part ?? p.id)}</span></div>` +
+					`<div>${statusHtml(p.status, p.statusColor)}</div>` +
+					partLine +
 					noteLine,
 			)
 			.addTo(map);

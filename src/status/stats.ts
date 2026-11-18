@@ -24,6 +24,8 @@ export interface RegionStats {
 	maxZoom: number;
 	/** Ground area of the tiles at `maxZoom` in km². Larger than the region where tiles cross its border. */
 	areaKm2: number;
+	/** Date of the file on the storage box (`YYYY-MM-DD`), i.e. of its upload. Missing in listings before 2026-11-18. */
+	date?: string;
 }
 
 export interface RegionStatsFile {
@@ -81,11 +83,18 @@ export function summarizeStats(size: number, levels: PyramidLevel[]): RegionStat
 	};
 }
 
-/** Reads `data/region-stats.json`, or returns an empty map if it hasn't been built yet. */
-export function loadRegionStats(path: string): Map<string, RegionStats> {
-	if (!existsSync(path)) return new Map();
+/** The listing of the storage box: its date and the stats of every region file on it. */
+export interface RegionStatsListing {
+	/** Date of the listing (`YYYY-MM-DD`). */
+	generated: string;
+	regions: Map<string, RegionStats>;
+}
+
+/** Reads `data/region-stats.json`, or returns `undefined` if it hasn't been built yet. */
+export function loadRegionStats(path: string): RegionStatsListing | undefined {
+	if (!existsSync(path)) return undefined;
 	const file = JSON.parse(readFileSync(path, 'utf-8')) as RegionStatsFile;
-	return new Map(Object.entries(file.regions));
+	return { generated: file.generated, regions: new Map(Object.entries(file.regions)) };
 }
 
 /**

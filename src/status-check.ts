@@ -2,7 +2,6 @@ import { resolve, dirname } from 'node:path';
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import {
-	aggregateStats,
 	generateMapStyle,
 	generateStatusPage,
 	loadKnownRegions,
@@ -30,9 +29,10 @@ const sources = regions.map((region) => ({
 writeFileSync(resolve(__dirname, '../web/sources.json'), JSON.stringify(sources, null, 2));
 
 const knownRegionMap = new Map(knownRegions.map((r) => [r.properties.id, r]));
-// Built with SSH by `npm run build:stats` and committed, because CI has no SSH access.
-const stats = aggregateStats(loadRegionStats(resolve(__dirname, '../data/region-stats.json')), getAllRegionMetadata());
-const html = generateStatusPage(allMetadata, knownRegionMap, stats);
+// The listing of the storage box, built with SSH by `npm run build:stats` and committed, because CI
+// has no SSH access. It sets which regions are rebuilt for the coming release (see src/status/current.ts).
+const listing = loadRegionStats(resolve(__dirname, '../data/region-stats.json'));
+const html = generateStatusPage(allMetadata, knownRegionMap, { regions: getAllRegionMetadata(), listing });
 writeFileSync(resolve(__dirname, '../web/index.html'), html);
 console.log(`Wrote status page with ${allMetadata.size} regions to web/index.html`);
 

@@ -16,4 +16,5 @@ export {
 	summarizeStats,
 	type RegionStats,
 	type RegionStatsFile,
+	type RegionStatsListing,
 } from './stats.ts';

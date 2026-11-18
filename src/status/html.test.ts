@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest';
 import { generateStatusPage, geometryBbox } from './html.ts';
 import type { RegionMetadata } from '../lib/framework.ts';
 import type { KnownRegion } from './geojson.ts';
+import type { RegionStats, RegionStatsListing } from './stats.ts';
 
 function makeMetadata(overrides: Partial<RegionMetadata>): RegionMetadata {
 	return {
@@ -36,6 +37,21 @@ function extractRowData(html: string): Record<string, unknown>[] {
 	const match = html.match(/const rowData = (\[.*?\]);/s);
 	if (!match) throw new Error('Could not find rowData in HTML');
 	return JSON.parse(match[1]);
+}
+
+/** Extract the map features from the generated HTML */
+function extractFeatures(html: string): { id: number; properties: Record<string, unknown> }[] {
+	const match = html.match(/const regionFeatures = (\{.*?\});\n/s);
+	if (!match) throw new Error('Could not find regionFeatures in HTML');
+	return JSON.parse(match[1]).features;
+}
+
+function file(date: string): RegionStats {
+	return { size: 1000, tiles: 10, maxZoom: 17, areaKm2: 1, date };
+}
+
+function listing(regions: Map<string, RegionStats>): RegionStatsListing {
+	return { generated: '2026-11-18', regions };
 }
 
 describe('generateStatusPage', () => {
@@ -155,12 +171,86 @@ describe('generateStatusPage', () => {
 			['de/berlin', makeMetadata({})],
 			['hu', makeMetadata({})],
 		]);
-		const stats = new Map([['de/berlin', { size: 2_062_941_743, tiles: 245_395, maxZoom: 18, areaKm2: 1576 }]]);
-		const rows = extractRowData(generateStatusPage(metadata, new Map(), stats));
+		const regions = new Map([['de/berlin', { size: 2_062_941_743, tiles: 245_395, maxZoom: 18, areaKm2: 1576 }]]);
+		const rows = extractRowData(generateStatusPage(metadata, new Map(), { listing: listing(regions) }));
 		expect(rows[0].kbPerTile).toBe(8.4);
 		expect(rows[0].kbPerKm2).toBe(1309);
 		expect(rows[1].kbPerTile).toBeNull();
 		expect(rows[1].kbPerKm2).toBeNull();
+	});
+
+	test("shows the code's statuses without a listing of the storage box", () => {
+		const metadata = new Map<string, RegionMetadata>([['de', makeMetadata({ status: 'released' })]]);
+		const html = generateStatusPage(metadata, new Map());
+		expect(extractRowData(html)[0]).toMatchObject({ status: 'Released', file: null });
+		expect(html).not.toContain('files as of');
+	});
+
+	test('marks a released region without a file as outdated, and one with a file as released', () => {
+		const metadata = new Map<string, RegionMetadata>([
+			['de/berlin', makeMetadata({ status: 'released', releaseDate: '2026-03-24' })],
+			['de/hessen', makeMetadata({ status: 'released', releaseDate: '2026-03-21' })],
+		]);
+		const html = generateStatusPage(metadata, new Map(), {
+			listing: listing(new Map([['de/berlin', file('2026-11-20')]])),
+		});
+		const rows = extractRowData(html);
+		expect(rows[0]).toMatchObject({ status: 'Released', file: { date: '2026-11-20', size: 1000 } });
+		expect(rows[1]).toMatchObject({ status: 'Outdated', releaseDate: '2026-03-21', file: null });
+		expect(html).toContain('1 Outdated');
+		expect(html).toContain('files as of 2026-11-18');
+	});
+
+	test('counts a scraping region with a file as released on its upload date', () => {
+		const metadata = new Map<string, RegionMetadata>([['bg', makeMetadata({ status: 'scraping' })]]);
+		const rows = extractRowData(
+			generateStatusPage(metadata, new Map(), { listing: listing(new Map([['bg', file('2026-11-25')]])) }),
+		);
+		expect(rows[0]).toMatchObject({ status: 'Released', releaseDate: '2026-11-25' });
+	});
+
+	describe('a row that stands for several regions', () => {
+		const regions = new Map<string, RegionMetadata>([
+			['fr/a', makeMetadata({ status: 'released', releaseDate: '2026-04-29', aggregateUnder: 'fr' })],
+			['fr/b', makeMetadata({ status: 'released', releaseDate: '2026-05-04', aggregateUnder: 'fr' })],
+		]);
+		const rowMetadata = new Map<string, RegionMetadata>([['fr', makeMetadata({ status: 'released' })]]);
+		const files = listing(new Map([['fr/b', file('2026-11-21')]]));
+
+		test('lists its parts with their own status and file', () => {
+			const rows = extractRowData(generateStatusPage(rowMetadata, new Map(), { regions, listing: files }));
+			expect(rows).toHaveLength(1);
+			expect(rows[0]).toMatchObject({ id: 'fr', status: 'Outdated', releaseDate: '2026-05-04', file: null });
+			expect(rows[0].parts).toEqual([
+				expect.objectContaining({ id: 'fr/a', name: 'A', status: 'Outdated', releaseDate: '2026-04-29', file: null }),
+				expect.objectContaining({ id: 'fr/b', status: 'Released', file: { date: '2026-11-21', size: 1000 } }),
+			]);
+		});
+
+		test('draws each part on the map when all parts have an outline', () => {
+			const known = new Map([
+				['fr', makeKnownRegion('fr', 'France')],
+				['fr/a', makeKnownRegion('fr/a', 'France - A')],
+				['fr/b', makeKnownRegion('fr/b', 'France - B')],
+			]);
+			const features = extractFeatures(generateStatusPage(rowMetadata, known, { regions, listing: files }));
+			expect(features.map((f) => f.properties)).toEqual([
+				expect.objectContaining({ id: 'fr', part: 'fr/a', name: 'France - A', status: 'Outdated' }),
+				expect.objectContaining({ id: 'fr', part: 'fr/b', name: 'France - B', status: 'Released' }),
+			]);
+			expect(features.map((f) => f.id)).toEqual([0, 1]);
+		});
+
+		test('draws the whole row when a part has no outline', () => {
+			const known = new Map([
+				['fr', makeKnownRegion('fr', 'France')],
+				['fr/a', makeKnownRegion('fr/a', 'France - A')],
+			]);
+			const features = extractFeatures(generateStatusPage(rowMetadata, known, { regions, listing: files }));
+			expect(features.map((f) => f.properties)).toEqual([
+				expect.objectContaining({ id: 'fr', name: 'France', status: 'Outdated' }),
+			]);
+		});
 	});
 
 	test('passes the resolution as a number of cm', () => {

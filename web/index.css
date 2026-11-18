@@ -279,6 +279,32 @@ code {
 		dd {
 			margin: 0;
 		}
+
+		h3 {
+			font-size: 14px;
+			margin: 14px 0 6px;
+		}
+
+		/* The parts of a row, such as the French régions: a plain table, without the main table's sticky header. */
+		table.parts {
+			width: auto;
+
+			thead {
+				position: static;
+			}
+
+			th {
+				background: none;
+				color: #8b949e;
+				font-weight: 600;
+			}
+
+			th,
+			td {
+				padding: 3px 16px 3px 0;
+				border-bottom: 1px solid #21262d;
+			}
+		}
 	}
 
 	.empty {

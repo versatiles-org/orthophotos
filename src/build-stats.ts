@@ -1,5 +1,5 @@
 /**
- * Reads size and tile counts of every region file on the remote and writes
+ * Reads size, tile counts and upload date of every region file on the remote and writes
  * `data/region-stats.json` for the status page (`npm run build:status`).
  *
  * `versatiles probe` reads only the container header over sftp, about 4 s per file.
@@ -34,9 +34,14 @@ for (const file of files) {
 	const args = ['probe', ...(ssh.keyFile ? ['--ssh-identity', ssh.keyFile] : []), url];
 	// `versatiles probe` prints its report to stderr.
 	const { stderr } = await runCommand('versatiles', args, { stdout: 'piped', stderr: 'piped', quietOnError: true });
-	const region = summarizeStats(file.size, parseProbePyramid(new TextDecoder().decode(stderr)));
+	const region = {
+		...summarizeStats(file.size, parseProbePyramid(new TextDecoder().decode(stderr))),
+		date: file.mtime.toISOString().slice(0, 10),
+	};
 	stats.regions[file.id] = region;
-	console.log(`  ${file.id}: ${(region.size / 1e6).toFixed(0)} MB, ${region.tiles} tiles, z${region.maxZoom}`);
+	console.log(
+		`  ${file.id}: ${(region.size / 1e6).toFixed(0)} MB, ${region.tiles} tiles, z${region.maxZoom}, ${region.date}`,
+	);
 }
 
 writeFileSync(OUTPUT, JSON.stringify(stats, null, '\t') + '\n');

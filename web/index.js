@@ -409,7 +409,9 @@ maplibregl.setRTLTextPlugin('https://tiles.versatiles.org/assets/lib/mapbox-gl-r
 const map = new maplibregl.Map({
 	container: 'map',
 	style: 'style.json',
-	bounds: [-12, 35, 41, 60],
+	// The lower 48 US states in the west, Florida and Gran Canaria in the south, Iceland in the north.
+	bounds: [-125, 24.5, 41, 67],
+	fitBoundsOptions: { padding: 10 },
 	attributionControl: { compact: true },
 	// The page itself doesn't scroll (see index.css), so the map can take the wheel and one-finger drags.
 });

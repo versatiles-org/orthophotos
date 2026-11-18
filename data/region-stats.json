@@ -1,47 +1,68 @@
 {
-	"generated": "2026-11-13",
+	"generated": "2026-11-18",
 	"regions": {
 		"de/baden_wuerttemberg": {
 			"size": 49822378784,
 			"tiles": 5388485,
 			"maxZoom": 18,
-			"areaKm2": 40105
+			"areaKm2": 40105,
+			"date": "2026-11-13"
+		},
+		"de/bayern": {
+			"size": 100317528767,
+			"tiles": 10788073,
+			"maxZoom": 18,
+			"areaKm2": 79071,
+			"date": "2026-11-16"
 		},
 		"de/berlin": {
 			"size": 2062941743,
 			"tiles": 245395,
 			"maxZoom": 18,
-			"areaKm2": 1572
+			"areaKm2": 1572,
+			"date": "2026-11-12"
 		},
 		"de/bremen": {
 			"size": 2681292184,
 			"tiles": 452037,
 			"maxZoom": 19,
-			"areaKm2": 653
+			"areaKm2": 653,
+			"date": "2026-11-13"
 		},
 		"de/hamburg": {
 			"size": 1689301924,
 			"tiles": 197477,
 			"maxZoom": 18,
-			"areaKm2": 1157
+			"areaKm2": 1157,
+			"date": "2026-11-13"
 		},
-		"de/thueringen": {
-			"size": 12231100428,
-			"tiles": 857458,
+		"fr/auvergne_rhone_alpes": {
+			"size": 39458129327,
+			"tiles": 2567111,
 			"maxZoom": 17,
-			"areaKm2": 22687
+			"areaKm2": 85182,
+			"date": "2026-11-16"
+		},
+		"fr/bourgogne_franche_comte": {
+			"size": 22448629118,
+			"tiles": 1930728,
+			"maxZoom": 17,
+			"areaKm2": 59994,
+			"date": "2026-11-17"
+		},
+		"fr/bretagne": {
+			"size": 13578105744,
+			"tiles": 1333205,
+			"maxZoom": 17,
+			"areaKm2": 39845,
+			"date": "2026-11-18"
 		},
 		"fr/la_reunion": {
-			"size": 1437157553,
-			"tiles": 71144,
+			"size": 1198766566,
+			"tiles": 47377,
 			"maxZoom": 17,
-			"areaKm2": 4197
-		},
-		"hu": {
-			"size": 6527703338,
-			"tiles": 3319002,
-			"maxZoom": 17,
-			"areaKm2": 103993
+			"areaKm2": 2821,
+			"date": "2026-11-13"
 		}
 	}
 }

@@ -241,6 +241,29 @@ describe('generateStatusPage', () => {
 			expect(features.map((f) => f.id)).toEqual([0, 1]);
 		});
 
+		test('frames a row drawn from its parts by their outlines, not by its own', () => {
+			const square = (x0: number, y0: number, x1: number, y1: number): KnownRegion['geometry'] => ({
+				type: 'Polygon',
+				coordinates: [
+					[
+						[x0, y0],
+						[x1, y0],
+						[x1, y1],
+						[x0, y1],
+						[x0, y0],
+					],
+				],
+			});
+			const known = new Map([
+				// Like the US outline, which reaches across the date line with the Aleutians.
+				['fr', { ...makeKnownRegion('fr', 'France'), geometry: square(-179, -10, 179, 70) }],
+				['fr/a', makeKnownRegion('fr/a', 'France - A')],
+				['fr/b', { ...makeKnownRegion('fr/b', 'France - B'), geometry: square(5, 5, 6, 6) }],
+			]);
+			const rows = extractRowData(generateStatusPage(rowMetadata, known, { regions, listing: files }));
+			expect(rows[0].bbox).toEqual([0, 0, 6, 6]);
+		});
+
 		test('draws the whole row when a part has no outline', () => {
 			const known = new Map([
 				['fr', makeKnownRegion('fr', 'France')],

@@ -21,6 +21,7 @@ export type KnownRegion = Feature<Polygon | MultiPolygon, { id: string; name: st
  * EU + EEA + candidate countries with sub-region detail). Regions outside NUTS
  * (e.g. `uk` post-Brexit) fall back to a slimmed Natural Earth 1:10m countries
  * dataset — country-level only, ISO codes mapped to NUTS conventions (GB→uk, GR→el).
+ * The US states (`us/new_york`) come from Natural Earth's 1:50m states and provinces.
  *
  * @param folder - Path to the folder containing the region data files
  * @returns Array of known regions with normalized IDs and geometry
@@ -30,27 +31,32 @@ export function loadKnownRegions(folder: string): KnownRegion[] {
 	regions.push(...parseNUTS(loadData(resolve(folder, 'NUTS_RG_03M_2024_4326.topojson.gz'))));
 
 	const existingIds = new Set(regions.map((r) => r.properties.id));
-	for (const feature of loadWorldCountries(resolve(folder, 'world-countries.geojson.gz'))) {
+	// Source: https://github.com/nvkelso/natural-earth-vector
+	//   geojson/ne_10m_admin_0_countries.geojson (public domain)
+	// To rebuild data/world-countries.geojson.gz, fetch the source GeoJSON, then
+	// keep only `properties.{id, name, fullname}` (id = ISO_A2_EH lowercased, with
+	// GB→uk and GR→el to match NUTS conventions), drop features whose ISO is `-99`,
+	// round coordinates to 6 decimals, and gzip with `level: 9`.
+	for (const feature of loadRegionFile(resolve(folder, 'world-countries.geojson.gz'))) {
 		if (!existingIds.has(feature.properties.id)) regions.push(feature);
 	}
+
+	// Source: https://github.com/nvkelso/natural-earth-vector, tag v5.1.2,
+	//   geojson/ne_50m_admin_1_states_provinces.geojson (public domain)
+	// To rebuild data/us-states.geojson.gz, keep the features with `iso_a2` "US" (50 states and
+	// DC) with only `properties.{id, name, fullname}`: id = "us/" + `name` lowercased with spaces
+	// as "_", fullname = "United States of America - " + `name`. Round coordinates to 4 decimals
+	// (about 10 m, plenty for the status map) and gzip with `level: 9`.
+	regions.push(...loadRegionFile(resolve(folder, 'us-states.geojson.gz')));
 
 	return regions;
 }
 
 /**
- * Loads the slimmed Natural Earth countries file. Each feature already has the
- * `KnownRegion` property shape, so no transformation is needed beyond precision
- * reduction (which the NUTS pipeline also applies).
- *
- * Source: https://github.com/nvkelso/natural-earth-vector
- *   geojson/ne_10m_admin_0_countries.geojson (public domain)
- *
- * To rebuild data/world-countries.geojson.gz, fetch the source GeoJSON, then
- * keep only `properties.{id, name, fullname}` (id = ISO_A2_EH lowercased, with
- * GB→uk and GR→el to match NUTS conventions), drop features whose ISO is `-99`,
- * round coordinates to 6 decimals, and gzip with `level: 9`.
+ * Loads a gzipped GeoJSON file whose features already have the `KnownRegion` property shape,
+ * so no transformation is needed beyond precision reduction (which the NUTS pipeline also applies).
  */
-function loadWorldCountries(filePath: string): KnownRegion[] {
+function loadRegionFile(filePath: string): KnownRegion[] {
 	const buffer = gunzipSync(readFileSync(filePath));
 	const fc = JSON.parse(new TextDecoder().decode(buffer)) as FeatureCollection<
 		Polygon | MultiPolygon,

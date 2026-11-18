@@ -1,6 +1,17 @@
 import { expect, test } from 'vitest';
-import { reducePrecision } from './geojson.ts';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { loadKnownRegions, reducePrecision } from './geojson.ts';
+import { US_STATES } from '../regions/us/states.ts';
 import type { Feature, FeatureCollection, Geometry, MultiPolygon, Point, Polygon } from 'geojson';
+
+const DATA_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../../data');
+
+test('loadKnownRegions - has an outline for every US state in the code, for the status map', () => {
+	const ids = new Set(loadKnownRegions(DATA_DIR).map((r) => r.properties.id));
+	expect(US_STATES.map((s) => s.name).filter((id) => !ids.has(id))).toEqual([]);
+	expect(ids.has('us')).toBe(true);
+});
 
 test('reducePrecision - rounds Point coordinates to 6 decimals', () => {
 	const point: Point = {

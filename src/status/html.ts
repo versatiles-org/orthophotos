@@ -132,6 +132,15 @@ export function generateStatusPage(
 			})
 			.sort((a, b) => a.id.localeCompare(b.id));
 		const own = regionState(id, meta);
+		// A row whose parts all have an outline is drawn and framed by its parts.
+		const partOutlines = parts.map((p) => knownRegions.get(p.id)?.geometry);
+		const drawParts = parts.length > 0 && partOutlines.every(Boolean);
+		const outline: Polygon | MultiPolygon | undefined = drawParts
+			? {
+					type: 'MultiPolygon',
+					coordinates: partOutlines.flatMap((g) => (g!.type === 'Polygon' ? [g!.coordinates] : g!.coordinates)),
+				}
+			: region?.geometry;
 		const statusKey = parts.length ? combinedStatus(parts.map((p) => p.statusKey)) : own.statusKey;
 		counts[statusKey]++;
 		const status = STATUS_LABELS[statusKey];
@@ -157,14 +166,13 @@ export function generateStatusPage(
 			notes: meta.notes,
 			kbPerTile: stat ? Math.round(stat.size / stat.tiles / 100) / 10 : null,
 			kbPerKm2: stat ? Math.round(stat.size / stat.areaKm2 / 1000) : null,
-			bbox: region?.geometry ? geometryBbox(region.geometry) : null,
+			bbox: outline ? geometryBbox(outline) : null,
 		});
 		// MapLibre's `feature-state` requires integer feature IDs — non-numeric strings
 		// like "de/bayern" silently no-op. Assign a sequential int here and keep the
 		// real region id inside `properties.id` for the table.
 		const notesCount = meta.notes.length;
-		const partOutlines = parts.map((p) => knownRegions.get(p.id)?.geometry);
-		if (parts.length && partOutlines.every(Boolean)) {
+		if (drawParts) {
 			// Each part in its own status, so the progress of a release run shows on the map.
 			parts.forEach((p, i) => {
 				const properties = { id, part: p.id, name: p.name, status: p.status, statusColor: p.statusColor, notesCount };

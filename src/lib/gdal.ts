@@ -202,7 +202,7 @@ export interface WmsBlockExtractOptions {
  *
  * The WMS driver subdivides each `gdal_translate` call into many 1024-px sub-tile
  * requests, and an 8192-px block means ~64 of them. A single transient failure
- * (CloudFront 502s on `es`, Apache 503s on `bg`, etc.) without internal retries
+ * (such as 502s and 503s, seen on `bg`) without internal retries
  * would force our outer `withRetry` to redo all ~64 requests — so we ask GDAL to
  * retry sub-tiles itself first. `GDAL_HTTP_RETRY_CODES` defaults to
  * "429,500,502,503,504", which covers every transient failure we've seen in the

@@ -237,9 +237,8 @@ export async function extractWmsBlock(options: WmsBlockExtractOptions, output: s
 		{
 			env: { GDAL_HTTP_MAX_RETRY: '5', GDAL_HTTP_RETRY_DELAY: '2' },
 			// Capture stderr instead of inheriting — scrapers that recognise specific
-			// server errors (e.g. ERDAS APOLLO `LayerNotDefined`, GeoServer
-			// `RasterFormatException`) catch by message and either skip the retry or
-			// the whole block. Without `quiet`, every GDAL `ERROR 1: …` line would
+			// server errors (e.g. ERDAS APOLLO `LayerNotDefined`) catch by message
+			// and skip the retry. Without `quiet`, every GDAL `ERROR 1: …` line would
 			// flood the console even on known-empty blocks. Captured stderr still
 			// makes it into the thrown Error's message for real failures.
 			quiet: true,

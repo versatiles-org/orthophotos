@@ -82,7 +82,10 @@ export default defineTileRegion<BgItem, { id: string; tifPaths: string[] }>({
 		for (const layer of YEAR_LAYERS) {
 			const wmsXmlPath = join(ctx.tempDir, `wms-${layer.replace(/^.*:/, '')}.xml`);
 			if (!existsSync(wmsXmlPath)) {
-				await generateWmsXml(WMS_URL, layer, wmsXmlPath);
+				// GeoServer throws `RasterFormatException: x lies outside the raster` for sub-requests
+				// that reach past the edge of a source raster. They become transparent, so the rest of
+				// the block keeps this year instead of falling back to an older one.
+				await generateWmsXml(WMS_URL, layer, wmsXmlPath, { zeroBlockOnServerException: true });
 			}
 			const { bbox } = await parseWmsCapabilities(capsPath, layer);
 			yearLayers.push({ layer, wmsXmlPath, bbox });
@@ -118,36 +121,21 @@ export default defineTileRegion<BgItem, { id: string; tifPaths: string[] }>({
 		const tifPaths: string[] = [];
 		for (const year of item.years) {
 			const tifPath = ctx.tempFile(join(ctx.tempDir, `${item.id}_${year.layer.replace(/^.*:/, '')}.tif`));
-			try {
-				await withRetry(
-					() =>
-						extractWmsBlock(
-							{
-								wmsXmlPath: year.wmsXmlPath,
-								x0: item.x0,
-								y0: item.y0,
-								x1: item.x1,
-								y1: item.y1,
-								blockPx: item.blockPx,
-							},
-							tifPath,
-						),
-					{
-						maxAttempts: 3,
-						// GeoServer throws `java.awt.image.RasterFormatException: x lies
-						// outside the raster` for blocks just outside an internal source
-						// raster's actual data extent. Deterministic — skip the retry.
-						shouldRetry: (err) => !err.message.includes('RasterFormatException'),
-					},
-				);
-			} catch (err) {
-				// Either the deterministic `RasterFormatException` (no retry attempted)
-				// or a different error after retries exhausted. Only the former means
-				// "no data for this year here" — fall through to the next overlapping year.
-				const msg = err instanceof Error ? err.message : String(err);
-				if (msg.includes('RasterFormatException')) continue;
-				throw err;
-			}
+			await withRetry(
+				() =>
+					extractWmsBlock(
+						{
+							wmsXmlPath: year.wmsXmlPath,
+							x0: item.x0,
+							y0: item.y0,
+							x1: item.x1,
+							y1: item.y1,
+							blockPx: item.blockPx,
+						},
+						tifPath,
+					),
+				{ maxAttempts: 3 },
+			);
 			if (!(await isValidRaster(tifPath))) {
 				ctx.errors.add(`${item.id}_${year.layer}.tif`);
 				continue;

@@ -93,7 +93,7 @@ Region fetch implementations should follow these patterns consistently:
 
 **Anti-patterns to avoid:**
 
-- Returning `'empty'` from a `try { ... } catch { return 'empty' }` block — that masks real failures. Catch only specific, known-safe errors (e.g. `bg.ts` catches just `RasterFormatException`); let everything else propagate.
+- Returning `'empty'` from a `try { ... } catch { return 'empty' }` block — that masks real failures. Catch only specific, known-safe errors (e.g. `me.ts` doesn't retry `LayerNotDefined`); let everything else propagate. A WMS that throws for single sub-requests at the edge of its source rasters (`bg`) needs `generateWmsXml(…, { zeroBlockOnServerException: true })` instead: catching the error would drop the whole block, though only one sub-request failed.
 - Using `curl` without `--fail` (or `-f`) for downloads. Without `--fail`, curl exits 0 on HTTP 4xx/5xx and writes the error body to disk; that body then flows through validation as if it were real data, and small error responses can be mistaken for legitimate empties. `downloadFile()` always passes `--fail`. For ad-hoc `runCommand('curl', ...)` calls, include `-f` (or `--fail`).
 - Writing `.skip` for "I'm not sure what went wrong" cases. `.skip` is permanent; once written, re-runs won't refetch. Reserve it for things that are fixed by the data source (a tile that doesn't exist isn't going to start existing on the next run).
 

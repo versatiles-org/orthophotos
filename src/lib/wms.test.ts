@@ -1,8 +1,9 @@
-import { describe, expect, test } from 'vitest';
-import { writeFileSync, mkdirSync, rmSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
+import { describe, expect, onTestFinished, test } from 'vitest';
+import { writeFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { bboxesOverlap, computeWmsBlocks, parseWmsCapabilities } from './wms.ts';
+import { bboxesOverlap, computeWmsBlocks, generateWmsXml, parseWmsCapabilities } from './wms.ts';
 import type { WmsBbox } from './wms.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -329,5 +330,27 @@ describe('parseWmsCapabilities', () => {
 		} finally {
 			rmSync(TEST_DIR, { recursive: true, force: true });
 		}
+	});
+});
+
+describe('generateWmsXml', () => {
+	// gdal_translate writes the WMS config without contacting the server.
+	async function generate(options?: Parameters<typeof generateWmsXml>[3]): Promise<string> {
+		const dir = mkdtempSync(join(tmpdir(), 'wms-xml-'));
+		onTestFinished(() => rmSync(dir, { recursive: true, force: true }));
+		const path = join(dir, 'wms.xml');
+		await generateWmsXml('http://example.invalid/wms', 'Raster:Layer_2024', path, options);
+		return readFileSync(path, 'utf-8');
+	}
+
+	test('writes a GDAL WMS config for the layer', async () => {
+		const xml = await generate();
+		expect(xml).toContain('<Layers>Raster:Layer_2024</Layers>');
+		expect(xml).not.toContain('ZeroBlockOnServerException');
+	});
+
+	test('treats server exceptions as empty blocks with zeroBlockOnServerException', async () => {
+		const xml = await generate({ zeroBlockOnServerException: true });
+		expect(xml).toMatch(/<ZeroBlockOnServerException>true<\/ZeroBlockOnServerException>\s*<\/GDAL_WMS>/);
 	});
 });

@@ -5,7 +5,7 @@
  * from a WMS service via GDAL's WMS driver.
  */
 
-import { readFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import { runCommand } from './command.ts';
 import { createXmlParser } from './xml.ts';
 
@@ -206,6 +206,14 @@ export interface GenerateWmsXmlOptions {
 	 * still accept).
 	 */
 	version?: '1.1.1' | '1.3.0';
+	/**
+	 * Treat a sub-request the server answers with a service exception as an empty, transparent
+	 * block, instead of failing the whole read. For servers that throw for requests reaching past
+	 * the edge of one of their source rasters, such as `bg`'s GeoServer
+	 * (`RasterFormatException: x lies outside the raster`): without it, a block that touches such
+	 * an edge loses all of that layer, though the layer covers most of it. Default: false.
+	 */
+	zeroBlockOnServerException?: boolean;
 }
 
 /**
@@ -260,4 +268,10 @@ export async function generateWmsXml(
 		srsParam +
 		'=EPSG:3857&ImageFormat=image/png&Transparent=TRUE&BandsCount=4&UserAgent=versatiles/orthophotos';
 	await runCommand('gdal_translate', [connStr, '-of', 'wms', outputPath]);
+	if (options?.zeroBlockOnServerException) {
+		const xml = await readFile(outputPath, 'utf-8');
+		if (!xml.includes('</GDAL_WMS>')) throw new Error(`generateWmsXml: no </GDAL_WMS> in ${outputPath}`);
+		const element = '  <ZeroBlockOnServerException>true</ZeroBlockOnServerException>\n';
+		await writeFile(outputPath, xml.replace('</GDAL_WMS>', `${element}</GDAL_WMS>`));
+	}
 }

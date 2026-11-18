@@ -118,8 +118,10 @@ export function generateStatusPage(
 <link rel="stylesheet" href="index.css" />
 </head>
 <body>
+<header>
 <h1>VersaTiles Orthophotos</h1>
 <p class="summary">${allMetadata.size} regions &middot; ${summary}</p>
+</header>
 <div id="map"></div>
 <div id="regions"></div>
 <script>

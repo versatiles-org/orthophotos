@@ -39,11 +39,12 @@ function extractRowData(html: string): Record<string, unknown>[] {
 }
 
 describe('generateStatusPage', () => {
-	test('returns valid HTML with the table container and no grid library', () => {
+	test('returns valid HTML with the header, map and table, and no grid library', () => {
 		const html = generateStatusPage(new Map(), new Map());
 		expect(html).toContain('<!DOCTYPE html>');
 		expect(html).toContain('<title>VersaTiles Orthophotos - Status</title>');
-		expect(html).toContain('<div id="regions"></div>');
+		// The full-window layout in index.css relies on this order of the body's children.
+		expect(html).toMatch(/<body>\s*<header>[\s\S]*<\/header>\s*<div id="map"><\/div>\s*<div id="regions"><\/div>/);
 		expect(html).not.toContain('ag-grid');
 		expect(html).toContain('<script src="index.js"></script>');
 		expect(html).toContain('<link rel="stylesheet" href="index.css"');

@@ -29,7 +29,8 @@ const STATUS_ORDER = ['Released', 'Scraping', 'Planned', 'Blocked'];
 /**
  * `value` is what the column sorts by, `text` what its filter searches (defaults to `value`),
  * `html` what the cell shows (defaults to the escaped `text`). Numeric columns accept filters such
- * as `>5` or `<=20`.
+ * as `>5` or `<=20`. `extra` columns are shown only with "More columns"; the row details show
+ * their values too.
  */
 const COLUMNS = [
 	{
@@ -52,9 +53,16 @@ const COLUMNS = [
 		title: 'Ground resolution of the source imagery',
 	},
 	{ key: 'releaseDate', label: 'Released', value: (r) => r.releaseDate },
-	{ key: 'checked', label: 'Checked', value: (r) => r.checked, title: 'Last check of the source for newer data' },
+	{
+		key: 'checked',
+		extra: true,
+		label: 'Checked',
+		value: (r) => r.checked,
+		title: 'Last check of the source for newer data',
+	},
 	{
 		key: 'kbPerTile',
+		extra: true,
 		label: 'KB/tile',
 		numeric: true,
 		value: (r) => r.kbPerTile,
@@ -63,6 +71,7 @@ const COLUMNS = [
 	},
 	{
 		key: 'kbPerKm2',
+		extra: true,
 		label: 'KB/km²',
 		numeric: true,
 		value: (r) => r.kbPerKm2,
@@ -71,6 +80,7 @@ const COLUMNS = [
 	},
 	{
 		key: 'licenseName',
+		extra: true,
 		label: 'License',
 		value: (r) => r.licenseName,
 		html: (r) => link(r.licenseName, r.licenseUrl),
@@ -78,6 +88,7 @@ const COLUMNS = [
 	},
 	{
 		key: 'creatorName',
+		extra: true,
 		label: 'Creator',
 		value: (r) => r.creatorName,
 		html: (r) => link(r.creatorName, r.creatorUrl),
@@ -98,15 +109,36 @@ const COLUMNS = [
 const textOf = (col, row) => String((col.text ?? col.value)(row) ?? '');
 
 /** CSS classes of a column's cells. Only the columns marked `wrap` break their text into lines. */
-const classOf = (col) => [col.numeric && 'num', col.wide && 'wide', col.wrap && 'wrap'].filter(Boolean).join(' ');
+const classOf = (col) =>
+	[col.numeric && 'num', col.wide && 'wide', col.wrap && 'wrap', col.extra && 'extra'].filter(Boolean).join(' ');
 
 // --- State ---
+
+const EXTRA_COLUMNS_KEY = 'orthophotos-status:extra-columns';
+
+/** Browser storage can be missing or throw, e.g. in a private window; the page works without it. */
+function loadExtraColumns() {
+	try {
+		return localStorage.getItem(EXTRA_COLUMNS_KEY) === 'true';
+	} catch {
+		return false;
+	}
+}
+
+function saveExtraColumns(show) {
+	try {
+		localStorage.setItem(EXTRA_COLUMNS_KEY, String(show));
+	} catch {
+		// Not remembered then.
+	}
+}
 
 const state = {
 	sortKey: 'id',
 	sortDir: 1,
 	filters: Object.fromEntries(COLUMNS.map((c) => [c.key, ''])),
 	selected: null,
+	extraColumns: loadExtraColumns(),
 };
 
 /** A filter of a numeric column: `>5`, `<=20`, `=0`, or a plain number for equality. */
@@ -150,6 +182,12 @@ container.innerHTML = `
 <div class="toolbar">
 	<span class="count"></span>
 	<button type="button" class="clear" hidden>Clear filters</button>
+	<button type="button" class="more" aria-pressed="false" title="${escapeHtml(
+		'Also show ' +
+			COLUMNS.filter((c) => c.extra)
+				.map((c) => c.label)
+				.join(', '),
+	)}">More columns</button>
 </div>
 <div class="table-wrap">
 	<table>
@@ -167,7 +205,7 @@ container.innerHTML = `
 						.join('')}</select></th>`;
 				}
 				const placeholder = c.numeric ? '>0' : 'Filter';
-				return `<th><input type="search" data-key="${c.key}" placeholder="${placeholder}" ${label}></th>`;
+				return `<th class="${classOf(c)}"><input type="search" data-key="${c.key}" placeholder="${placeholder}" ${label}></th>`;
 			}).join('')}</tr>
 		</thead>
 		<tbody></tbody>
@@ -177,14 +215,19 @@ container.innerHTML = `
 const tbody = container.querySelector('tbody');
 const countEl = container.querySelector('.count');
 const clearButton = container.querySelector('.clear');
+const moreButton = container.querySelector('.more');
 
 function detailHtml(row) {
 	const notes = row.notes.length
 		? `<ul class="notes">${row.notes.map((n) => `<li>${formatNote(n)}</li>`).join('')}</ul>`
 		: '<p class="muted">No notes.</p>';
+	const size =
+		row.kbPerTile == null ? '' : `${row.kbPerTile.toFixed(1)} KB/tile, ${row.kbPerKm2.toLocaleString('en-US')} KB/km²`;
 	const facts = [
 		['License', link(row.licenseName, row.licenseUrl)],
 		['Creator', link(row.creatorName, row.creatorUrl)],
+		['Checked', escapeHtml(row.checked)],
+		['File size', size],
 	]
 		.filter(([, v]) => v)
 		.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`)
@@ -215,6 +258,8 @@ function render() {
 	countEl.textContent =
 		rows.length === rowData.length ? `${rowData.length} regions` : `${rows.length} of ${rowData.length} regions`;
 	clearButton.hidden = !Object.values(state.filters).some((f) => f.trim());
+	container.classList.toggle('extra-columns', state.extraColumns);
+	moreButton.setAttribute('aria-pressed', String(state.extraColumns));
 	for (const th of container.querySelectorAll('tr.labels th')) {
 		const sorted = th.dataset.key === state.sortKey;
 		th.setAttribute('aria-sort', sorted ? (state.sortDir > 0 ? 'ascending' : 'descending') : 'none');
@@ -246,11 +291,27 @@ clearButton.addEventListener('click', () => {
 	render();
 });
 
+moreButton.addEventListener('click', () => {
+	state.extraColumns = !state.extraColumns;
+	saveExtraColumns(state.extraColumns);
+	if (!state.extraColumns) {
+		// A hidden column must not filter or sort the table without showing it.
+		for (const col of COLUMNS.filter((c) => c.extra)) {
+			state.filters[col.key] = '';
+			container.querySelector(`tr.filters [data-key="${col.key}"]`).value = '';
+		}
+		if (COLUMNS.find((c) => c.key === state.sortKey).extra) {
+			state.sortKey = 'id';
+			state.sortDir = 1;
+		}
+	}
+	render();
+});
+
 tbody.addEventListener('click', (e) => {
 	if (e.target.closest('a, button, input, select')) {
 		if (e.target.closest('a.to-map')) {
 			e.preventDefault();
-			document.getElementById('map').scrollIntoView({ behavior: 'smooth' });
 			zoomTo(state.selected);
 		}
 		return;
@@ -286,10 +347,18 @@ function select(id, { zoom = false, scroll = false } = {}) {
 	highlight(id);
 	if (id === null) return;
 	if (zoom) zoomTo(id);
-	if (scroll) {
-		const tr = tbody.querySelector(`tr.row[data-id="${CSS.escape(id)}"]`);
-		tr?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-	}
+	const tr = tbody.querySelector(`tr.row[data-id="${CSS.escape(id)}"]`);
+	if (scroll) tr?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+	else if (tr) revealDetails(tr);
+}
+
+/** Scrolls the table so the opened details are visible, but never the row itself under the header. */
+function revealDetails(tr) {
+	const wrap = tbody.closest('.table-wrap');
+	const below = tr.nextElementSibling.getBoundingClientRect().bottom - wrap.getBoundingClientRect().bottom;
+	if (below <= 0) return;
+	const roomAbove = tr.getBoundingClientRect().top - wrap.querySelector('thead').getBoundingClientRect().bottom;
+	wrap.scrollBy({ top: Math.min(below + 8, roomAbove), behavior: 'smooth' });
 }
 
 // --- Map ---
@@ -301,7 +370,7 @@ const map = new maplibregl.Map({
 	style: 'style.json',
 	bounds: [-12, 35, 41, 60],
 	attributionControl: { compact: true },
-	cooperativeGestures: true,
+	// The page itself doesn't scroll (see index.css), so the map can take the wheel and one-finger drags.
 });
 
 /** Region ID → the integer feature ID that MapLibre's feature state needs. */

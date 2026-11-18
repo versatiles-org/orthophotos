@@ -1,10 +1,26 @@
-import { describe, expect, onTestFinished, test } from 'vitest';
+import { describe, expect, onTestFinished, test, vi } from 'vitest';
 import { writeFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { bboxesOverlap, computeWmsBlocks, generateWmsXml, parseWmsCapabilities } from './wms.ts';
 import type { WmsBbox } from './wms.ts';
+
+// CI has no GDAL: a fake gdal_translate writes a minimal WMS config to its last argument.
+vi.mock('./command.ts', async (importOriginal) => {
+	const original = await importOriginal<typeof import('./command.ts')>();
+	const { writeFileSync } = await import('node:fs');
+	return {
+		...original,
+		runCommand: vi.fn(async (_command: string, args: string[]) => {
+			writeFileSync(args.at(-1)!, '<GDAL_WMS>\n  <Service name="WMS"></Service>\n</GDAL_WMS>\n');
+			return { success: true, code: 0, stdout: new Uint8Array(), stderr: new Uint8Array() };
+		}),
+	};
+});
+
+import { runCommand } from './command.ts';
+const mockRunCommand = vi.mocked(runCommand);
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TEST_DIR = resolve(__dirname, '../../test-data/wms-temp');
@@ -334,7 +350,6 @@ describe('parseWmsCapabilities', () => {
 });
 
 describe('generateWmsXml', () => {
-	// gdal_translate writes the WMS config without contacting the server.
 	async function generate(options?: Parameters<typeof generateWmsXml>[3]): Promise<string> {
 		const dir = mkdtempSync(join(tmpdir(), 'wms-xml-'));
 		onTestFinished(() => rmSync(dir, { recursive: true, force: true }));
@@ -343,14 +358,27 @@ describe('generateWmsXml', () => {
 		return readFileSync(path, 'utf-8');
 	}
 
-	test('writes a GDAL WMS config for the layer', async () => {
+	test('has gdal_translate write a GDAL WMS config for the layer', async () => {
 		const xml = await generate();
-		expect(xml).toContain('<Layers>Raster:Layer_2024</Layers>');
+		const [command, args] = mockRunCommand.mock.calls.at(-1)!;
+		expect(command).toBe('gdal_translate');
+		expect(args[0]).toBe(
+			'WMS:http://example.invalid/wms?Version=1.1.1&Layers=Raster:Layer_2024&SRS=EPSG:3857&ImageFormat=image/png&Transparent=TRUE&BandsCount=4&UserAgent=versatiles/orthophotos',
+		);
+		expect(args.slice(1, 3)).toEqual(['-of', 'wms']);
 		expect(xml).not.toContain('ZeroBlockOnServerException');
 	});
 
 	test('treats server exceptions as empty blocks with zeroBlockOnServerException', async () => {
 		const xml = await generate({ zeroBlockOnServerException: true });
 		expect(xml).toMatch(/<ZeroBlockOnServerException>true<\/ZeroBlockOnServerException>\s*<\/GDAL_WMS>/);
+	});
+
+	test('refuses a config without a closing GDAL_WMS element', async () => {
+		mockRunCommand.mockImplementationOnce(async (_command, args) => {
+			writeFileSync(args.at(-1)!, '');
+			return { success: true, code: 0, stdout: new Uint8Array(), stderr: new Uint8Array() };
+		});
+		await expect(generate({ zeroBlockOnServerException: true })).rejects.toThrow('no </GDAL_WMS>');
 	});
 });

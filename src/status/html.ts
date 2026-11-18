@@ -24,7 +24,8 @@ interface RowData {
 	statusColor: string;
 	releaseDate: string;
 	date: string;
-	resolution: string;
+	/** Source resolution in cm, `null` if unknown. */
+	resolution: number | null;
 	checked: string;
 	licenseName: string;
 	licenseUrl: string;
@@ -35,6 +36,8 @@ interface RowData {
 	kbPerTile: number | null;
 	/** File size per km² of the top zoom's tiles in KB, `null` without stats. */
 	kbPerKm2: number | null;
+	/** `[west, south, east, north]` of the region's outline, for zooming the map to it; `null` without one. */
+	bbox: [number, number, number, number] | null;
 }
 
 interface MapFeatureProperties {
@@ -68,7 +71,7 @@ export function generateStatusPage(
 			statusColor,
 			releaseDate: meta.status === 'released' ? meta.releaseDate : '',
 			date: meta.date ?? '',
-			resolution: meta.resolution !== undefined ? `${meta.resolution} cm` : '',
+			resolution: meta.resolution ?? null,
 			checked: meta.checked ?? '',
 			licenseName: meta.license?.name ?? '',
 			licenseUrl: meta.license?.url ?? '',
@@ -77,6 +80,7 @@ export function generateStatusPage(
 			notes: meta.notes,
 			kbPerTile: stat ? Math.round(stat.size / stat.tiles / 100) / 10 : null,
 			kbPerKm2: stat ? Math.round(stat.size / stat.areaKm2 / 1000) : null,
+			bbox: region?.geometry ? geometryBbox(region.geometry) : null,
 		});
 		if (region?.geometry) {
 			// MapLibre's `feature-state` requires integer feature IDs — non-numeric strings
@@ -109,7 +113,6 @@ export function generateStatusPage(
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VersaTiles Orthophotos - Status</title>
 <link rel="icon" type="image/png" href="https://tiles.versatiles.org/assets/images/versatiles-logo.png">
-<script src="https://cdn.jsdelivr.net/npm/ag-grid-community@33/dist/ag-grid-community.min.js"></script>
 <script src="https://tiles.versatiles.org/assets/lib/maplibre-gl/maplibre-gl.js"></script>
 <link rel="stylesheet" href="https://tiles.versatiles.org/assets/lib/maplibre-gl/maplibre-gl.css" />
 <link rel="stylesheet" href="index.css" />
@@ -118,13 +121,34 @@ export function generateStatusPage(
 <h1>VersaTiles Orthophotos</h1>
 <p class="summary">${allMetadata.size} regions &middot; ${summary}</p>
 <div id="map"></div>
-<div id="grid"></div>
+<div id="regions"></div>
 <script>
-const rowData = ${JSON.stringify(rows)};
-const regionFeatures = ${JSON.stringify(featureCollection)};
+const rowData = ${scriptJson(rows)};
+const regionFeatures = ${scriptJson(featureCollection)};
 </script>
 <script src="index.js"></script>
 </body>
 </html>
 `;
+}
+
+/** `[west, south, east, north]` of a polygon or multipolygon, rounded to 0.001°. */
+export function geometryBbox(geometry: Polygon | MultiPolygon): [number, number, number, number] {
+	const rings = geometry.type === 'Polygon' ? geometry.coordinates : geometry.coordinates.flat();
+	let [west, south, east, north] = [Infinity, Infinity, -Infinity, -Infinity];
+	for (const ring of rings) {
+		for (const [x, y] of ring) {
+			west = Math.min(west, x);
+			south = Math.min(south, y);
+			east = Math.max(east, x);
+			north = Math.max(north, y);
+		}
+	}
+	const round = (v: number) => Math.round(v * 1000) / 1000;
+	return [round(west), round(south), round(east), round(north)];
+}
+
+/** JSON for an inline `<script>`: `<` is escaped, so no text in the data can end the script. */
+function scriptJson(value: unknown): string {
+	return JSON.stringify(value).replaceAll('<', '\\u003c');
 }

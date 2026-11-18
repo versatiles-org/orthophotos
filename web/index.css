@@ -25,36 +25,212 @@ a {
 	}
 }
 
-#grid {
-	/* The Notes cell renderer returns a <details> element, which is block-level
-	   by default and anchors to the top of the auto-height cell. Switching to
-	   inline-block + vertical-align:middle lets the row's line-box centre it,
-	   so the collapsed "<n> notes" summary sits on the same baseline as the
-	   other (non-auto-height) cells. */
-	.ag-cell[col-id='notes'] details {
+.muted {
+	color: #8b949e;
+}
+
+code {
+	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+	font-size: 0.9em;
+}
+
+.status {
+	color: var(--status);
+	font-weight: bold;
+	white-space: nowrap;
+
+	&::before {
+		content: '';
 		display: inline-block;
-		vertical-align: middle;
+		width: 0.6em;
+		height: 0.6em;
+		margin-right: 0.4em;
+		border-radius: 50%;
+		background: var(--status);
+	}
+}
+
+#regions {
+	.toolbar {
+		display: flex;
+		gap: 12px;
+		align-items: center;
+		margin-bottom: 8px;
+		font-size: 14px;
+		color: #8b949e;
 	}
 
-	details {
-		line-height: 1.2;
+	button.clear {
+		background: #21262d;
+		color: #e6edf3;
+		border: 1px solid #30363d;
+		border-radius: 4px;
+		padding: 2px 8px;
+		cursor: pointer;
+		font: inherit;
+	}
 
-		summary {
-			cursor: pointer;
+	/* Scrolls on its own, so the header and filter rows stay in view. */
+	.table-wrap {
+		overflow: auto;
+		max-height: 80vh;
+		border: 1px solid #21262d;
+		border-radius: 4px;
+	}
 
-			&:hover {
-				color: #58a6ff;
-			}
+	table {
+		width: 100%;
+		border-collapse: collapse;
+		font-size: 13px;
+	}
+
+	th,
+	td {
+		padding: 6px 8px;
+		text-align: left;
+		border-bottom: 1px solid #21262d;
+		vertical-align: top;
+		white-space: nowrap;
+	}
+
+	.wrap,
+	tr.detail-row > td {
+		white-space: normal;
+	}
+
+	.num {
+		text-align: right;
+		font-variant-numeric: tabular-nums;
+	}
+
+	.wide {
+		min-width: 180px;
+	}
+
+	thead th {
+		background: #161b22;
+		position: sticky;
+		top: 0;
+		z-index: 1;
+	}
+
+	tr.labels button {
+		all: unset;
+		cursor: pointer;
+		color: #8b949e;
+		font-weight: 600;
+		white-space: nowrap;
+
+		&:hover,
+		&:focus-visible {
+			color: #e6edf3;
+		}
+	}
+
+	tr.labels th[aria-sort='ascending'] button,
+	tr.labels th[aria-sort='descending'] button {
+		color: #e6edf3;
+	}
+
+	tr.filters th {
+		top: 30px;
+		padding-top: 0;
+	}
+
+	tr.filters input,
+	tr.filters select {
+		box-sizing: border-box;
+		width: 100%;
+		min-width: 60px;
+		background: #0d1117;
+		color: #e6edf3;
+		border: 1px solid #30363d;
+		border-radius: 4px;
+		padding: 3px 6px;
+		font: inherit;
+	}
+
+	tr.row {
+		cursor: pointer;
+
+		&:hover {
+			background: #161b22;
 		}
 
-		ul {
+		&:focus-visible {
+			outline: 2px solid #58a6ff;
+			outline-offset: -2px;
+		}
+
+		&.selected {
+			background: #1c2330;
+		}
+
+		&.selected td {
+			border-bottom-color: transparent;
+		}
+	}
+
+	.note-count {
+		display: inline-block;
+		min-width: 1.4em;
+		padding: 0 4px;
+		border-radius: 8px;
+		background: #21262d;
+		text-align: center;
+	}
+
+	tr.detail-row > td {
+		background: #1c2330;
+		padding: 0 8px 12px;
+	}
+
+	/* Stays in the visible part of the table box when the table is scrolled sideways, as on phones. */
+	.detail {
+		position: sticky;
+		left: 8px;
+		width: min(900px, calc(100vw - 72px));
+		cursor: auto;
+
+		h2 {
+			font-size: 15px;
+			margin: 4px 0 8px;
+		}
+
+		.to-map {
+			font-size: 13px;
+			font-weight: normal;
+			margin-left: 8px;
+		}
+
+		.notes {
+			margin: 0 0 8px;
 			padding-left: 18px;
-			font-size: 0.8rem;
+			line-height: 1.45;
 		}
 
 		li {
-			margin: 4px 0;
+			margin: 3px 0;
 		}
+
+		dl {
+			display: grid;
+			grid-template-columns: max-content 1fr;
+			gap: 2px 12px;
+			margin: 0;
+		}
+
+		dt {
+			color: #8b949e;
+		}
+
+		dd {
+			margin: 0;
+		}
+	}
+
+	.empty {
+		padding: 16px 8px;
 	}
 }
 

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { generateStatusPage } from './html.ts';
+import { generateStatusPage, geometryBbox } from './html.ts';
 import type { RegionMetadata } from '../lib/framework.ts';
 import type { KnownRegion } from './geojson.ts';
 
@@ -39,11 +39,12 @@ function extractRowData(html: string): Record<string, unknown>[] {
 }
 
 describe('generateStatusPage', () => {
-	test('returns valid HTML with AG Grid', () => {
+	test('returns valid HTML with the table container and no grid library', () => {
 		const html = generateStatusPage(new Map(), new Map());
 		expect(html).toContain('<!DOCTYPE html>');
 		expect(html).toContain('<title>VersaTiles Orthophotos - Status</title>');
-		expect(html).toContain('ag-grid-community');
+		expect(html).toContain('<div id="regions"></div>');
+		expect(html).not.toContain('ag-grid');
 		expect(html).toContain('<script src="index.js"></script>');
 		expect(html).toContain('<link rel="stylesheet" href="index.css"');
 		expect(html).toContain('0 regions');
@@ -159,5 +160,50 @@ describe('generateStatusPage', () => {
 		expect(rows[0].kbPerKm2).toBe(1309);
 		expect(rows[1].kbPerTile).toBeNull();
 		expect(rows[1].kbPerKm2).toBeNull();
+	});
+
+	test('passes the resolution as a number of cm', () => {
+		const metadata = new Map<string, RegionMetadata>([
+			['de', makeMetadata({ resolution: 20 })],
+			['at', makeMetadata({})],
+		]);
+		const rows = extractRowData(generateStatusPage(metadata, new Map()));
+		expect(rows[0].resolution).toBe(20);
+		expect(rows[1].resolution).toBeNull();
+	});
+
+	test('gives each region with an outline its bounding box', () => {
+		const metadata = new Map<string, RegionMetadata>([
+			['de', makeMetadata({})],
+			['xx', makeMetadata({})],
+		]);
+		const known = new Map([['de', makeKnownRegion('de', 'Deutschland')]]);
+		const rows = extractRowData(generateStatusPage(metadata, known));
+		expect(rows[0].bbox).toEqual([0, 0, 1, 1]);
+		expect(rows[1].bbox).toBeNull();
+	});
+
+	test('escapes "<" in the inline data, so a note cannot end the script', () => {
+		const metadata = new Map<string, RegionMetadata>([['de', makeMetadata({ notes: ['a </script><b>'] })]]);
+		const html = generateStatusPage(metadata, new Map());
+		expect(html).not.toContain('</script><b>');
+		expect(extractRowData(html)[0].notes).toEqual(['a </script><b>']);
+	});
+});
+
+describe('geometryBbox', () => {
+	test('spans all parts of a multipolygon, rounded to 0.001°', () => {
+		const square = (x: number, y: number) => [
+			[
+				[x, y],
+				[x + 1.00049, y],
+				[x + 1.00049, y + 1],
+				[x, y + 1],
+				[x, y],
+			],
+		];
+		expect(geometryBbox({ type: 'MultiPolygon', coordinates: [square(-5, 40), square(10, 50)] })).toEqual([
+			-5, 40, 11, 51,
+		]);
 	});
 });

@@ -107,11 +107,22 @@ code {
 		min-width: 180px;
 	}
 
-	thead th {
-		background: #161b22;
+	/* Sticks as one block, so the filter row stays right below the labels whatever their height. */
+	thead {
 		position: sticky;
 		top: 0;
 		z-index: 1;
+	}
+
+	/* Borders of collapsed cells aren't painted with a sticky header, so rows would show through them;
+	   a shadow draws the bottom line instead. */
+	thead th {
+		background: #161b22;
+		border-bottom: none;
+	}
+
+	tr.filters th {
+		box-shadow: inset 0 -1px #30363d;
 	}
 
 	tr.labels button {
@@ -133,7 +144,6 @@ code {
 	}
 
 	tr.filters th {
-		top: 30px;
 		padding-top: 0;
 	}
 

@@ -38,13 +38,13 @@
 		"@types/topojson-client": "^3.1.5",
 		"@versatiles/release-tool": "^2.23.0",
 		"@versatiles/style": "^9.1.0",
-		"@vitest/coverage-v8": "^5.1.0",
-		"eslint": "^10.14.0",
+		"@vitest/coverage-v8": "^5.1.1",
+		"eslint": "^10.15.0",
 		"prettier": "^3.10.1",
 		"tsx": "^4.23.15",
 		"typescript": "^6.0.3",
-		"typescript-eslint": "^8.72.2",
-		"vitest": "^5.1.0"
+		"typescript-eslint": "^8.73.0",
+		"vitest": "^5.1.1"
 	},
 	"allowScripts": {
 		"esbuild": true,

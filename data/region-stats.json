@@ -1,5 +1,5 @@
 {
-	"generated": "2026-11-18",
+	"generated": "2026-11-19",
 	"regions": {
 		"de/baden_wuerttemberg": {
 			"size": 49822378784,
@@ -22,6 +22,13 @@
 			"areaKm2": 1572,
 			"date": "2026-11-12"
 		},
+		"de/brandenburg": {
+			"size": 47011427255,
+			"tiles": 5709653,
+			"maxZoom": 18,
+			"areaKm2": 35982,
+			"date": "2026-11-19"
+		},
 		"de/bremen": {
 			"size": 2681292184,
 			"tiles": 452037,
@@ -35,6 +42,13 @@
 			"maxZoom": 18,
 			"areaKm2": 1157,
 			"date": "2026-11-13"
+		},
+		"de/hessen": {
+			"size": 32498608007,
+			"tiles": 3861388,
+			"maxZoom": 18,
+			"areaKm2": 26549,
+			"date": "2026-11-19"
 		},
 		"fr/auvergne_rhone_alpes": {
 			"size": 39458129327,

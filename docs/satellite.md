@@ -28,7 +28,7 @@ The satellite layer runs through the same tasks as a region, but isn't one: it's
 ./run.sh satellite/sentinel2 1-3
 ```
 
-Per tile, task 1 reads the red, green and blue band, converts them losslessly to an 8-bit RGBA GeoTIFF with alpha from the nodata mask, and tiles it with `versatiles mosaic tile` up to zoom 13 (10 m). The colour stretch (`BLACK`, `WHITE`, `EXPONENT`) was tuned to match the brightness and contrast of the S2GM layer. Task 2 assembles the tiles; where neighbouring UTM zones overlap, alpha compositing joins them.
+Per tile, task 1 reads the red, green and blue band, converts them losslessly to an 8-bit RGBA GeoTIFF with alpha from the nodata mask, and tiles it with `versatiles mosaic tile` up to zoom 13 (10 m). The colour stretch (`BLACK`, `WHITE`, `EXPONENT`) was tuned to match the brightness and contrast of the S2GM layer. Task 2 assembles the tiles. Where neighbouring Sentinel-2 tiles overlap, such as across a UTM zone boundary, `mosaic assemble` doesn't blend them: of two opaque map tiles, it keeps the one from the input listed first, which is the alphabetical order of the tile IDs. Only a map tile that no input covers fully, such as one along the outer edge of the data, is alpha-composited.
 
 A test tile (Berlin, `33UUU`) took 45 s to read and convert and 12 s to tile, and gave a 65 MB container. The whole layer is a long run for the build server.
 
